@@ -63,3 +63,5 @@ databaseChangeLog:
       file: db/changelog/changes/031-sync-offer-exclusive-and-post-author.sql
   - include:
       file: db/changelog/changes/032-sync-project-admin-credentials.sql
+  - include:
+      file: db/changelog/changes/033-clean-demo-data-keep-base.sql
