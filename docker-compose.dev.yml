@@ -1,0 +1,45 @@
+# =============================================================================
+# Local Native Dev Infra for HeyGoodly (Postgres:5432 + Redis:6379)
+# Uses Shared MinIO from ../shared-infra on localhost:9000
+# =============================================================================
+name: ${APP_SLUG:-heygoodly}-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${APP_SLUG:-heygoodly}-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-heygoodly_db}
+      POSTGRES_USER: ${POSTGRES_USER:-heygoodly_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - heygoodly_dev_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-heygoodly_user} -d ${POSTGRES_DB:-heygoodly_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${APP_SLUG:-heygoodly}-dev-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-CHANGE_ME_REDIS_PASSWORD}
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - heygoodly_dev_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-CHANGE_ME_REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  heygoodly_dev_postgres_data:
+    name: heygoodly_dev_postgres_data
+  heygoodly_dev_redis_data:
+    name: heygoodly_dev_redis_data

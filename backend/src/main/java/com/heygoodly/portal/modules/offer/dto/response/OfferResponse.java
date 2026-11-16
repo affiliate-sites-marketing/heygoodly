@@ -1,0 +1,26 @@
+package com.heygoodly.portal.modules.offer.dto.response;
+
+import java.time.Instant;
+
+public record OfferResponse(
+        Long id,
+        Long storeId,
+        String storeName,
+        String storeSlug,
+        String storeLogo,
+        String image,
+        String name,
+        String discountValue,
+        String code,
+        String urlRef,
+        String description,
+        boolean isVerified,
+        boolean isExclusive,
+        boolean isActive,
+        int sortOrder,
+        boolean hasExpiration,
+        Instant startAt,
+        Instant expireAt,
+        long usesCount,
+        java.util.List<String> tags
+) {}
