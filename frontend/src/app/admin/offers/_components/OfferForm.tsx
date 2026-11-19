@@ -14,6 +14,7 @@ import ImageUpload from '@/components/admin/ImageUpload';
 import TagInput from '@/components/admin/TagInput';
 import DisplayPositionPicker from '@/components/admin/DisplayPositionPicker';
 import { ROUTES } from '@/constants/routes';
+import { SITE_NAME, SITE_SLUG } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { offerService, type AdminOfferPayload } from '@/services/offerService';
@@ -124,7 +125,7 @@ function OfferFormContent({ id }: { id?: string }) {
           : offerData.discount.includes('%')
             ? 'percentage'
             : 'fixed',
-        destinationUrl: offerData.destinationUrl || `https://${offerData.storeSlug || 'store'}.com/?ref=heygoodly`,
+        destinationUrl: offerData.destinationUrl || `https://${offerData.storeSlug || 'store'}.com/?ref=${SITE_SLUG}`,
         isExclusive: offerData.isExclusive,
         isActive: offerData.isActive,
         isVerified: Boolean(offerData.isVerified),
@@ -228,7 +229,7 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
       name: form.title.trim(),
       discountValue: discountFormatted,
       code: form.offerType === 'deal' ? null : (form.couponCode.trim().toUpperCase() || null),
-      urlRef: form.destinationUrl.trim() || (selectedStore?.afWebsite || `https://${storeSlug}.com/?ref=heygoodly`),
+      urlRef: form.destinationUrl.trim() || (selectedStore?.afWebsite || `https://${storeSlug}.com/?ref=${SITE_SLUG}`),
       description: form.terms.trim() || null,
       isVerified: form.isVerified,
       isExclusive: form.isExclusive,
@@ -419,7 +420,7 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                     setForm({ ...form, destinationUrl: e.target.value });
                     if (errors.destinationUrl) setErrors((prev) => ({ ...prev, destinationUrl: '' }));
                   }}
-                  placeholder="https://www.nilight.com/?pb_ref=heygoodly"
+                  placeholder={`https://www.nilight.com/?pb_ref=${SITE_SLUG}`}
                   className={`${inputClass} font-mono ${errors.destinationUrl ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                 />
                 {errors.destinationUrl && (
@@ -476,7 +477,7 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                     }}
                     className={`px-3 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                       form.hasExpiration
-                        ? 'bg-rose-50 border-[#C62828] text-[#C62828] shadow-2xs'
+                        ? 'bg-brand-primary-soft border-brand-primary text-brand-primary shadow-2xs'
                         : 'bg-slate-50/50 border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
@@ -566,14 +567,14 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                     type="checkbox"
                     checked={form.isActive}
                     onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                 </label>
 
                 <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition">
                   <div>
                     <span className="text-xs font-bold text-slate-800 block">Editor Verified Badge</span>
-                    <span className="text-[11px] text-slate-400">Mark verified by HeyGoodly staff</span>
+                    <span className="text-[11px] text-slate-400">Mark verified by {SITE_NAME} staff</span>
                   </div>
                   <input
                     type="checkbox"
@@ -670,7 +671,7 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                   ) : (
                     <span className="text-[11px] text-slate-400 italic">No code needed</span>
                   )}
-                  <span className="text-[11px] font-bold text-[#C62828] bg-rose-50 px-2.5 py-1 rounded-lg">
+                  <span className="text-[11px] font-bold text-brand-primary bg-brand-primary-soft px-2.5 py-1 rounded-lg">
                     Get Deal →
                   </span>
                 </div>

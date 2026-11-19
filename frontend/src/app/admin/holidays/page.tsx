@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { useAdminI18n } from '@/context/AdminI18nContext';
+import StyledSelect from '@/components/ui/StyledSelect';
 import { settingService } from '@/services/settingService';
 import { invalidateSiteSettingsCache } from '@/lib/admin/useSiteSettings';
 import {
@@ -235,7 +236,7 @@ export default function AdminHolidaysPage() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-rose-600 shrink-0" />
+            <Sparkles className="w-5 h-5 text-brand-primary shrink-0" />
             {t('Holiday & Geo Themes')}
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -256,7 +257,7 @@ export default function AdminHolidaysPage() {
             type="button"
             disabled={saving}
             onClick={handleSaveAll}
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 px-5 py-2.5 text-xs font-semibold rounded-xl bg-zinc-900 dark:bg-rose-600 text-white hover:bg-zinc-800 dark:hover:bg-rose-500 shadow-sm shadow-rose-600/20 disabled:opacity-50 transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 px-5 py-2.5 text-xs font-semibold rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white shadow-sm shadow-brand-primary/20 disabled:opacity-50 transition-all cursor-pointer"
           >
             <Save className="w-3.5 h-3.5 shrink-0" />
             <span>{saving ? t('Saving...') : t('Save Changes')}</span>
@@ -268,7 +269,7 @@ export default function AdminHolidaysPage() {
       <section className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-rose-500" />
+            <SlidersHorizontal className="w-4 h-4 text-brand-primary" />
             {t('1. Master Activation Mode')}
           </h2>
           <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-300">
@@ -276,7 +277,7 @@ export default function AdminHolidaysPage() {
               type="checkbox"
               checked={effectsEnabled}
               onChange={(e) => setEffectsEnabled(e.target.checked)}
-              className="rounded border-zinc-300 text-rose-600 focus:ring-rose-500"
+              className="rounded border-zinc-300 text-brand-primary accent-brand-primary focus:ring-brand-primary"
             />
             {t('Enable festive falling effects (snow, confetti, shimmer)')}
           </label>
@@ -310,7 +311,7 @@ export default function AdminHolidaysPage() {
                 onClick={() => setMode(item.id)}
                 className={`text-left p-3.5 rounded-lg border transition-all ${
                   active
-                    ? 'border-rose-600 bg-rose-50/70 dark:bg-rose-950/30 ring-1 ring-rose-600'
+                    ? 'border-brand-primary bg-brand-primary-soft/70 dark:bg-brand-primary/15 ring-1 ring-brand-primary'
                     : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
                 }`}
               >
@@ -334,7 +335,7 @@ export default function AdminHolidaysPage() {
                   onClick={() => setManualTheme(th.id)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs text-left transition-colors ${
                     manualTheme === th.id
-                      ? 'border-rose-600 bg-rose-50 dark:bg-rose-950/30 font-semibold text-rose-700 dark:text-rose-300'
+                      ? 'border-brand-primary bg-brand-primary-soft dark:bg-brand-primary/15 font-semibold text-brand-primary dark:text-brand-primary-light'
                       : 'border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                   }`}
                 >
@@ -391,20 +392,22 @@ export default function AdminHolidaysPage() {
                     {m.flag} {m.code}
                   </button>
                 ))}
-                <select
+                <StyledSelect
                   value={EXTRA_MARKETS.some((e) => e.code === simCountry) ? simCountry : ''}
-                  onChange={(e) => {
-                    if (e.target.value) setSimCountry(e.target.value);
+                  onChange={(val) => {
+                    if (val) setSimCountry(val);
                   }}
-                  className="px-2.5 py-1.5 rounded-md text-xs font-medium border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200"
-                >
-                  <option value="">+ {t('Other Country...')}</option>
-                  {EXTRA_MARKETS.map((m) => (
-                    <option key={m.code} value={m.code}>
-                      {m.flag} {m.name} ({m.code})
-                    </option>
-                  ))}
-                </select>
+                  placeholder={`+ ${t('Other Country...')}`}
+                  searchable
+                  searchPlaceholder={t('Search...')}
+                  minMenuWidth={240}
+                  size="sm"
+                  options={EXTRA_MARKETS.map((m) => ({
+                    value: m.code,
+                    label: `${m.flag} ${m.name} (${m.code})`,
+                    searchText: `${m.name} ${m.code}`,
+                  }))}
+                />
               </div>
             </div>
             <div>
@@ -485,25 +488,28 @@ export default function AdminHolidaysPage() {
               {t('Keep on "Auto" to follow the priority calendar, or pin/disable a specific market independently when Mode is Auto.')}
             </p>
           </div>
-          <select
+          <StyledSelect
             value=""
-            onChange={(e) => {
-              const code = e.target.value;
+            resetAfterSelect
+            onChange={(code) => {
               if (!code) return;
               setCountryOverrides((prev) => ({
                 ...prev,
                 [code]: prev[code] || 'auto',
               }));
             }}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-200 shrink-0"
-          >
-            <option value="">+ {t('Add Other Country')}</option>
-            {EXTRA_MARKETS.filter((em) => !(em.code in countryOverrides)).map((em) => (
-              <option key={em.code} value={em.code}>
-                {em.flag} {em.name} ({em.code})
-              </option>
-            ))}
-          </select>
+            placeholder={`+ ${t('Add Other Country')}`}
+            searchable
+            searchPlaceholder={t('Search...')}
+            align="right"
+            minMenuWidth={250}
+            className="shrink-0"
+            options={EXTRA_MARKETS.filter((em) => !(em.code in countryOverrides)).map((em) => ({
+              value: em.code,
+              label: `${em.flag} ${em.name} (${em.code})`,
+              searchText: `${em.name} ${em.code}`,
+            }))}
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -526,21 +532,29 @@ export default function AdminHolidaysPage() {
                   <div className="text-[11px] text-zinc-500 truncate">{m.timezone}</div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <select
+                  <StyledSelect
                     value={val}
-                    onChange={(e) => {
-                      const nextVal = e.target.value as 'auto' | HolidayThemeId;
-                      setCountryOverrides((prev) => ({ ...prev, [m.code]: nextVal }));
+                    onChange={(nextVal) => {
+                      setCountryOverrides((prev) => ({
+                        ...prev,
+                        [m.code]: nextVal as 'auto' | HolidayThemeId,
+                      }));
                     }}
-                    className="px-2 py-1.5 text-xs rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[145px]"
-                  >
-                    <option value="auto">{t('Auto (Calendar)')}</option>
-                    {Object.values(HOLIDAY_THEMES).map((th) => (
-                      <option key={th.id} value={th.id}>
-                        {th.brandEmoji ? `${th.brandEmoji} ` : ''}{th.label}
-                      </option>
-                    ))}
-                  </select>
+                    searchable
+                    searchPlaceholder={t('Search...')}
+                    align="right"
+                    minMenuWidth={270}
+                    size="sm"
+                    className="w-[165px]"
+                    options={[
+                      { value: 'auto', label: t('Auto (Calendar)'), searchText: 'auto calendar' },
+                      ...Object.values(HOLIDAY_THEMES).map((th) => ({
+                        value: th.id,
+                        label: `${th.brandEmoji ? `${th.brandEmoji} ` : ''}${t(th.label)}`,
+                        searchText: `${th.label} ${th.id}`,
+                      })),
+                    ]}
+                  />
                   {isExtra && (
                     <button
                       type="button"
@@ -609,20 +623,22 @@ export default function AdminHolidaysPage() {
               {tab.label}
             </button>
           ))}
-          <select
+          <StyledSelect
             value={EXTRA_MARKETS.some((e) => e.code === scopeFilter) ? scopeFilter : ''}
-            onChange={(e) => {
-              if (e.target.value) setScopeFilter(e.target.value as ScopeFilter);
+            onChange={(val) => {
+              if (val) setScopeFilter(val as ScopeFilter);
             }}
-            className="px-2.5 py-1 rounded-md text-xs font-medium border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200"
-          >
-            <option value="">+ {t('Other Country...')}</option>
-            {EXTRA_MARKETS.map((m) => (
-              <option key={m.code} value={m.code}>
-                {m.flag} {m.name} ({m.code})
-              </option>
-            ))}
-          </select>
+            placeholder={`+ ${t('Other Country...')}`}
+            searchable
+            searchPlaceholder={t('Search...')}
+            minMenuWidth={240}
+            size="xs"
+            options={EXTRA_MARKETS.map((m) => ({
+              value: m.code,
+              label: `${m.flag} ${m.name} (${m.code})`,
+              searchText: `${m.name} ${m.code}`,
+            }))}
+          />
         </div>
 
         {/* Rules Table */}
@@ -649,7 +665,7 @@ export default function AdminHolidaysPage() {
                         type="checkbox"
                         checked={rule.enabled}
                         onChange={() => toggleRuleEnabled(rule.id)}
-                        className="rounded border-zinc-300 text-rose-600 focus:ring-rose-500"
+                        className="rounded border-zinc-300 text-brand-primary accent-brand-primary focus:ring-brand-primary"
                       />
                     </td>
                     <td className="py-2.5 px-3">
@@ -697,17 +713,21 @@ export default function AdminHolidaysPage() {
                       {formatRuleSchedule(rule)}
                     </td>
                     <td className="py-2.5 px-3">
-                      <select
-                        value={rule.priority}
-                        onChange={(e) => updateRulePriority(rule.id, Number(e.target.value))}
-                        className="px-2 py-1 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-mono"
-                      >
-                        <option value={100}>100 (Mega)</option>
-                        <option value={90}>90 (High)</option>
-                        <option value={85}>85 (Major+)</option>
-                        <option value={80}>80 (Country)</option>
-                        <option value={50}>50 (Standard)</option>
-                      </select>
+                      <StyledSelect
+                        value={String(rule.priority)}
+                        onChange={(val) => updateRulePriority(rule.id, Number(val))}
+                        align="right"
+                        minMenuWidth={165}
+                        size="xs"
+                        buttonClassName="font-mono"
+                        options={[
+                          { value: '100', label: '100 (Mega)' },
+                          { value: '90', label: '90 (High)' },
+                          { value: '85', label: '85 (Major+)' },
+                          { value: '80', label: '80 (Country)' },
+                          { value: '50', label: '50 (Standard)' },
+                        ]}
+                      />
                     </td>
                     <td className="py-2.5 px-3 text-right">
                       {rule.id.startsWith('custom-') && (
@@ -750,46 +770,55 @@ export default function AdminHolidaysPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('Scope')}</label>
-                  <select
+                  <StyledSelect
                     value={newRuleScope}
-                    onChange={(e) => setNewRuleScope(e.target.value as HolidayRuleScope)}
-                    className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950"
-                  >
-                    <option value="country">{t('Country Specific')}</option>
-                    <option value="six_markets">{t('Shared 6 Markets')}</option>
-                    <option value="world">{t('World Global')}</option>
-                  </select>
+                    onChange={(val) => setNewRuleScope(val as HolidayRuleScope)}
+                    size="md"
+                    minMenuWidth={200}
+                    className="w-full"
+                    options={[
+                      { value: 'country', label: t('Country Specific') },
+                      { value: 'six_markets', label: t('Shared 6 Markets') },
+                      { value: 'world', label: t('World Global') },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('Priority')}</label>
-                  <select
-                    value={newRulePriority}
-                    onChange={(e) => setNewRulePriority(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950"
-                  >
-                    <option value={100}>100 (Global Mega)</option>
-                    <option value={85}>85 (Country Major+)</option>
-                    <option value={80}>80 (Country Major)</option>
-                    <option value={50}>50 (Standard)</option>
-                  </select>
+                  <StyledSelect
+                    value={String(newRulePriority)}
+                    onChange={(val) => setNewRulePriority(Number(val))}
+                    size="md"
+                    minMenuWidth={200}
+                    className="w-full"
+                    options={[
+                      { value: '100', label: '100 (Global Mega)' },
+                      { value: '85', label: '85 (Country Major+)' },
+                      { value: '80', label: '80 (Country Major)' },
+                      { value: '50', label: '50 (Standard)' },
+                    ]}
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('Visual Theme')}</label>
-                <select
+                <StyledSelect
                   value={newRuleTheme}
-                  onChange={(e) => setNewRuleTheme(e.target.value as HolidayThemeId)}
-                  className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950"
-                >
-                  {Object.values(HOLIDAY_THEMES)
+                  onChange={(val) => setNewRuleTheme(val as HolidayThemeId)}
+                  searchable
+                  searchPlaceholder={t('Search...')}
+                  size="md"
+                  minMenuWidth={300}
+                  className="w-full"
+                  options={Object.values(HOLIDAY_THEMES)
                     .filter((x) => x.id !== 'none')
-                    .map((th) => (
-                      <option key={th.id} value={th.id}>
-                        {th.brandEmoji} {th.label}
-                      </option>
-                    ))}
-                </select>
+                    .map((th) => ({
+                      value: th.id,
+                      label: `${th.brandEmoji} ${t(th.label)}`,
+                      searchText: `${th.label} ${th.id}`,
+                    }))}
+                />
               </div>
 
               <div className="grid grid-cols-4 gap-2">

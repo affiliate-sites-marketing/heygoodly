@@ -545,7 +545,7 @@ export default function AdminCommandPalette({ isOpen, onClose }: AdminCommandPal
         {/* Search Header Container (Bo cong mềm mại, KHÔNG tràn viền) */}
         <div className="p-4 sm:p-5 pb-3.5">
           {/* Ô tìm kiếm bo cong mềm mại */}
-          <div className="relative flex items-center h-13 sm:h-14 px-5 rounded-full bg-zinc-100/90 dark:bg-zinc-800/50 border border-zinc-200/90 dark:border-zinc-700/60 shadow-xs focus-within:ring-2 focus-within:ring-[#C62828]/25 focus-within:border-[#C62828] focus-within:bg-white dark:focus-within:bg-zinc-800/90 transition-all">
+          <div className="relative flex items-center h-13 sm:h-14 px-5 rounded-full bg-zinc-100/90 dark:bg-zinc-800/50 border border-zinc-200/90 dark:border-zinc-700/60 shadow-xs focus-within:ring-2 focus-within:ring-brand-primary/25 focus-within:border-brand-primary focus-within:bg-white dark:focus-within:bg-zinc-800/90 transition-all">
             <Search size={20} className="text-zinc-400 dark:text-zinc-400 shrink-0 mr-3.5" strokeWidth={2} />
             <input
               ref={inputRef}
@@ -560,7 +560,7 @@ export default function AdminCommandPalette({ isOpen, onClose }: AdminCommandPal
               className="flex-1 text-[15px] sm:text-[16px] font-normal bg-transparent border-0 outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
             />
             {isSearchingDb && (
-              <Loader2 size={16} className="animate-spin text-[#C62828] mr-2 shrink-0" />
+              <Loader2 size={16} className="animate-spin text-brand-primary mr-2 shrink-0" />
             )}
             {query ? (
               <button
@@ -592,7 +592,7 @@ export default function AdminCommandPalette({ isOpen, onClose }: AdminCommandPal
                   }}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                     isCatActive
-                      ? 'bg-[#C62828] text-white shadow-xs'
+                      ? 'bg-brand-primary text-white shadow-xs'
                       : 'bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200/70 dark:border-zinc-700/60'
                   }`}
                 >

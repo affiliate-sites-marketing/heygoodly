@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { SITE_DOMAIN } from '@/constants/site';
 import {
   History,
   Search,
@@ -24,11 +25,13 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import StyledSelect from '@/components/ui/StyledSelect';
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import UnauthorizedAccess from '@/components/admin/UnauthorizedAccess';
 import { usePermission } from '@/lib/admin/usePermission';
 import { useToast } from '@/context/ToastContext';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 import { useServerPagination } from '@/lib/admin/useServerPagination';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { auditService, type AuditStats } from '@/services/auditService';
@@ -42,6 +45,7 @@ import AuditDetailModal from './_components/AuditDetailModal';
 export default function AdminTracingPage() {
   const { hasPermission } = usePermission();
   const { toast } = useToast();
+  const { locale, t } = useAdminI18n();
 
   // Filters state
   const [search, setSearch] = useState('');
@@ -103,7 +107,7 @@ export default function AdminTracingPage() {
       timestamp: l.timestamp || l.createdAt || new Date().toISOString(),
       userId: String(l.userId || '1'),
       userName: l.userName || 'Super Administrator',
-      userEmail: l.userEmail || 'admin@heygoodly.com',
+      userEmail: l.userEmail || `admin@${SITE_DOMAIN}`,
       userRole: l.userRole || 'Administrator',
       userAvatar: l.userAvatar,
       action: (l.action || 'UPDATE') as any,
@@ -111,7 +115,7 @@ export default function AdminTracingPage() {
       module: l.module || 'system',
       targetId: l.targetId || String(l.resourceId || ''),
       targetName: l.targetName || l.resourceName || 'System Resource',
-      targetHref: l.targetHref || '/admin/dashboard',
+      targetHref: l.targetHref || undefined,
       ipAddress: l.ipAddress || '127.0.0.1',
       userAgent: l.userAgent || 'Web Application',
       deviceType: l.deviceType || 'Web Application',
@@ -162,21 +166,27 @@ export default function AdminTracingPage() {
   // Action badge styling helper
   const getActionBadge = (action: ActionType) => {
     const actStr = String(action).toUpperCase();
-    if (actStr === 'CREATE') {
+    if (actStr === 'CREATE' || actStr === 'RBAC_CREATE' || actStr === 'CLONE') {
       return (
         <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <PlusCircle size={11} /> CREATE
+          <PlusCircle size={11} /> {actStr}
         </span>
       );
     }
-    if (actStr === 'UPDATE' || actStr === 'UPDATE_PROFILE' || actStr === 'UPDATE_MEDIA_TAGS') {
+    if (
+      actStr === 'UPDATE' ||
+      actStr === 'UPDATE_PROFILE' ||
+      actStr === 'UPDATE_MEDIA_TAGS' ||
+      actStr === 'UPDATE_SYSTEM_SETTINGS' ||
+      actStr === 'TOGGLE_STATUS'
+    ) {
       return (
         <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
           <Edit3 size={11} /> {actStr}
         </span>
       );
     }
-    if (actStr === 'DELETE' || actStr === 'DELETE_MEDIA') {
+    if (actStr === 'DELETE' || actStr === 'DELETE_MEDIA' || actStr === 'RBAC_DELETE') {
       return (
         <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
           <Trash2 size={11} /> {actStr}
@@ -204,17 +214,22 @@ export default function AdminTracingPage() {
         </span>
       );
     }
-    if (actStr.includes('RBAC') || actStr.includes('SECURITY') || actStr.includes('2FA')) {
+    if (
+      actStr.includes('RBAC') ||
+      actStr.includes('SECURITY') ||
+      actStr.includes('2FA') ||
+      actStr.includes('PASSWORD')
+    ) {
       return (
         <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-300">
           <Lock size={11} /> {actStr}
         </span>
       );
     }
-    if (actStr === 'LOGIN') {
+    if (actStr === 'LOGIN' || actStr === 'USER_LOGIN_SUCCESS') {
       return (
         <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-300">
-          <LogIn size={11} /> LOGIN
+          <LogIn size={11} /> {actStr}
         </span>
       );
     }
@@ -228,12 +243,12 @@ export default function AdminTracingPage() {
   const formatRelativeTime = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();
     const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 1) return locale === 'vi' ? 'Vừa xong' : 'Just now';
+    if (minutes < 60) return locale === 'vi' ? `${minutes} phút trước` : `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return locale === 'vi' ? `${hours} giờ trước` : `${hours}h ago`;
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    return locale === 'vi' ? `${days} ngày trước` : `${days}d ago`;
   };
 
   if (!hasPermission('audit.view')) {
@@ -340,92 +355,97 @@ export default function AdminTracingPage() {
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Search action, user, IP, target..."
-              className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              placeholder={t('Search action, user, IP, target...')}
+              className="w-full h-9 text-xs bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-3 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
             />
           </div>
 
           {/* Action Filter */}
           <div>
-            <select
+            <StyledSelect
               value={actionFilter}
-              onChange={(e) => {
-                setActionFilter(e.target.value);
+              onChange={(val) => {
+                setActionFilter(val);
                 setCurrentPage(1);
               }}
-              className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-            >
-              <option value="ALL">All Action Types</option>
-              {statsData?.availableActions && statsData.availableActions.length > 0 ? (
-                statsData.availableActions.map((act) => (
-                  <option key={act} value={act}>
-                    {act}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="CREATE">CREATE</option>
-                  <option value="UPDATE">UPDATE</option>
-                  <option value="DELETE">DELETE</option>
-                  <option value="PUBLISH">PUBLISH</option>
-                  <option value="UPLOAD_MEDIA">UPLOAD_MEDIA</option>
-                  <option value="DELETE_MEDIA">DELETE_MEDIA</option>
-                </>
-              )}
-            </select>
+              searchable
+              searchPlaceholder={t('Search...')}
+              size="md"
+              className="w-full"
+              options={[
+                { value: 'ALL', label: t('All Action Types') },
+                ...(statsData?.availableActions && statsData.availableActions.length > 0
+                  ? statsData.availableActions.map((act) => ({ value: act, label: act }))
+                  : [
+                      { value: 'CREATE', label: 'CREATE' },
+                      { value: 'UPDATE', label: 'UPDATE' },
+                      { value: 'DELETE', label: 'DELETE' },
+                      { value: 'PUBLISH', label: 'PUBLISH' },
+                      { value: 'RBAC_CHANGE', label: 'RBAC_CHANGE' },
+                      { value: 'UPDATE_SYSTEM_SETTINGS', label: 'UPDATE_SYSTEM_SETTINGS' },
+                      { value: 'USER_LOGIN_SUCCESS', label: 'USER_LOGIN_SUCCESS' },
+                      { value: 'UPLOAD_MEDIA', label: 'UPLOAD_MEDIA' },
+                      { value: 'DELETE_MEDIA', label: 'DELETE_MEDIA' },
+                    ]),
+              ]}
+            />
           </div>
 
           {/* Module Filter */}
           <div>
-            <select
+            <StyledSelect
               value={moduleFilter}
-              onChange={(e) => {
-                setModuleFilter(e.target.value);
+              onChange={(val) => {
+                setModuleFilter(val);
                 setCurrentPage(1);
               }}
-              className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-            >
-              <option value="ALL">All Modules</option>
-              {statsData?.availableModules && statsData.availableModules.length > 0 ? (
-                statsData.availableModules.map((mod) => (
-                  <option key={mod} value={mod}>
-                    {mod.toUpperCase()}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="media">MEDIA</option>
-                  <option value="stores">STORES</option>
-                  <option value="offers">OFFERS</option>
-                  <option value="posts">POSTS</option>
-                  <option value="users">USERS</option>
-                  <option value="auth">AUTH</option>
-                </>
-              )}
-            </select>
+              searchable
+              searchPlaceholder={t('Search...')}
+              size="md"
+              className="w-full"
+              options={[
+                { value: 'ALL', label: t('All Modules') },
+                ...(statsData?.availableModules && statsData.availableModules.length > 0
+                  ? statsData.availableModules.map((mod) => ({
+                      value: mod,
+                      label: mod.toUpperCase(),
+                    }))
+                  : [
+                      { value: 'posts', label: 'POSTS' },
+                      { value: 'stores', label: 'STORES' },
+                      { value: 'offers', label: 'OFFERS' },
+                      { value: 'categories', label: 'CATEGORIES' },
+                      { value: 'tags', label: 'TAGS' },
+                      { value: 'media', label: 'MEDIA' },
+                      { value: 'users', label: 'USERS' },
+                      { value: 'roles', label: 'ROLES' },
+                      { value: 'settings', label: 'SETTINGS' },
+                      { value: 'holidays', label: 'HOLIDAYS' },
+                      { value: 'auth', label: 'AUTH' },
+                    ]),
+              ]}
+            />
           </div>
 
           {/* Staff Member Filter */}
           <div>
-            <select
+            <StyledSelect
               value={userFilter}
-              onChange={(e) => {
-                setUserFilter(e.target.value);
+              onChange={(val) => {
+                setUserFilter(val);
                 setCurrentPage(1);
               }}
-              className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-            >
-              <option value="ALL">All Staff Members</option>
-              {statsData?.availableOperators && statsData.availableOperators.length > 0 ? (
-                statsData.availableOperators.map((email) => (
-                  <option key={email} value={email}>
-                    {email}
-                  </option>
-                ))
-              ) : (
-                <option value="admin@heygoodly.com">admin@heygoodly.com</option>
-              )}
-            </select>
+              searchable
+              searchPlaceholder={t('Search...')}
+              size="md"
+              className="w-full"
+              options={[
+                { value: 'ALL', label: t('All Staff Members') },
+                ...(statsData?.availableOperators && statsData.availableOperators.length > 0
+                  ? statsData.availableOperators.map((email) => ({ value: email, label: email }))
+                  : [{ value: `admin@${SITE_DOMAIN}`, label: `admin@${SITE_DOMAIN}` }]),
+              ]}
+            />
           </div>
         </div>
 
@@ -433,7 +453,7 @@ export default function AdminTracingPage() {
         <div className="flex items-center justify-between pt-2 border-t border-zinc-100 text-xs">
           <div className="flex items-center gap-1.5 overflow-x-auto">
             <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mr-1">
-              Time Range:
+              {t('Time Range:')}
             </span>
             {(
               [
@@ -442,21 +462,21 @@ export default function AdminTracingPage() {
                 { key: 'WEEK', label: 'Last 7 Days' },
                 { key: 'MONTH', label: 'Last 30 Days' },
               ] as const
-            ).map((t) => (
+            ).map((item) => (
               <button
-                key={t.key}
+                key={item.key}
                 type="button"
                 onClick={() => {
-                  setDateFilter(t.key);
+                  setDateFilter(item.key);
                   setCurrentPage(1);
                 }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                  dateFilter === t.key
-                    ? 'bg-zinc-900 text-white shadow-2xs'
+                  dateFilter === item.key
+                    ? 'bg-brand-primary text-white shadow-2xs'
                     : 'text-zinc-600 hover:bg-zinc-100'
                 }`}
               >
-                {t.label}
+                {t(item.label)}
               </button>
             ))}
           </div>
@@ -518,15 +538,15 @@ export default function AdminTracingPage() {
                           <span>{formatRelativeTime(log.timestamp)}</span>
                         </div>
                         <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
-                          {new Date(log.timestamp).toLocaleString('en-US')}
+                          {new Date(log.timestamp).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}
                         </div>
                       </td>
 
                       {/* User & Role */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
-                            {log.userName.slice(0, 1).toUpperCase()}
+                          <div className="w-7 h-7 rounded-lg bg-brand-primary text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                            {(log.userName || log.userEmail || 'U').slice(0, 1).toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <p className="font-bold text-zinc-900 truncate">{log.userName}</p>

@@ -78,10 +78,10 @@ export default function MediaTagInput({
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-          <Tag size={13} className="text-[#C62828]" />
+          <Tag size={13} className="text-brand-primary" />
           <span>{t(label)}</span>
           {required && (
-            <span className="text-[10px] font-black uppercase text-[#C62828] bg-rose-50 border border-rose-200/80 px-1.5 py-0.2 rounded">
+            <span className="text-[10px] font-black uppercase text-brand-primary bg-rose-50 border border-rose-200/80 px-1.5 py-0.2 rounded">
               {t('Required')}
             </span>
           )}
@@ -117,14 +117,14 @@ export default function MediaTagInput({
               }}
               onKeyDown={handleKeyDown}
               placeholder={t(placeholder)}
-              className="w-full text-xs pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] text-slate-800 placeholder:text-slate-400"
+              className="w-full text-xs pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-slate-800 placeholder:text-slate-400"
             />
           </div>
           <button
             type="button"
             onClick={() => addTag(inputValue)}
             disabled={!inputValue.trim()}
-            className="h-8.5 px-3 bg-slate-900 hover:bg-[#C62828] disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0"
+            className="h-8.5 px-3 bg-slate-900 hover:bg-brand-primary disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0"
           >
             <Plus size={13} /> {t('Add Tag')}
           </button>
@@ -143,9 +143,9 @@ export default function MediaTagInput({
           {tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs group hover:border-[#C62828]/40 transition"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs group hover:border-brand-primary/40 transition"
             >
-              <span className="text-[#C62828] font-bold">#</span>
+              <span className="text-brand-primary font-bold">#</span>
               <span>{tag}</span>
               <button
                 type="button"

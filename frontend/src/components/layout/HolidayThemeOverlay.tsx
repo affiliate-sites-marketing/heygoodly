@@ -59,7 +59,7 @@ export default function HolidayThemeOverlay() {
   if (theme.effectType === 'shimmer') {
     return (
       <div
-        className="pointer-events-none fixed inset-x-0 top-0 h-1 z-50 bg-gradient-to-r from-[#C62828] via-amber-400 to-[#C62828] opacity-90"
+        className="pointer-events-none fixed inset-x-0 top-0 h-1 z-50 bg-gradient-to-r from-brand-primary via-amber-400 to-brand-primary opacity-90"
         aria-hidden="true"
       />
     );

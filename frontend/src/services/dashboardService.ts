@@ -63,6 +63,8 @@ type StatsListener = (stats: DashboardStats) => void;
 
 class DashboardService {
   private cachedStats: DashboardStats | null = null;
+  private cachedAt = 0;
+  private static readonly CACHE_TTL_MS = 30_000;
   private listeners = new Set<StatsListener>();
   private inFlightPromise: Promise<DashboardStats | null> | null = null;
 
@@ -81,7 +83,7 @@ class DashboardService {
   }
 
   async getStats(forceRefresh = false): Promise<DashboardStats | null> {
-    if (!forceRefresh && this.cachedStats) {
+    if (!forceRefresh && this.cachedStats && Date.now() - this.cachedAt < DashboardService.CACHE_TTL_MS) {
       return this.cachedStats;
     }
     if (this.inFlightPromise) {
@@ -120,6 +122,7 @@ class DashboardService {
 
   private updateCache(stats: DashboardStats): DashboardStats {
     this.cachedStats = stats;
+    this.cachedAt = Date.now();
     this.listeners.forEach((listener) => {
       try {
         listener(stats);

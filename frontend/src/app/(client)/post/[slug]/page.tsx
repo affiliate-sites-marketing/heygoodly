@@ -118,7 +118,7 @@ export default function ArticleDetailPage() {
           <div className="pt-2">
             <Link
               href={ROUTES.PUBLIC.POSTS}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-xl transition"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl transition"
             >
               <ArrowLeft size={14} />
               <span>Browse Editorial Archive</span>
@@ -227,7 +227,7 @@ export default function ArticleDetailPage() {
           margin-bottom: 0.5rem;
         }
         .editorial-article-body blockquote {
-          border-left: 4px solid #C62828;
+          border-left: 4px solid var(--brand-primary);
           padding-left: 1rem;
           font-style: italic;
           color: #475569;
@@ -255,7 +255,7 @@ export default function ArticleDetailPage() {
         html.dark .editorial-article-body blockquote {
           color: #e2e8f0 !important;
           background-color: #161d2b !important;
-          border-left-color: #ef4444 !important;
+          border-left-color: var(--brand-primary) !important;
         }
         html.dark .editorial-article-body img {
           border-color: #242d42 !important;
@@ -268,13 +268,13 @@ export default function ArticleDetailPage() {
 
         {/* Breadcrumb Navigation */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-500">
-          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-red-700 transition">Home</Link>
+          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-brand-primary transition">Home</Link>
           <ChevronRight size={12} className="shrink-0" />
-          <Link href={ROUTES.PUBLIC.POSTS} className="hover:text-red-700 transition">Reviews &amp; Editorial</Link>
+          <Link href={ROUTES.PUBLIC.POSTS} className="hover:text-brand-primary transition">Reviews &amp; Editorial</Link>
           {categorySlug && (
             <>
               <ChevronRight size={12} className="shrink-0" />
-              <Link href={ROUTES.PUBLIC.CATEGORY_DETAIL(categorySlug)} className="hover:text-red-700 transition">
+              <Link href={ROUTES.PUBLIC.CATEGORY_DETAIL(categorySlug)} className="hover:text-brand-primary transition">
                 {article.category}
               </Link>
             </>
@@ -286,7 +286,7 @@ export default function ArticleDetailPage() {
         {/* Article Header Card */}
         <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-xs space-y-5 sm:space-y-6">
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
-            <span className="bg-red-700 text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs">
+            <span className="bg-brand-primary text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs">
               {article.category}
             </span>
             {article.readTime && (
@@ -416,7 +416,7 @@ export default function ArticleDetailPage() {
 
                   <div className="space-y-1.5">
                     {formattedMaxDiscount && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-red-700 bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-full tracking-widest">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
                         <Sparkles size={11} /> Brand Deals • {formattedMaxDiscount}
                       </span>
                     )}
@@ -442,7 +442,7 @@ export default function ArticleDetailPage() {
 
                   <Link
                     href={ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}
-                    className="w-full py-3 bg-red-700 hover:bg-red-800 text-white font-black text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 group cursor-pointer"
+                    className="w-full py-3 bg-brand-primary hover:bg-brand-primary-hover text-white font-black text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 group cursor-pointer"
                   >
                     <span>
                       {sidebarConfig.ctaText ||
@@ -459,7 +459,7 @@ export default function ArticleDetailPage() {
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3.5">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
-                      <Tag size={15} className="text-red-700" />
+                      <Tag size={15} className="text-brand-primary" />
                       <span>Active {targetStoreName} Codes</span>
                     </h3>
                   </div>
@@ -469,14 +469,14 @@ export default function ArticleDetailPage() {
                       <Link
                         key={c.id}
                         href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?offer=${c.id}`}
-                        className="block p-3 rounded-xl border border-slate-200/90 hover:border-red-300 bg-slate-50/60 hover:bg-red-50/30 transition group space-y-1.5"
+                        className="block p-3 rounded-xl border border-slate-200/90 hover:border-brand-primary bg-slate-50/60 hover:bg-brand-primary-soft/40 transition group space-y-1.5"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-black text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                          <span className="text-xs font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
                             {c.discount}
                           </span>
                           {c.code ? (
-                            <span className="font-mono text-[11px] font-bold text-slate-800 bg-white border border-dashed border-slate-300 px-2 py-0.5 rounded group-hover:border-red-400 group-hover:text-red-700 transition">
+                            <span className="font-mono text-[11px] font-bold text-slate-800 bg-white border border-dashed border-slate-300 px-2 py-0.5 rounded group-hover:border-brand-primary group-hover:text-brand-primary transition">
                               {c.code}
                             </span>
                           ) : (
@@ -485,7 +485,7 @@ export default function ArticleDetailPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs font-bold text-slate-800 group-hover:text-red-700 transition line-clamp-1">
+                        <p className="text-xs font-bold text-slate-800 group-hover:text-brand-primary transition line-clamp-1">
                           {c.title}
                         </p>
                       </Link>
@@ -494,7 +494,7 @@ export default function ArticleDetailPage() {
 
                   <Link
                     href={ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}
-                    className="w-full py-2 text-center text-xs font-bold text-slate-600 hover:text-red-700 flex items-center justify-center gap-1 pt-1 transition"
+                    className="w-full py-2 text-center text-xs font-bold text-slate-600 hover:text-brand-primary flex items-center justify-center gap-1 pt-1 transition"
                   >
                     <span>View all {targetStoreName} coupons</span>
                     <ExternalLink size={12} />
@@ -507,10 +507,10 @@ export default function ArticleDetailPage() {
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
-                      <BookOpen size={15} className="text-red-700" />
+                      <BookOpen size={15} className="text-brand-primary" />
                       <span>Related Lab Reviews</span>
                     </h3>
-                    <Link href={ROUTES.PUBLIC.POSTS} className="text-[11px] font-bold text-red-700 hover:underline">
+                    <Link href={ROUTES.PUBLIC.POSTS} className="text-[11px] font-bold text-brand-primary hover:underline">
                       See all
                     </Link>
                   </div>
@@ -536,10 +536,10 @@ export default function ArticleDetailPage() {
                           )}
                         </div>
                         <div className="space-y-1 min-w-0 flex-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 block">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary block">
                             {rel.category}
                           </span>
-                          <h4 className="font-bold text-xs text-slate-900 group-hover:text-red-700 transition line-clamp-2 leading-snug">
+                          <h4 className="font-bold text-xs text-slate-900 group-hover:text-brand-primary transition line-clamp-2 leading-snug">
                             {rel.title}
                           </h4>
                         </div>
@@ -566,7 +566,7 @@ export default function ArticleDetailPage() {
                         <Link
                           key={tag}
                           href={ROUTES.PUBLIC.TAG_DETAIL(tag.toLowerCase().replace(/\s+/g, '-'))}
-                          className="text-[11px] font-medium bg-slate-800 hover:bg-red-700 text-slate-200 hover:text-white px-2.5 py-1 rounded-lg transition"
+                          className="text-[11px] font-medium bg-slate-800 hover:bg-brand-primary-hover text-slate-200 hover:text-white px-2.5 py-1 rounded-lg transition"
                         >
                           #{tag}
                         </Link>
@@ -608,7 +608,7 @@ export default function ArticleDetailPage() {
                     )}
                   </div>
                   <div className="space-y-1 min-w-0 flex-1">
-                    <h4 className="font-bold text-xs text-slate-900 group-hover:text-red-700 transition line-clamp-2 leading-snug">
+                    <h4 className="font-bold text-xs text-slate-900 group-hover:text-brand-primary transition line-clamp-2 leading-snug">
                       {rel.title}
                     </h4>
                     <span className="text-[10px] text-slate-400 block">

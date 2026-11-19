@@ -31,7 +31,7 @@ export default function PositionReorderCell({
       <span
         className={`inline-flex items-center justify-center min-w-[38px] px-2 py-0.5 rounded-md text-[11px] font-bold ${
           isPinned
-            ? 'bg-red-50 text-[#C62828] border border-red-200'
+            ? 'bg-red-50 text-brand-primary border border-red-200'
             : 'bg-slate-100 text-slate-500 border border-slate-200'
         }`}
         title={isPinned ? `Pinned at position #${sortOrder}` : 'Auto (default order 9999)'}
@@ -45,7 +45,7 @@ export default function PositionReorderCell({
           onClick={() => onMove(-1)}
           disabled={disabled || !canReorder || index <= 0}
           title={canReorder ? 'Move up' : 'Sort by Display Order to reorder'}
-          className="p-1 text-slate-500 hover:text-[#C62828] hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
+          className="p-1 text-slate-500 hover:text-brand-primary hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
         >
           <ArrowUp size={12} />
         </button>
@@ -54,7 +54,7 @@ export default function PositionReorderCell({
           onClick={() => onMove(1)}
           disabled={disabled || !canReorder || index >= total - 1}
           title={canReorder ? 'Move down' : 'Sort by Display Order to reorder'}
-          className="p-1 text-slate-500 hover:text-[#C62828] hover:bg-slate-50 border-l border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
+          className="p-1 text-slate-500 hover:text-brand-primary hover:bg-slate-50 border-l border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
         >
           <ArrowDown size={12} />
         </button>

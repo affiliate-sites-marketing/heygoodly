@@ -66,7 +66,6 @@ export const API_ENDPOINTS = {
     PAGES: '/api/v1/admin/pages',
     FEEDBACK: '/api/v1/admin/feedbacks',
     SETTINGS: '/api/v1/admin/settings',
-    FILES_UPLOAD: '/api/v1/admin/files/upload',
     MEDIA: '/api/v1/admin/media',
     MEDIA_DETAIL: (id: number | string) => `/api/v1/admin/media/${id}`,
     MEDIA_TAGS: (id: number | string) => `/api/v1/admin/media/${id}/tags`,
@@ -89,5 +88,6 @@ export const API_ENDPOINTS = {
     REVOKE_OTHER_SESSIONS: '/api/v1/profile/sessions/other',
     AUDIT: '/api/v1/profile/audit-logs',
     NOTIFICATIONS: '/api/v1/profile/notifications',
+    PREFERENCES: '/api/v1/profile/preferences',
   },
 } as const;

@@ -2,6 +2,7 @@ package com.heygoodly.portal.modules.user.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.exception.BadRequestException;
@@ -16,12 +17,16 @@ import com.heygoodly.portal.modules.role.entity.RoleEntity;
 import com.heygoodly.portal.modules.setting.service.SettingService;
 import com.heygoodly.portal.modules.user.dto.request.ChangePasswordRequest;
 import com.heygoodly.portal.modules.user.dto.request.UpdateProfileRequest;
+import com.heygoodly.portal.modules.user.dto.request.UpdateUserPreferenceRequest;
 import com.heygoodly.portal.modules.user.dto.response.ProfileResponse;
 import com.heygoodly.portal.modules.user.dto.response.SessionResponse;
 import com.heygoodly.portal.modules.user.dto.response.TwoFactorDetailsResponse;
+import com.heygoodly.portal.modules.user.dto.response.UserPreferenceResponse;
 import com.heygoodly.portal.modules.user.entity.UserEntity;
 import com.heygoodly.portal.modules.user.entity.UserLoginRecordEntity;
+import com.heygoodly.portal.modules.user.entity.UserPreferenceEntity;
 import com.heygoodly.portal.modules.user.repository.UserLoginRecordRepository;
+import com.heygoodly.portal.modules.user.repository.UserPreferenceRepository;
 import com.heygoodly.portal.modules.user.repository.UserRepository;
 import com.heygoodly.portal.modules.user.service.ProfileService;
 import com.heygoodly.portal.security.TotpService;
@@ -49,6 +54,7 @@ import java.util.stream.Collectors;
 public class ProfileServiceImpl implements ProfileService {
 
     private final UserRepository userRepository;
+    private final UserPreferenceRepository userPreferenceRepository;
     private final UserLoginRecordRepository loginRecordRepository;
     private final AuditLogRepository auditLogRepository;
     private final AuditLogService auditLogService;
@@ -56,6 +62,7 @@ public class ProfileServiceImpl implements ProfileService {
     private final ObjectMapper objectMapper;
     private final TotpService totpService;
     private final SettingService settingService;
+    private final RedisCacheService redisCacheService;
 
     @Override
     @Transactional(readOnly = true)
@@ -79,6 +86,7 @@ public class ProfileServiceImpl implements ProfileService {
         user.setSocialLinkedIn(NullSafeUtils.safeTrim(request.getSocialLinkedIn()));
 
         UserEntity saved = userRepository.save(user);
+        evictAuthCache(saved.getEmail());
 
         // Record audit activity
         try {
@@ -121,6 +129,7 @@ public class ProfileServiceImpl implements ProfileService {
         user.setPasswordHash(passwordEncoder.encode(nextRaw));
         user.setPasswordUpdatedAt(Instant.now());
         userRepository.save(user);
+        evictAuthCache(user.getEmail());
 
         // Invalidate other sessions if requested
         if (request.isInvalidateOtherSessions()) {
@@ -328,6 +337,12 @@ public class ProfileServiceImpl implements ProfileService {
         return preferences;
     }
 
+    private void evictAuthCache(String email) {
+        if (email != null && !email.isBlank()) {
+            redisCacheService.evict(RedisCacheService.AUTH_USER_PREFIX + email.trim().toLowerCase());
+        }
+    }
+
     private UserEntity getUserOrThrow(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -387,6 +402,39 @@ public class ProfileServiceImpl implements ProfileService {
         defaults.put("customerFeedback", true);
         defaults.put("browserPush", false);
         return defaults;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserPreferenceResponse getUserPreferences(Long userId) {
+        return userPreferenceRepository.findByUserId(userId)
+                .map(pref -> new UserPreferenceResponse(pref.getThemeMode(), pref.getLocale()))
+                .orElseGet(() -> new UserPreferenceResponse("light", "en"));
+    }
+
+    @Override
+    @Transactional
+    public UserPreferenceResponse updateUserPreferences(Long userId, UpdateUserPreferenceRequest request) {
+        getUserOrThrow(userId);
+
+        UserPreferenceEntity pref = userPreferenceRepository.findByUserId(userId)
+                .orElseGet(() -> UserPreferenceEntity.builder()
+                        .userId(userId)
+                        .themeMode("light")
+                        .locale("en")
+                        .build());
+
+        if (request != null) {
+            if (request.getThemeMode() != null && !request.getThemeMode().isBlank()) {
+                pref.setThemeMode(request.getThemeMode().trim().toLowerCase());
+            }
+            if (request.getLocale() != null && !request.getLocale().isBlank()) {
+                pref.setLocale(request.getLocale().trim().toLowerCase());
+            }
+        }
+
+        UserPreferenceEntity saved = userPreferenceRepository.save(pref);
+        return new UserPreferenceResponse(saved.getThemeMode(), saved.getLocale());
     }
 }
 

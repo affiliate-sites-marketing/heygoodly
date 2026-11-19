@@ -15,12 +15,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import { SITE_DOMAIN } from '@/constants/site';
 import { STORAGE_KEYS } from '@/constants/ui-constants';
 import { authService } from '@/services/authService';
 
 export default function Verify2FaPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@heygoodly.com');
+  const [email, setEmail] = useState(`admin@${SITE_DOMAIN}`);
   const [code, setCode] = useState('');
   const [isBackupMode, setIsBackupMode] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(true);

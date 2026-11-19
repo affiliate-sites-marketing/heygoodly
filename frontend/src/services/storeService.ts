@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { Store, ReviewerProfile } from '@/types/deals';
+import { TtlCache } from '@/lib/utils/ttlCache';
 
 export function mapBackendStoreToStore(s: any): Store {
   const maxOfferNum = Number(s.maxOffer ?? 0);
@@ -62,8 +63,11 @@ export function mapBackendStoreToStore(s: any): Store {
 }
 
 class StoreService {
+  private readonly publicCache = new TtlCache();
+  private static readonly CACHE_TTL_MS = 30_000;
+
   /**
-   * Fetch stores directly from backend API (PostgreSQL + Redis).
+   * Fetch stores directly from backend API (PostgreSQL + Redis, with 30s client cache).
    */
   async getStores(params?: {
     category?: string;
@@ -71,6 +75,10 @@ class StoreService {
     search?: string;
     size?: number;
   }): Promise<Store[]> {
+    const cacheKey = `stores:list:${JSON.stringify(params ?? {})}`;
+    const cached = this.publicCache.get<Store[]>(cacheKey);
+    if (cached) return cached;
+
     try {
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.STORES, {
         params: {
@@ -92,7 +100,9 @@ class StoreService {
         pageData?.items ||
         (Array.isArray(pageData) ? pageData : Array.isArray(res.data) ? res.data : null);
       if (list && Array.isArray(list)) {
-        return list.map(mapBackendStoreToStore);
+        const mapped = list.map(mapBackendStoreToStore);
+        this.publicCache.set(cacheKey, mapped, StoreService.CACHE_TTL_MS);
+        return mapped;
       }
     } catch (err) {
       console.warn('Failed to fetch public stores from backend:', err);
@@ -116,6 +126,9 @@ class StoreService {
   }): Promise<{ content: Store[]; totalElements: number; totalPages: number; pageNumber: number }> {
     const page = params?.page ?? 0;
     const size = params?.size ?? 24;
+    const cacheKey = `stores:page:${JSON.stringify({ ...params, page, size })}`;
+    const cached = this.publicCache.get<{ content: Store[]; totalElements: number; totalPages: number; pageNumber: number }>(cacheKey);
+    if (cached) return cached;
 
     try {
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.STORES, {
@@ -138,12 +151,14 @@ class StoreService {
 
       const pageData = res.data?.data;
       if (pageData && Array.isArray(pageData.content)) {
-        return {
+        const result = {
           content: pageData.content.map(mapBackendStoreToStore),
           totalElements: Number(pageData.totalElements ?? pageData.content.length),
           totalPages: Math.max(1, Number(pageData.totalPages ?? 1)),
           pageNumber: Number(pageData.pageNumber ?? page),
         };
+        this.publicCache.set(cacheKey, result, StoreService.CACHE_TTL_MS);
+        return result;
       }
     } catch (err) {
       console.warn('Backend public stores API error:', err);
@@ -163,6 +178,9 @@ class StoreService {
   async getStoreBySlug(slug: string): Promise<Store | null> {
     if (!slug || !slug.trim()) return null;
     const cleanSlug = slug.trim().replace(/-store$/i, '').toLowerCase();
+    const cacheKey = `stores:slug:${cleanSlug}`;
+    const cached = this.publicCache.get<Store>(cacheKey);
+    if (cached) return cached;
 
     try {
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.STORE_DETAIL(cleanSlug), {
@@ -170,7 +188,9 @@ class StoreService {
       });
       const data = res.data?.data || res.data;
       if (data && data.id && data.name) {
-        return mapBackendStoreToStore(data);
+        const mapped = mapBackendStoreToStore(data);
+        this.publicCache.set(cacheKey, mapped, StoreService.CACHE_TTL_MS);
+        return mapped;
       }
     } catch {
       // 404 or offline -> return null cleanly
@@ -215,26 +235,31 @@ class StoreService {
 
   async createStore(payload: any): Promise<any> {
     const res = await apiClient.post(API_ENDPOINTS.ADMIN.STORES, payload);
+    this.publicCache.clear();
     return res.data?.data || res.data;
   }
 
   async updateStore(id: string | number, payload: any): Promise<any> {
     const res = await apiClient.put(API_ENDPOINTS.ADMIN.STORE_DETAIL(id), payload);
+    this.publicCache.clear();
     return res.data?.data || res.data;
   }
 
   async toggleStoreStatus(id: string | number): Promise<any> {
     const res = await apiClient.patch(API_ENDPOINTS.ADMIN.STORE_TOGGLE(id));
+    this.publicCache.clear();
     return res.data?.data || res.data;
   }
 
   async cloneStore(id: string | number): Promise<any> {
     const res = await apiClient.post(API_ENDPOINTS.ADMIN.STORE_CLONE(id));
+    this.publicCache.clear();
     return res.data?.data || res.data;
   }
 
   async deleteStore(id: string | number): Promise<void> {
     await apiClient.delete(API_ENDPOINTS.ADMIN.STORE_DETAIL(id));
+    this.publicCache.clear();
   }
 
   async searchReviewerProfiles(search = '', signal?: AbortSignal): Promise<ReviewerProfile[]> {

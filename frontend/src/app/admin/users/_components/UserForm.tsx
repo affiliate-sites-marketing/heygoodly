@@ -39,6 +39,7 @@ import ImageUpload from '@/components/admin/ImageUpload';
 import Pagination from '@/components/admin/Pagination';
 import { Badge } from '@/components/ui/Badge';
 import { ROUTES } from '@/constants/routes';
+import { SITE_DOMAIN } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { useToast } from '@/context/ToastContext';
@@ -581,7 +582,7 @@ function UserFormInner({
                       setForm({ ...form, email: e.target.value });
                       if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
                     }}
-                    placeholder="elena@heygoodly.com"
+                    placeholder={`elena@${SITE_DOMAIN}`}
                     className={`${inputClass} ${errors.email ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.email && (
@@ -708,7 +709,7 @@ function UserFormInner({
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <RotateCcw size={14} className="text-[#C62828]" />
+                    <RotateCcw size={14} className="text-brand-primary" />
                     <span>Default Password ({DEFAULT_USER_PASSWORD})</span>
                   </button>
                   <button
@@ -758,7 +759,7 @@ function UserFormInner({
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <code className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-mono text-xs font-bold text-[#C62828]">
+                        <code className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 font-mono text-xs font-bold text-brand-primary">
                           {DEFAULT_USER_PASSWORD}
                         </code>
                         <button
@@ -782,7 +783,7 @@ function UserFormInner({
                       <button
                         type="button"
                         onClick={handleResetToDefaultPassword}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold shadow-sm transition cursor-pointer"
                       >
                         <RotateCcw size={13} />
                         <span>{existing ? 'Reset to Default Password' : 'Use Default Password'}</span>
@@ -861,7 +862,7 @@ function UserFormInner({
                       <button
                         type="button"
                         onClick={handleApplyCustomPassword}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-semibold shadow-sm transition cursor-pointer"
                       >
                         <KeyRound size={13} />
                         <span>{existing ? 'Apply Custom Password' : 'Set as Initial Password'}</span>
@@ -883,7 +884,7 @@ function UserFormInner({
                     type="checkbox"
                     checked={form.mustChangePassword}
                     onChange={(e) => setForm({ ...form, mustChangePassword: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                 </label>
               </div>
@@ -1018,7 +1019,7 @@ function UserFormInner({
                         <button
                           type="button"
                           onClick={handleCreateLoginRecord}
-                          className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                          className="px-4 py-1.5 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold shadow-xs transition cursor-pointer"
                         >
                           Save Record
                         </button>
@@ -1392,7 +1393,7 @@ function UserFormInner({
                     type="checkbox"
                     checked={form.isActive}
                     onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                 </label>
 

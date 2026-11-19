@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { SITE_NAME, SITE_SLUG } from '@/constants/site';
 import {
   User,
   ShieldCheck,
@@ -167,7 +168,7 @@ function PaginationBar({
             onClick={() => onPageChange(p)}
             className={`w-7 h-7 inline-flex items-center justify-center rounded-lg text-xs font-bold transition cursor-pointer ${
               p === currentPage
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-brand-primary text-white shadow-xs'
                 : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >
@@ -582,7 +583,7 @@ export default function AdminProfilePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `heygoodly-2fa-backup-codes-${Date.now().toString().slice(-4)}.txt`;
+    a.download = `${SITE_SLUG}-2fa-backup-codes-${Date.now().toString().slice(-4)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Backup recovery codes downloaded to text file');
@@ -874,7 +875,7 @@ export default function AdminProfilePage() {
                     className="w-20 h-20 rounded-2xl object-cover ring-4 ring-indigo-50 border border-slate-100 shadow-md group-hover:opacity-95 transition"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center ring-4 ring-indigo-50 border border-slate-100 shadow-md">
+                  <div className="w-20 h-20 rounded-2xl bg-brand-primary text-white font-black text-2xl flex items-center justify-center ring-4 ring-brand-primary-soft border border-slate-100 shadow-md">
                     {(profile.fullName || 'AD').slice(0, 2).toUpperCase()}
                   </div>
                 )}
@@ -1011,7 +1012,7 @@ export default function AdminProfilePage() {
                     onClick={() => setActiveSection(tab.id as any)}
                     className={`w-full h-9 flex items-center justify-between px-3.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                       isCurrent
-                        ? 'bg-indigo-600 text-white shadow-xs'
+                        ? 'bg-brand-primary text-white shadow-xs'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
@@ -1077,7 +1078,7 @@ export default function AdminProfilePage() {
                       <button
                         type="button"
                         onClick={handleOpen2FaWizard}
-                        className="h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
+                        className="h-9 px-4 inline-flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
                       >
                         <ShieldCheck size={15} /> Enable 2FA Now
                       </button>
@@ -1131,7 +1132,7 @@ export default function AdminProfilePage() {
                     <button
                       type="submit"
                       disabled={unlocking2Fa || !unlock2FaPassword.trim()}
-                      className="w-full h-10 inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap"
+                      className="w-full h-10 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap"
                     >
                       {unlocking2Fa ? <Loader2 className="animate-spin" size={15} /> : <Lock size={15} />}
                       <span>Unlock 2FA Settings</span>
@@ -1151,7 +1152,7 @@ export default function AdminProfilePage() {
                           Your Account is Guarded by Two-Factor Authentication
                         </h3>
                         <p className="text-xs text-emerald-800 leading-relaxed">
-                          Every sign-in to HeyGoodly ProCMS requires your master password plus a rotating 6-digit numeric passcode from your authenticator app.
+                          Every sign-in to {SITE_NAME} ProCMS requires your master password plus a rotating 6-digit numeric passcode from your authenticator app.
                         </p>
                       </div>
                     </div>
@@ -1238,7 +1239,7 @@ export default function AdminProfilePage() {
                                 <div
                                   className={`w-9 h-9 rounded-xl flex items-center justify-center ${
                                     isSelected
-                                      ? 'bg-indigo-600 text-white'
+                                      ? 'bg-brand-primary text-white'
                                       : 'bg-slate-100 text-slate-600'
                                   }`}
                                 >
@@ -1297,7 +1298,7 @@ export default function AdminProfilePage() {
                               <button
                                 type="button"
                                 onClick={handleDownloadCodes}
-                                className="h-9 px-3.5 text-xs font-bold inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
+                                className="h-9 px-3.5 text-xs font-bold inline-flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
                               >
                                 <Download size={13} />
                                 <span>Download .txt</span>
@@ -1378,7 +1379,7 @@ export default function AdminProfilePage() {
                         <button
                           type="button"
                           onClick={() => toast.info('Browser WebAuthn prompt initialized. Connect YubiKey or touch Touch ID.')}
-                          className="h-9 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition cursor-pointer shadow-xs"
+                          className="h-9 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-brand-primary hover:bg-brand-primary-hover rounded-xl transition cursor-pointer shadow-xs"
                         >
                           <KeyRound size={13} /> Connect YubiKey or Touch ID
                         </button>
@@ -1542,7 +1543,7 @@ export default function AdminProfilePage() {
                 <div className="pt-4 border-t border-slate-100 flex justify-end">
                   <button
                     type="submit"
-                    className="h-9 px-5 inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
+                    className="h-9 px-5 inline-flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <Save size={14} /> Save Profile Changes
                   </button>
@@ -1625,7 +1626,7 @@ export default function AdminProfilePage() {
                     <button
                       type="submit"
                       disabled={unlockingAuth || !authUnlockPassword.trim()}
-                      className="w-full h-10 inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap"
+                      className="w-full h-10 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap"
                     >
                       {unlockingAuth ? <Loader2 className="animate-spin" size={15} /> : <Lock size={15} />}
                       <span>Verify &amp; Unlock</span>
@@ -1765,7 +1766,7 @@ export default function AdminProfilePage() {
                     </div>
                     <button
                       type="submit"
-                      className="h-9 px-5 inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
+                      className="h-9 px-5 inline-flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
                     >
                       <Lock size={14} /> Update Master Password
                     </button>
@@ -1777,7 +1778,7 @@ export default function AdminProfilePage() {
                       <ShieldCheck size={14} className="text-indigo-600" /> Cryptographic Hashing Architecture
                     </h4>
                     <p className="text-slate-500 text-[11px] leading-relaxed">
-                      HeyGoodly ProCMS utilizes the Argon2id memory-hard password hashing algorithm with unique salt per record, protecting against GPU and ASIC cracking attempts.
+                      {SITE_NAME} ProCMS utilizes the Argon2id memory-hard password hashing algorithm with unique salt per record, protecting against GPU and ASIC cracking attempts.
                     </p>
                   </div>
                 </form>
@@ -2106,7 +2107,7 @@ export default function AdminProfilePage() {
                 <div className="pt-4 border-t border-slate-100 flex justify-end">
                   <button
                     type="submit"
-                    className="h-9 px-5 inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
+                    className="h-9 px-5 inline-flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <Save size={14} /> Save Notification Rules
                   </button>
@@ -2162,7 +2163,7 @@ export default function AdminProfilePage() {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                        qrCodeUri || `otpauth://totp/HeyGoodly:${profile.email}?secret=${totpSecret}&issuer=HeyGoodly`
+                        qrCodeUri || `otpauth://totp/${SITE_NAME}:${profile.email}?secret=${totpSecret}&issuer=${SITE_NAME}`
                       )}`}
                       alt="Authenticator QR Code"
                       className="w-full h-full object-contain rounded-xl"
@@ -2188,7 +2189,7 @@ export default function AdminProfilePage() {
                 <button
                   type="button"
                   onClick={() => setWizardStep(2)}
-                  className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  className="w-full h-10 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
                   Next: Verify Passcode <ArrowRight size={14} />
                 </button>
@@ -2229,7 +2230,7 @@ export default function AdminProfilePage() {
                   <button
                     type="submit"
                     disabled={verifyingOtp || otpInput.trim().length !== 6}
-                    className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="flex-1 h-10 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     {verifyingOtp ? (
                       <>
@@ -2266,7 +2267,7 @@ export default function AdminProfilePage() {
                     setWizardOpen(false);
                     setWizardStep(1);
                   }}
-                  className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  className="w-full h-10 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
                   Done &amp; Close
                 </button>

@@ -37,7 +37,7 @@ export default function AdminHeaderBar({
     <header className="h-16 bg-white/95 backdrop-blur-md border-b border-zinc-200/80 px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-2xs z-20 sticky top-0">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs min-w-0">
-        <span className="text-[#C62828] font-bold shrink-0">HeyGoodly CMS</span>
+        <span className="text-brand-primary font-bold shrink-0">HeyGoodly CMS</span>
         <span className="text-zinc-300">/</span>
         <span className="font-semibold text-zinc-900 truncate">{pageTitle}</span>
       </div>
@@ -56,7 +56,7 @@ export default function AdminHeaderBar({
             onClick={() => setLocale('en')}
             className={`px-2 py-1 rounded-lg transition cursor-pointer ${
               locale === 'en'
-                ? 'bg-[#C62828] text-white shadow-2xs'
+                ? 'bg-brand-primary text-white shadow-2xs'
                 : 'text-zinc-600 hover:text-zinc-900'
             }`}
           >
@@ -67,7 +67,7 @@ export default function AdminHeaderBar({
             onClick={() => setLocale('vi')}
             className={`px-2 py-1 rounded-lg transition cursor-pointer ${
               locale === 'vi'
-                ? 'bg-[#C62828] text-white shadow-2xs'
+                ? 'bg-brand-primary text-white shadow-2xs'
                 : 'text-zinc-600 hover:text-zinc-900'
             }`}
           >
@@ -126,11 +126,11 @@ export default function AdminHeaderBar({
           title={locale === 'vi' ? `Tìm kiếm nhanh & Điều hướng (${shortcutTitle})` : `Quick Search & Command Palette (${shortcutTitle})`}
           aria-label={`Quick Search (${shortcutTitle})`}
         >
-          <Search size={13} className="text-zinc-500 group-hover:text-[#C62828] transition-colors shrink-0" />
+          <Search size={13} className="text-zinc-500 group-hover:text-brand-primary transition-colors shrink-0" />
           <span className="hidden sm:inline-flex items-center gap-0.5 font-mono">
             {isMac ? (
               <>
-                <Command size={11} className="group-hover:text-[#C62828] transition-colors" />
+                <Command size={11} className="group-hover:text-brand-primary transition-colors" />
                 <span className="font-bold">K</span>
               </>
             ) : (
@@ -143,7 +143,7 @@ export default function AdminHeaderBar({
         <Link
           href="/"
           target="_blank"
-          className="h-8 inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700 hover:text-[#C62828] bg-white hover:bg-rose-50/50 border border-zinc-200/80 px-3 rounded-xl transition whitespace-nowrap shadow-2xs"
+          className="h-8 inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700 hover:text-brand-primary bg-white hover:bg-brand-primary-soft/50 border border-zinc-200/80 px-3 rounded-xl transition whitespace-nowrap shadow-2xs"
         >
           <span>{t('Live Site')}</span>
           <ExternalLink size={13} className="shrink-0" />

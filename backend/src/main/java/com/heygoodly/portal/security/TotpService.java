@@ -5,6 +5,7 @@ import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import com.warrenstrange.googleauth.GoogleAuthenticatorQRGenerator;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -15,10 +16,15 @@ import java.util.List;
 public class TotpService {
 
     private final SettingService settingService;
+    private final String defaultIssuer;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public TotpService(SettingService settingService) {
+    public TotpService(
+            SettingService settingService,
+            @Value("${app.two-factor.issuer:HeyGoodlyProCMS}") String defaultIssuer
+    ) {
         this.settingService = settingService;
+        this.defaultIssuer = defaultIssuer;
     }
 
     public GoogleAuthenticatorKey generateSecretKey() {
@@ -27,7 +33,7 @@ public class TotpService {
     }
 
     public String getQrCodeUri(GoogleAuthenticatorKey credentials, String accountName) {
-        String issuer = settingService.getSettingValue("two_factor_issuer", "HeyGoodlyProCMS");
+        String issuer = settingService.getSettingValue("two_factor_issuer", defaultIssuer);
         return GoogleAuthenticatorQRGenerator.getOtpAuthTotpURL(issuer, accountName, credentials);
     }
 

@@ -2,6 +2,7 @@ package com.heygoodly.portal.modules.post.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.dto.PageResponse;
@@ -10,6 +11,7 @@ import com.heygoodly.portal.common.exception.ResourceNotFoundException;
 import com.heygoodly.portal.common.util.NullSafeUtils;
 import com.heygoodly.portal.common.util.SecurityUtils;
 import com.heygoodly.portal.common.util.SlugUtils;
+import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.category.entity.CategoryEntity;
 import com.heygoodly.portal.modules.category.repository.CategoryRepository;
 import com.heygoodly.portal.modules.post.constant.PostConstants;
@@ -49,7 +51,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -63,57 +64,80 @@ public class PostServiceImpl implements PostService {
     private final StoreRepository storeRepository;
     private final com.heygoodly.portal.modules.tag.service.TagService tagService;
     private final com.heygoodly.portal.modules.tag.repository.TagRepository tagRepository;
+    private final AuditLogService auditLogService;
     private final com.heygoodly.portal.modules.tag.repository.EntityTagRepository entityTagRepository;
     private final ObjectMapper objectMapper;
     private final com.heygoodly.portal.modules.post.mapper.PostMapper postMapper;
+    private final RedisCacheService redisCacheService;
 
     @Override
     public List<String> getTrendingTags() {
-        Set<String> seen = new LinkedHashSet<>();
+        return redisCacheService.getOrLoad(
+                RedisCacheService.POSTS_TRENDING_TAGS_KEY,
+                new TypeReference<List<String>>() {},
+                java.time.Duration.ofMinutes(5),
+                () -> {
+                    Set<String> seen = new LinkedHashSet<>();
 
-        List<String> jsonTagsList = postRepository.findActiveTagsJson();
-        if (jsonTagsList != null) {
-            for (String rawJson : jsonTagsList) {
-                List<String> parsed = parseTagsJson(rawJson);
-                for (String item : parsed) {
-                    String clean = NullSafeUtils.safeTrim(item);
-                    if (!clean.isEmpty()) {
-                        seen.add(clean);
+                    List<String> jsonTagsList = postRepository.findActiveTagsJson();
+                    if (jsonTagsList != null) {
+                        for (String rawJson : jsonTagsList) {
+                            List<String> parsed = parseTagsJson(rawJson);
+                            for (String item : parsed) {
+                                String clean = NullSafeUtils.safeTrim(item);
+                                if (!clean.isEmpty()) {
+                                    seen.add(clean);
+                                }
+                            }
+                        }
                     }
-                }
-            }
-        }
 
-        List<String> rawKeywords = postRepository.findActiveMetaKeywords();
-        if (rawKeywords != null) {
-            for (String kwStr : rawKeywords) {
-                String trimmedKw = NullSafeUtils.safeTrim(kwStr);
-                if (trimmedKw.isEmpty()) {
-                    continue;
-                }
-                String[] split = trimmedKw.split(PostConstants.KEYWORD_SPLIT_REGEX);
-                for (String part : split) {
-                    String clean = NullSafeUtils.safeTrim(part);
-                    if (!clean.isEmpty()) {
-                        seen.add(clean);
+                    List<String> rawKeywords = postRepository.findActiveMetaKeywords();
+                    if (rawKeywords != null) {
+                        for (String kwStr : rawKeywords) {
+                            String trimmedKw = NullSafeUtils.safeTrim(kwStr);
+                            if (trimmedKw.isEmpty()) {
+                                continue;
+                            }
+                            String[] split = trimmedKw.split(PostConstants.KEYWORD_SPLIT_REGEX);
+                            for (String part : split) {
+                                String clean = NullSafeUtils.safeTrim(part);
+                                if (!clean.isEmpty()) {
+                                    seen.add(clean);
+                                }
+                            }
+                        }
                     }
-                }
-            }
-        }
 
-        return seen.stream().limit(15).toList();
+                    return seen.stream().limit(15).toList();
+                }
+        );
     }
 
     @Override
     public List<PostSummaryResponse> getHomeFeatured() {
-        List<PostEntity> featured = postRepository.findFeaturedPosts(PageRequest.of(0, 4));
-        return mapToSummaryList(featured, true);
+        return redisCacheService.getOrLoad(
+                RedisCacheService.POSTS_FEATURED_KEY,
+                new TypeReference<List<PostSummaryResponse>>() {},
+                java.time.Duration.ofMinutes(2),
+                () -> {
+                    List<PostEntity> featured = postRepository.findFeaturedPosts(PageRequest.of(0, 4));
+                    return mapToSummaryList(featured, true);
+                }
+        );
     }
 
     @Override
     public List<PostSummaryResponse> getEditorPicks() {
-        List<PostEntity> picks = postRepository.findRecentPosts(PageRequest.of(0, 6));
-        return mapToSummaryList(picks, true);
+        return redisCacheService.getOrLoad(
+                RedisCacheService.POSTS_PICKS_KEY,
+                new TypeReference<List<PostSummaryResponse>>() {},
+                java.time.Duration.ofMinutes(2),
+                () -> {
+                    List<PostEntity> picks = postRepository.findRecentPosts(PageRequest.of(0, 6));
+                    return mapToSummaryList(picks, true);
+                }
+        );
     }
 
     @Override
@@ -275,7 +299,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public PostDetailResponse getPostBySlug(String slug) {
         String cleanSlug = NullSafeUtils.safeTrim(slug);
         PostEntity post = postRepository.findBySlugAndIsDeletedFalse(cleanSlug)
@@ -296,7 +320,7 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        postRepository.incrementViewCount(post.getId());
+        redisCacheService.incrementPostView(post.getId());
         return mapToDetail(post, !isStaff);
     }
 
@@ -384,11 +408,13 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PostStatsResponse getPostStats() {
-        long total = postRepository.countByIsDeletedFalse();
-        long published = postRepository.countPublishedPosts();
-        long scheduled = postRepository.countScheduledPosts();
-        long draft = postRepository.countDraftPosts();
-        long totalViews = postRepository.sumTotalViews();
+        List<Object[]> rows = postRepository.summarizePosts();
+        Object[] row = (rows != null && !rows.isEmpty()) ? rows.get(0) : null;
+        long total = (row != null && row[0] instanceof Number n) ? n.longValue() : 0L;
+        long published = (row != null && row[1] instanceof Number n) ? n.longValue() : 0L;
+        long scheduled = (row != null && row[2] instanceof Number n) ? n.longValue() : 0L;
+        long draft = (row != null && row[3] instanceof Number n) ? n.longValue() : 0L;
+        long totalViews = (row != null && row[4] instanceof Number n) ? n.longValue() : 0L;
         return new PostStatsResponse(total, published, scheduled, draft, totalViews);
     }
 
@@ -497,6 +523,10 @@ public class PostServiceImpl implements PostService {
             tagService.syncEntityTags(EntityFieldConstants.TYPE_POST, saved.getId(), normalizedTags);
         }
 
+        String createAction = PostStatus.PUBLISHED.name().equals(saved.getStatus()) ? "PUBLISH" : "CREATE";
+        auditLogService.recordAction(createAction, "posts", String.valueOf(saved.getId()), saved.getTitle(), null);
+        evictPostCaches();
+
         return mapToDetail(saved);
     }
 
@@ -506,6 +536,11 @@ public class PostServiceImpl implements PostService {
         PostEntity post = postRepository.findById(id)
                 .filter(p -> !NullSafeUtils.safeBoolean(p.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(PostConstants.ENTITY_POST, PostConstants.FIELD_ID, id));
+
+        String oldTitle = post.getTitle();
+        String oldSlug = post.getSlug();
+        String oldStatus = post.getStatus();
+        Boolean oldFeatured = post.getIsFeatured();
 
         String rawSlug = NullSafeUtils.safeTrim(request.getSlug());
         String slug = !rawSlug.isEmpty()
@@ -599,6 +634,17 @@ public class PostServiceImpl implements PostService {
         }
 
         PostEntity updated = postRepository.save(post);
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "title", "Title", oldTitle, updated.getTitle());
+        AuditLogService.appendDiff(diffs, "slug", "Slug", oldSlug, updated.getSlug());
+        AuditLogService.appendDiff(diffs, "status", "Status", oldStatus, updated.getStatus());
+        AuditLogService.appendDiff(diffs, "isFeatured", "Featured", oldFeatured, updated.getIsFeatured());
+        String updateAction = !Objects.equals(oldStatus, updated.getStatus())
+                && PostStatus.PUBLISHED.name().equals(updated.getStatus())
+                ? "PUBLISH"
+                : "UPDATE";
+        auditLogService.recordAction(updateAction, "posts", String.valueOf(updated.getId()), updated.getTitle(), diffs);
+        evictPostCaches();
         return mapToDetail(updated);
     }
 
@@ -647,6 +693,8 @@ public class PostServiceImpl implements PostService {
 
         clone.setCreatedBy(SecurityUtils.getCurrentUserEmail().orElse(AppConstants.SYSTEM_USER));
         PostEntity saved = postRepository.save(clone);
+        auditLogService.recordAction("CLONE", "posts", String.valueOf(saved.getId()), saved.getTitle(), null);
+        evictPostCaches();
         return mapToDetail(saved);
     }
 
@@ -657,6 +705,7 @@ public class PostServiceImpl implements PostService {
                 .filter(p -> !NullSafeUtils.safeBoolean(p.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(PostConstants.ENTITY_POST, PostConstants.FIELD_ID, id));
 
+        String deletedTitle = post.getTitle();
         post.setIsDeleted(true);
         post.setSlug(new StringBuilder()
                 .append(post.getSlug())
@@ -666,6 +715,8 @@ public class PostServiceImpl implements PostService {
                 .append(System.currentTimeMillis())
                 .toString());
         postRepository.save(post);
+        auditLogService.recordAction("DELETE", "posts", String.valueOf(id), deletedTitle, null);
+        evictPostCaches();
     }
 
     private Long resolveStoreId(Long storeId, String storeSlug) {
@@ -863,6 +914,13 @@ public class PostServiceImpl implements PostService {
     public void reorder(List<Long> orderedIds) {
         com.heygoodly.portal.common.util.SortOrderUtils.reorderEntities(
                 orderedIds, postRepository, PostEntity::getId, PostEntity::setSortOrder);
+        evictPostCaches();
+    }
+
+    private void evictPostCaches() {
+        redisCacheService.evictByPrefix(RedisCacheService.POSTS_PUBLIC_PREFIX);
+        redisCacheService.evictByPrefix(RedisCacheService.CATEGORIES_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
     }
 
     private String serializeJson(Object value) {

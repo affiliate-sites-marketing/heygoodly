@@ -1,5 +1,6 @@
 package com.heygoodly.portal.modules.role.service.impl;
 
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.dto.PageResponse;
@@ -8,6 +9,7 @@ import com.heygoodly.portal.common.exception.DuplicateResourceException;
 import com.heygoodly.portal.common.exception.ResourceNotFoundException;
 import com.heygoodly.portal.common.util.NullSafeUtils;
 import com.heygoodly.portal.common.util.SlugUtils;
+import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.role.dto.request.RoleRequest;
 import com.heygoodly.portal.modules.role.dto.response.PermissionResponse;
 import com.heygoodly.portal.modules.role.dto.response.RoleResponse;
@@ -29,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +49,8 @@ public class RoleServiceImpl implements RoleService {
     private final PermissionRepository permissionRepository;
     private final UserRepository userRepository;
     private final RoleMapper roleMapper;
+    private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
 
     @Override
     @Transactional(readOnly = true)
@@ -123,6 +128,13 @@ public class RoleServiceImpl implements RoleService {
                 .build();
 
         RoleEntity saved = roleRepository.save(role);
+        auditLogService.recordAction(
+                "RBAC_CREATE",
+                "roles",
+                String.valueOf(saved.getId()),
+                saved.getName(),
+                null
+        );
         log.info("Successfully created role id={}", saved.getId());
         return roleMapper.toRoleResponse(saved, 0L);
     }
@@ -137,6 +149,12 @@ public class RoleServiceImpl implements RoleService {
         if (RoleCode.ADMIN.getSlug().equalsIgnoreCase(role.getSlug()) || RoleCode.SUPER_ADMIN.getSlug().equalsIgnoreCase(role.getSlug())) {
             throw new BadRequestException("Super Administrator permissions are locked and cannot be modified.");
         }
+
+        String oldName = role.getName();
+        String oldDesc = role.getDescription();
+        String oldPerms = role.getPermissions() != null
+                ? role.getPermissions().stream().map(PermissionEntity::getCode).sorted().collect(Collectors.joining(", "))
+                : "";
 
         if (Boolean.TRUE.equals(role.getIsSystem())) {
             role.setDescription(NullSafeUtils.safeTrim(request.getDescription()));
@@ -158,6 +176,23 @@ public class RoleServiceImpl implements RoleService {
         }
 
         RoleEntity updated = roleRepository.save(role);
+        redisCacheService.evictByPrefix(RedisCacheService.AUTH_USER_PREFIX);
+        String newPerms = updated.getPermissions() != null
+                ? updated.getPermissions().stream().map(PermissionEntity::getCode).sorted().collect(Collectors.joining(", "))
+                : "";
+
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "name", "Role Name", oldName, updated.getName());
+        AuditLogService.appendDiff(diffs, "description", "Description", oldDesc, updated.getDescription());
+        AuditLogService.appendDiff(diffs, "permissions", "RBAC Permissions", oldPerms, newPerms);
+        auditLogService.recordAction(
+                "RBAC_CHANGE",
+                "roles",
+                String.valueOf(updated.getId()),
+                updated.getName(),
+                diffs
+        );
+
         long count = userRepository.countByRoleIdAndIsDeletedFalse(id);
         log.info("Successfully updated role id={}", updated.getId());
         return roleMapper.toRoleResponse(updated, count);
@@ -180,7 +215,10 @@ public class RoleServiceImpl implements RoleService {
                     String.format("Cannot delete role assigned to %d active user(s).", userCount));
         }
 
+        String roleName = role.getName();
         roleRepository.delete(role);
+        redisCacheService.evictByPrefix(RedisCacheService.AUTH_USER_PREFIX);
+        auditLogService.recordAction("RBAC_DELETE", "roles", String.valueOf(id), roleName, null);
         log.info("Successfully deleted role id={}", id);
     }
 

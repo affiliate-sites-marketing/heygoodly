@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
+import { SITE_DOMAIN, SITE_NAME } from '@/constants/site';
 
 export interface SystemSettingsMap {
   [key: string]: string;
@@ -7,14 +8,17 @@ export interface SystemSettingsMap {
 
 export const BASELINE_FACTORY_SETTINGS: SystemSettingsMap = {
   // Brand & Identity
-  site_name: 'HeyGoodly',
+  site_name: SITE_NAME,
   site_slogan: 'Coupon Codes & Honest Tech Reviews',
-  contact_email: 'contact@heygoodly.com',
+  contact_email: `contact@${SITE_DOMAIN}`,
   contact_hotline: '',
   contact_address: '',
   site_logo: '',
   site_favicon: '',
-  footer_copyright: '© 2026 HeyGoodly. All rights reserved.',
+  footer_copyright: `© 2026 ${SITE_NAME}. All rights reserved.`,
+  brand_theme_preset: 'crimson',
+  brand_primary_color: '#C62828',
+  brand_hover_color: '#B71C1C',
   holiday_theme_mode: 'off',
   holiday_theme_manual: 'none',
   holiday_effects_enabled: 'true',
@@ -22,12 +26,12 @@ export const BASELINE_FACTORY_SETTINGS: SystemSettingsMap = {
   holiday_custom_rules: '[]',
 
   // SEO & Verification
-  meta_title: 'HeyGoodly - Latest Deals, Verified Coupons & Shopping Reviews',
+  meta_title: `${SITE_NAME} - Latest Deals, Verified Coupons & Shopping Reviews`,
   meta_description: 'Discover verified promo codes, discounts, exclusive deals, and honest shopping reviews to save more every day.',
   google_meta: '',
   bing_meta: '',
   custom_head_code: '',
-  canonical_url: 'https://heygoodly.com',
+  canonical_url: `https://${SITE_DOMAIN}`,
   og_image: '',
   no_index: 'false',
 

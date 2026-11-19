@@ -46,7 +46,7 @@ export default function AdminFormPage({
         <div className="space-y-1.5">
           <Link
             href={backHref}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#C62828] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-brand-primary transition-colors"
           >
             <ArrowLeft size={14} /> {t(backLabel)}
           </Link>
@@ -66,7 +66,7 @@ export default function AdminFormPage({
             type="submit"
             form={formId}
             formNoValidate
-            className="h-9 px-5 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-[#C62828] hover:bg-[#B71C1C] text-white rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            className="h-9 px-5 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
           >
             <Save size={14} /> {t(submitLabel)}
           </button>
@@ -124,7 +124,7 @@ export function FormNotFound({ backHref, entity }: { backHref: string; entity: s
       <p className="text-xs text-slate-500">The record may have been deleted or the link is invalid.</p>
       <Link
         href={backHref}
-        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-[#C62828] hover:bg-[#B71C1C] text-white rounded-xl"
+        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl"
       >
         <ArrowLeft size={14} /> Back to list
       </Link>
@@ -133,6 +133,6 @@ export function FormNotFound({ backHref, entity }: { backHref: string; entity: s
 }
 
 export const inputClass =
-  'w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] transition';
+  'w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition';
 
 export const labelClass = 'text-xs font-bold text-slate-700';

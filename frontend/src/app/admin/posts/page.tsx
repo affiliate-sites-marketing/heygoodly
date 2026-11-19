@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { SITE_NAME } from '@/constants/site';
 import {
   BookOpen,
   Plus,
@@ -192,7 +193,7 @@ function AdminPostsContent() {
         category: p.categoryName || 'General',
         categoryId: p.categoryId ? Number(p.categoryId) : undefined,
         author: {
-          name: p.authorName || 'HeyGoodly Editorial',
+          name: p.authorName || `${SITE_NAME} Editorial`,
           role: p.authorRole || '',
           avatar: p.authorAvatar || '',
         },
@@ -373,7 +374,7 @@ function AdminPostsContent() {
         {hasPermission('post.create') && (
           <Link
             href={ROUTES.ADMIN.POST_CREATE}
-            className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
           >
             <Plus size={16} /> Write New Article
           </Link>
@@ -458,7 +459,7 @@ function AdminPostsContent() {
             onClick={() => handleFeaturedChange(featuredFilter === 'FEATURED' ? 'ALL' : 'FEATURED')}
             className={`px-3 py-1 rounded-lg font-semibold transition text-[11px] cursor-pointer ${
               featuredFilter === 'FEATURED'
-                ? 'bg-[#C62828] text-white shadow-2xs'
+                ? 'bg-brand-primary text-white shadow-2xs'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -499,7 +500,7 @@ function AdminPostsContent() {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-[#C62828] transition-colors">
+                    <span className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-brand-primary transition-colors">
                       {art.title}
                     </span>
                     {art.featured && (

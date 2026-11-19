@@ -73,7 +73,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLogEntity, Long>,
             Pageable pageable
     );
 
-    @Query("SELECT COUNT(a) FROM AuditLogEntity a WHERE LOWER(a.action) LIKE '%delete%' OR LOWER(a.action) LIKE '%rbac%' OR LOWER(a.action) LIKE '%security%' OR LOWER(a.action) LIKE '%lock%'")
+    @Query("SELECT COUNT(a) FROM AuditLogEntity a WHERE LOWER(a.action) LIKE '%delete%' OR LOWER(a.action) LIKE '%rbac%' OR LOWER(a.action) LIKE '%security%' OR LOWER(a.action) LIKE '%lock%' OR LOWER(a.action) LIKE '%password%' OR LOWER(a.action) LIKE '%2fa%'")
     long countSensitiveActions();
 
     @Query("SELECT COUNT(DISTINCT a.userEmail) FROM AuditLogEntity a WHERE a.userEmail IS NOT NULL AND a.userEmail <> ''")

@@ -68,6 +68,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost' }}
             NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || 'http://localhost' }}
+            NEXT_PUBLIC_SITE_NAME=${{ vars.NEXT_PUBLIC_SITE_NAME || 'HeyGoodly' }}
           tags: |
             ${{ env.REGISTRY }}/${{ steps.repo.outputs.owner_repo }}-frontend:latest
             ${{ env.REGISTRY }}/${{ steps.repo.outputs.owner_repo }}-frontend:${{ github.sha }}

@@ -1,11 +1,14 @@
 package com.heygoodly.portal.modules.menu.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.dto.PageResponse;
 import com.heygoodly.portal.common.exception.BadRequestException;
 import com.heygoodly.portal.common.exception.ResourceNotFoundException;
 import com.heygoodly.portal.common.util.NullSafeUtils;
+import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.menu.dto.request.MenuRequest;
 import com.heygoodly.portal.modules.menu.dto.response.MenuResponse;
 import com.heygoodly.portal.modules.menu.entity.MenuEntity;
@@ -20,8 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
@@ -31,14 +36,23 @@ public class MenuServiceImpl implements MenuService {
 
     private final MenuRepository menuRepository;
     private final MenuMapper menuMapper;
+    private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
 
     @Override
     @Transactional(readOnly = true)
     public List<MenuResponse> getPublicMenus(String position) {
         String pos = StringUtils.hasText(position) ? position.toLowerCase().trim() : AppConstants.DEFAULT_MENU_POSITION;
-        log.info("Fetching public menus for position: {}", pos);
-        List<MenuEntity> list = menuRepository.findByPositionAndIsActiveTrueOrderBySortOrderAsc(pos);
-        return menuMapper.buildTree(list);
+        return redisCacheService.getOrLoad(
+                RedisCacheService.MENUS_PUBLIC_PREFIX + pos,
+                new TypeReference<List<MenuResponse>>() {},
+                java.time.Duration.ofMinutes(5),
+                () -> {
+                    log.info("Fetching public menus for position: {}", pos);
+                    List<MenuEntity> list = menuRepository.findByPositionAndIsActiveTrueOrderBySortOrderAsc(pos);
+                    return menuMapper.buildTree(list);
+                }
+        );
     }
 
     @Override
@@ -93,6 +107,9 @@ public class MenuServiceImpl implements MenuService {
                 .build();
 
         MenuEntity saved = menuRepository.save(menu);
+        redisCacheService.evictByPrefix(RedisCacheService.MENUS_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        auditLogService.recordAction("CREATE", "menus", String.valueOf(saved.getId()), saved.getTitle(), null);
         log.info("Successfully created menu item id={}", saved.getId());
         return menuMapper.toResponse(saved, Collections.emptyList());
     }
@@ -103,6 +120,11 @@ public class MenuServiceImpl implements MenuService {
         log.info("Updating menu item id={}", id);
         MenuEntity entity = menuRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_MENU, EntityFieldConstants.ID, id));
+
+        String oldTitle = entity.getTitle();
+        String oldPosition = entity.getPosition();
+        String oldTargetValue = entity.getTargetValue();
+        Boolean oldActive = entity.getIsActive();
 
         MenuEntity parent = null;
         if (Objects.nonNull(request.getParentId())) {
@@ -127,6 +149,14 @@ public class MenuServiceImpl implements MenuService {
         }
 
         MenuEntity updated = menuRepository.save(entity);
+        redisCacheService.evictByPrefix(RedisCacheService.MENUS_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "title", "Menu Title", oldTitle, updated.getTitle());
+        AuditLogService.appendDiff(diffs, "position", "Position", oldPosition, updated.getPosition());
+        AuditLogService.appendDiff(diffs, "targetValue", "Target URL/Slug", oldTargetValue, updated.getTargetValue());
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, updated.getIsActive());
+        auditLogService.recordAction("UPDATE", "menus", String.valueOf(updated.getId()), updated.getTitle(), diffs);
         log.info("Successfully updated menu item id={}", updated.getId());
         return menuMapper.toResponse(updated, Collections.emptyList());
     }
@@ -137,7 +167,11 @@ public class MenuServiceImpl implements MenuService {
         log.info("Deleting menu item id={}", id);
         MenuEntity entity = menuRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_MENU, EntityFieldConstants.ID, id));
+        String deletedTitle = entity.getTitle();
         menuRepository.delete(entity);
+        redisCacheService.evictByPrefix(RedisCacheService.MENUS_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        auditLogService.recordAction("DELETE", "menus", String.valueOf(id), deletedTitle, null);
         log.info("Successfully deleted menu item id={}", id);
     }
 }

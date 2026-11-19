@@ -56,7 +56,7 @@ export default function CategoriesDirectoryPage() {
 
         {/* Header Banner */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-8 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#c62828] uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-xs font-bold text-brand-primary uppercase tracking-widest">
             <Layers size={16} /> Article Categories &amp; Editorial Taxonomy
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -74,7 +74,7 @@ export default function CategoriesDirectoryPage() {
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Filter article categories..."
-                className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828]"
+                className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
               />
             </div>
             <div className="text-xs text-slate-500 font-semibold shrink-0">
@@ -86,7 +86,7 @@ export default function CategoriesDirectoryPage() {
         {/* Categories Grid */}
         {isLoading ? (
           <div className="py-20 text-center text-slate-400 font-medium text-sm flex flex-col items-center justify-center gap-2">
-            <Loader2 size={24} className="animate-spin text-[#c62828]" />
+            <Loader2 size={24} className="animate-spin text-brand-primary" />
             <p>Loading editorial categories...</p>
           </div>
         ) : categories.length === 0 ? (
@@ -100,7 +100,7 @@ export default function CategoriesDirectoryPage() {
               <button
                 type="button"
                 onClick={() => handleSearchChange('')}
-                className="text-xs font-bold text-[#c62828] hover:underline cursor-pointer"
+                className="text-xs font-bold text-brand-primary hover:underline cursor-pointer"
               >
                 Clear search
               </button>
@@ -112,12 +112,12 @@ export default function CategoriesDirectoryPage() {
               {categories.map((cat) => (
                 <div
                   key={cat.id}
-                  className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-red-300 transition-all flex flex-col justify-between group"
+                  className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-brand-primary transition-all flex flex-col justify-between group"
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       {cat.image ? (
-                        <div className="w-14 h-14 rounded-2xl overflow-hidden border border-red-100 bg-red-50 shrink-0">
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-primary-border bg-brand-primary-soft shrink-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={cat.image}
@@ -127,11 +127,11 @@ export default function CategoriesDirectoryPage() {
                           />
                         </div>
                       ) : cat.icon ? (
-                        <span className="w-14 h-14 flex items-center justify-center text-3xl bg-red-50 rounded-2xl border border-red-100 shrink-0">
+                        <span className="w-14 h-14 flex items-center justify-center text-3xl bg-brand-primary-soft rounded-2xl border border-brand-primary-border shrink-0">
                           {cat.icon}
                         </span>
                       ) : (
-                        <span className="w-14 h-14 flex items-center justify-center bg-red-50 text-[#c62828] rounded-2xl border border-red-100 shrink-0">
+                        <span className="w-14 h-14 flex items-center justify-center bg-brand-primary-soft text-brand-primary rounded-2xl border border-brand-primary-border shrink-0">
                           <Layers size={26} />
                         </span>
                       )}
@@ -143,7 +143,7 @@ export default function CategoriesDirectoryPage() {
                     </div>
 
                     <div>
-                      <h2 className="text-lg font-bold text-slate-900 group-hover:text-[#c62828] transition-colors">
+                      <h2 className="text-lg font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
                         <Link href={ROUTES.PUBLIC.CATEGORY_DETAIL(cat.slug)}>
                           {cat.name}
                         </Link>
@@ -159,7 +159,7 @@ export default function CategoriesDirectoryPage() {
                   <div className="pt-6 border-t border-slate-100 mt-6 flex items-center justify-between">
                     <Link
                       href={ROUTES.PUBLIC.CATEGORY_DETAIL(cat.slug)}
-                      className="text-xs font-bold text-[#c62828] group-hover:text-red-700 inline-flex items-center gap-1.5"
+                      className="text-xs font-bold text-brand-primary group-hover:text-brand-primary inline-flex items-center gap-1.5"
                     >
                       View Category Articles <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                     </Link>

@@ -139,7 +139,7 @@ export default function StoresDirectoryPage() {
 
         {/* Header Banner */}
         <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-2xs space-y-5">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#c62828] uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-xs font-bold text-brand-primary uppercase tracking-widest">
             <StoreIcon size={16} /> Official Merchant Directory &amp; Brand Partners
           </div>
           <h1 className="text-2xl sm:text-4xl font-black text-slate-950 tracking-tight">
@@ -158,7 +158,7 @@ export default function StoresDirectoryPage() {
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search partner stores..."
-                className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828]"
+                className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
               />
             </div>
             <div className="text-xs text-slate-500 font-semibold shrink-0">
@@ -171,7 +171,7 @@ export default function StoresDirectoryPage() {
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-500 text-[11px] shrink-0">
-                  <Layers size={13} className="text-[#c62828]" />
+                  <Layers size={13} className="text-brand-primary" />
                   <span>Category</span>
                 </div>
 
@@ -183,12 +183,12 @@ export default function StoresDirectoryPage() {
                       key={cSlug}
                       type="button"
                       onClick={() => removeCategory(cSlug)}
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-[#c62828] border border-red-200 hover:bg-red-100 transition cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-primary-soft text-brand-primary border border-brand-primary-border hover:bg-brand-primary-soft-hover transition cursor-pointer"
                       title={`Remove ${name}`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
                       <span>{name}</span>
-                      <X size={11} className="ml-0.5 text-red-500" />
+                      <X size={11} className="ml-0.5 text-brand-primary" />
                     </button>
                   );
                 })}
@@ -197,7 +197,7 @@ export default function StoresDirectoryPage() {
                   <button
                     type="button"
                     onClick={clearAllCategories}
-                    className="text-[11px] font-semibold text-[#c62828] hover:underline cursor-pointer ml-1"
+                    className="text-[11px] font-semibold text-brand-primary hover:underline cursor-pointer ml-1"
                   >
                     Clear all ({selectedCategories.length})
                   </button>
@@ -217,7 +217,7 @@ export default function StoresDirectoryPage() {
                   onClick={clearAllCategories}
                   className={`text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer shrink-0 ${
                     selectedCategories.length === 0
-                      ? 'bg-[#c62828] text-white shadow-2xs'
+                      ? 'bg-brand-primary text-white shadow-2xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -234,7 +234,7 @@ export default function StoresDirectoryPage() {
                       onClick={() => toggleCategory(cat.slug)}
                       className={`text-xs font-bold px-3.5 py-1.5 rounded-xl transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
                         isSelected
-                          ? 'bg-[#c62828] text-white shadow-2xs ring-2 ring-red-600/20'
+                          ? 'bg-brand-primary text-white shadow-2xs ring-2 ring-brand-primary/20'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
@@ -265,17 +265,17 @@ export default function StoresDirectoryPage() {
                     }`}
                     aria-expanded={isCategoryPopoverOpen}
                   >
-                    <Layers size={13} className={selectedCategories.length > 0 ? 'text-red-400' : 'text-[#c62828]'} />
+                    <Layers size={13} className={selectedCategories.length > 0 ? 'text-brand-primary-light' : 'text-brand-primary'} />
                     <span>All Categories ({categories.length})</span>
                     {selectedCategories.length > 0 && (
-                      <span className="w-4 h-4 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                      <span className="w-4 h-4 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                         {selectedCategories.length}
                       </span>
                     )}
                     <ChevronDown
                       size={13}
                       className={`transition-transform duration-200 ${
-                        isCategoryPopoverOpen ? 'rotate-180 text-red-500' : 'text-slate-400'
+                        isCategoryPopoverOpen ? 'rotate-180 text-brand-primary' : 'text-slate-400'
                       }`}
                     />
                   </button>
@@ -290,7 +290,7 @@ export default function StoresDirectoryPage() {
                         value={categorySearch}
                         onChange={(e) => setCategorySearch(e.target.value)}
                         placeholder={`Search ${categories.length} categories...`}
-                        className="w-full bg-slate-50 text-slate-800 placeholder:text-slate-400 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828] transition"
+                        className="w-full bg-slate-50 text-slate-800 placeholder:text-slate-400 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition"
                         autoFocus
                       />
                       {categorySearch && (
@@ -311,7 +311,7 @@ export default function StoresDirectoryPage() {
                         <button
                           type="button"
                           onClick={clearAllCategories}
-                          className="text-[#c62828] hover:underline font-bold cursor-pointer"
+                          className="text-brand-primary hover:underline font-bold cursor-pointer"
                         >
                           Reset to All
                         </button>
@@ -326,7 +326,7 @@ export default function StoresDirectoryPage() {
                         onClick={clearAllCategories}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer text-left ${
                           selectedCategories.length === 0
-                            ? 'bg-red-50 text-[#c62828] font-bold border border-red-200 shadow-2xs'
+                            ? 'bg-brand-primary-soft text-brand-primary font-bold border border-brand-primary-border shadow-2xs'
                             : 'text-slate-700 hover:bg-slate-100 border border-transparent'
                         }`}
                       >
@@ -338,7 +338,7 @@ export default function StoresDirectoryPage() {
                           <div
                             className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
                               selectedCategories.length === 0
-                                ? 'bg-[#c62828] border-[#c62828] text-white'
+                                ? 'bg-brand-primary border-brand-primary text-white'
                                 : 'border-slate-300'
                             }`}
                           >
@@ -358,19 +358,19 @@ export default function StoresDirectoryPage() {
                             onClick={() => toggleCategory(cat.slug)}
                             className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer text-left ${
                               isSel
-                                ? 'bg-red-50 text-[#c62828] font-bold border border-red-200 shadow-2xs'
+                                ? 'bg-brand-primary-soft text-brand-primary font-bold border border-brand-primary-border shadow-2xs'
                                 : 'text-slate-700 hover:bg-slate-100 border border-transparent'
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              {cat.icon ? <span className="text-sm">{cat.icon}</span> : <span className="w-2 h-2 rounded-full bg-[#c62828]/80 shrink-0" />}
+                              {cat.icon ? <span className="text-sm">{cat.icon}</span> : <span className="w-2 h-2 rounded-full bg-brand-primary/80 shrink-0" />}
                               <span className="truncate">{cat.name}</span>
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0 ml-2">
                               {typeof cat.storeCount === 'number' && cat.storeCount > 0 && (
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                  isSel ? 'bg-red-200 text-red-800' : 'bg-slate-100 text-slate-500'
+                                  isSel ? 'bg-brand-primary-soft-hover text-brand-primary-active' : 'bg-slate-100 text-slate-500'
                                 }`}>
                                   {cat.storeCount}
                                 </span>
@@ -378,7 +378,7 @@ export default function StoresDirectoryPage() {
                               <div
                                 className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
                                   isSel
-                                    ? 'bg-[#c62828] border-[#c62828] text-white'
+                                    ? 'bg-brand-primary border-brand-primary text-white'
                                     : 'border-slate-300'
                                 }`}
                               >
@@ -400,7 +400,7 @@ export default function StoresDirectoryPage() {
         {/* Stores Grid */}
         {isLoading ? (
           <div className="py-20 text-center text-slate-400 font-medium text-sm flex flex-col items-center justify-center gap-2">
-            <Loader2 size={24} className="animate-spin text-[#c62828]" />
+            <Loader2 size={24} className="animate-spin text-brand-primary" />
             <p>Loading partner stores...</p>
           </div>
         ) : stores.length === 0 ? (
@@ -417,7 +417,7 @@ export default function StoresDirectoryPage() {
                   setSearch('');
                   clearAllCategories();
                 }}
-                className="text-xs font-bold text-[#c62828] hover:underline cursor-pointer"
+                className="text-xs font-bold text-brand-primary hover:underline cursor-pointer"
               >
                 Clear filters
               </button>
@@ -453,7 +453,7 @@ export default function StoresDirectoryPage() {
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
                         {store.category}
                       </span>
-                      <h3 className="font-black text-slate-900 text-lg leading-tight group-hover:text-[#c62828] transition truncate">
+                      <h3 className="font-black text-slate-900 text-lg leading-tight group-hover:text-brand-primary transition truncate">
                         {store.name}
                       </h3>
 
@@ -476,7 +476,7 @@ export default function StoresDirectoryPage() {
                   {/* Badges: Max Discount & Active Coupons */}
                   <div className="flex items-center gap-2 flex-wrap">
                     {store.maxDiscount && (
-                      <span className="inline-flex items-center gap-1 text-xs font-black text-[#c62828] bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg">
+                      <span className="inline-flex items-center gap-1 text-xs font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-1 rounded-lg">
                         <Tag size={12} /> {store.maxDiscount}
                       </span>
                     )}
@@ -494,7 +494,7 @@ export default function StoresDirectoryPage() {
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                     <Link
                       href={ROUTES.PUBLIC.STORE_DETAIL(store.slug)}
-                      className="w-full py-2.5 bg-slate-900 hover:bg-[#c62828] text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 text-center shadow-2xs"
+                      className="w-full py-2.5 bg-slate-900 hover:bg-brand-primary text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 text-center shadow-2xs"
                     >
                       <span>View Coupons &amp; Deals</span>
                       <ArrowRight size={13} />

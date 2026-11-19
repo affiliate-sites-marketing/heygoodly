@@ -75,7 +75,7 @@ export function useAdminCounts(): AdminCounts {
       });
     });
 
-    dashboardService.getStats(true).then((data) => {
+    dashboardService.getStats(false).then((data) => {
       if (data) {
         setCounts({
           storesCount: data.activeStoresCount || 0,

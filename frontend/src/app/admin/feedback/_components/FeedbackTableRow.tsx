@@ -36,8 +36,8 @@ export default function FeedbackTableRow({
               <CheckCircle2 size={13} className="text-slate-400" /> Read
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[#C62828] font-bold text-[10px] bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C62828] animate-pulse" /> New
+            <span className="inline-flex items-center gap-1 text-brand-primary font-bold text-[10px] bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" /> New
             </span>
           )}
         </button>
@@ -53,7 +53,7 @@ export default function FeedbackTableRow({
       <td className="py-3.5 px-4 max-w-md">
         <p
           onClick={() => onSelectMessage(item)}
-          className="text-xs text-slate-700 truncate cursor-pointer hover:text-[#C62828]"
+          className="text-xs text-slate-700 truncate cursor-pointer hover:text-brand-primary"
         >
           {item.message}
         </p>

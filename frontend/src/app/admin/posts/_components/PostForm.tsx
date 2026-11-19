@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { SITE_NAME } from '@/constants/site';
 import Image from 'next/image';
 import {
   Edit2,
@@ -170,7 +171,7 @@ function PostFormContent({ id }: { id?: string }) {
             category: data.categoryName || 'General',
             categoryId: data.categoryId ? Number(data.categoryId) : undefined,
             author: {
-              name: data.authorName || 'HeyGoodly Editorial',
+              name: data.authorName || `${SITE_NAME} Editorial`,
               role: data.authorRole || 'Editorial Reviewer',
               avatar: data.authorAvatar || '',
             },
@@ -250,7 +251,7 @@ function PostFormContent({ id }: { id?: string }) {
         showGuaranteeCard: existing.sidebarConfig?.showGuaranteeCard !== false,
         ctaText: existing.sidebarConfig?.ctaText || '',
         brandDescription: existing.sidebarConfig?.brandDescription || '',
-        guaranteeTitle: existing.sidebarConfig?.guaranteeTitle || 'HeyGoodly Testing Guarantee',
+        guaranteeTitle: existing.sidebarConfig?.guaranteeTitle || `${SITE_NAME} Testing Guarantee`,
         guaranteeText:
           existing.sidebarConfig?.guaranteeText ||
           'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.',
@@ -304,7 +305,7 @@ function PostFormContent({ id }: { id?: string }) {
         showGuaranteeCard: true,
         ctaText: '',
         brandDescription: '',
-        guaranteeTitle: 'HeyGoodly Testing Guarantee',
+        guaranteeTitle: `${SITE_NAME} Testing Guarantee`,
         guaranteeText:
           'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.',
       };
@@ -525,7 +526,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       showGuaranteeCard: form.showGuaranteeCard,
       ctaText: form.ctaText.trim(),
       brandDescription: form.brandDescription.trim(),
-      guaranteeTitle: form.guaranteeTitle.trim() || 'HeyGoodly Testing Guarantee',
+      guaranteeTitle: form.guaranteeTitle.trim() || `${SITE_NAME} Testing Guarantee`,
       guaranteeText:
         form.guaranteeText.trim() ||
         'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.',
@@ -608,7 +609,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
         onClick={() => setActiveTab('preview')}
         className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
           activeTab === 'preview'
-            ? 'bg-[#C62828] text-white shadow-2xs'
+            ? 'bg-brand-primary text-white shadow-2xs'
             : 'text-slate-600 hover:text-slate-900'
         }`}
       >
@@ -851,7 +852,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     type="checkbox"
                     checked={form.featured}
                     onChange={(e) => setForm({ ...form, featured: e.target.checked })}
-                    className="rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                    className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                   <span className="text-xs font-bold text-slate-800">
                     Feature on Homepage Hero / Spotlight
@@ -1016,7 +1017,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     {currentTagList.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-rose-50 text-[#C62828] border border-rose-200 shadow-2xs"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-rose-50 text-brand-primary border border-rose-200 shadow-2xs"
                       >
                         <span>#{tag}</span>
                         <button
@@ -1083,7 +1084,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                               onClick={() => toggleTag(item.name || item.slug)}
                               className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-2xs hover:scale-105 active:scale-95 ${
                                 isSelected
-                                  ? 'bg-rose-600 text-white border border-rose-600 font-bold ring-1 ring-rose-600/30'
+                                  ? 'bg-brand-primary text-white border border-brand-primary font-bold ring-1 ring-brand-primary/30'
                                   : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
                               }`}
                             >
@@ -1105,7 +1106,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                               toggleTag(tagSearchQuery);
                               setTagSearchQuery('');
                             }}
-                            className="text-rose-600 font-bold hover:underline cursor-pointer"
+                            className="text-brand-primary font-bold hover:underline cursor-pointer"
                           >
                             + Add #{tagSearchQuery} as new tag
                           </button>
@@ -1124,7 +1125,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
               title="Right Sidebar & Affiliate Store Configuration"
               description="Configure the partner store, active promo codes, related reviews, and editorial guarantee displayed in the article right sidebar"
               headerRight={
-                <span className="text-[11px] font-bold text-[#C62828] bg-red-50 border border-red-200 px-3 py-1 rounded-xl flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-3 py-1 rounded-xl flex items-center gap-1.5">
                   <PanelRight size={13} />
                   <span>Right Sidebar Config</span>
                 </span>
@@ -1208,11 +1209,11 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           type="checkbox"
                           checked={form.showBrandCard}
                           onChange={(e) => setForm({ ...form, showBrandCard: e.target.checked })}
-                          className="mt-0.5 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                          className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                         />
                         <div>
                           <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <StoreIcon size={13} className="text-[#C62828]" />
+                            <StoreIcon size={13} className="text-brand-primary" />
                             <span>1. Brand Deals Card</span>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-0.5">
@@ -1226,11 +1227,11 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           type="checkbox"
                           checked={form.showStoreCoupons}
                           onChange={(e) => setForm({ ...form, showStoreCoupons: e.target.checked })}
-                          className="mt-0.5 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                          className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                         />
                         <div>
                           <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <Tag size={13} className="text-[#C62828]" />
+                            <Tag size={13} className="text-brand-primary" />
                             <span>2. Active Promo Codes</span>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-0.5">
@@ -1244,11 +1245,11 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           type="checkbox"
                           checked={form.showRelatedReviews}
                           onChange={(e) => setForm({ ...form, showRelatedReviews: e.target.checked })}
-                          className="mt-0.5 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                          className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                         />
                         <div>
                           <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <BookOpen size={13} className="text-[#C62828]" />
+                            <BookOpen size={13} className="text-brand-primary" />
                             <span>3. Related Lab Reviews</span>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-0.5">
@@ -1262,7 +1263,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           type="checkbox"
                           checked={form.showGuaranteeCard}
                           onChange={(e) => setForm({ ...form, showGuaranteeCard: e.target.checked })}
-                          className="mt-0.5 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                          className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                         />
                         <div>
                           <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -1286,7 +1287,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           type="text"
                           value={form.guaranteeTitle}
                           onChange={(e) => setForm({ ...form, guaranteeTitle: e.target.value })}
-                          placeholder="HeyGoodly Testing Guarantee"
+                          placeholder={`${SITE_NAME} Testing Guarantee`}
                           className={inputClass}
                         />
                       </div>
@@ -1328,7 +1329,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                         )}
                       </div>
                       <div className="space-y-1">
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-red-700 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full tracking-widest">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded-full tracking-widest">
                           <Sparkles size={10} /> Brand Deals • Up to {previewStoreDiscount}
                         </span>
                         <h4 className="font-black text-sm text-slate-900">{previewStoreName}</h4>
@@ -1342,7 +1343,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
                         </p>
                       </div>
-                      <div className="w-full py-2 bg-red-700 text-white font-black text-[11px] rounded-lg">
+                      <div className="w-full py-2 bg-brand-primary text-white font-black text-[11px] rounded-lg">
                         {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
                       </div>
                     </div>
@@ -1352,12 +1353,12 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs space-y-2">
                       <div className="flex items-center justify-between text-xs font-black text-slate-900">
                         <span className="flex items-center gap-1.5">
-                          <Tag size={13} className="text-red-700" />
+                          <Tag size={13} className="text-brand-primary" />
                           Active {previewStoreName} Codes
                         </span>
                       </div>
                       <div className="p-2 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-[11px]">
-                        <span className="font-black text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">
+                        <span className="font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-1.5 py-0.5 rounded">
                           {previewStoreDiscount}
                         </span>
                         <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2 py-0.5 rounded">
@@ -1371,7 +1372,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     <div className="bg-slate-900 text-white rounded-xl p-3.5 space-y-1.5">
                       <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-bold">
                         <ShieldCheck size={14} />
-                        <span>{form.guaranteeTitle || 'HeyGoodly Testing Guarantee'}</span>
+                        <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
                       </div>
                       <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
                         {form.guaranteeText}
@@ -1415,7 +1416,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
 
             <div className="bg-white border border-[#E7E7E5] rounded-2xl p-6 sm:p-10 shadow-2xs space-y-5">
               <div className="flex flex-wrap items-center gap-2.5 text-xs">
-                <span className="bg-[#C62828] text-white font-extrabold text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-2xs">
+                <span className="bg-brand-primary text-white font-extrabold text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-2xs">
                   {form.category}
                 </span>
                 <span className="text-slate-400">•</span>
@@ -1443,7 +1444,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   </div>
                   <div>
                     <div className="font-extrabold text-slate-900 text-sm">{form.authorName}</div>
-                    <div className="text-xs text-slate-500">{form.authorRole} • HeyGoodly Staff</div>
+                    <div className="text-xs text-slate-500">{form.authorRole} • {SITE_NAME} Staff</div>
                   </div>
                 </div>
 
@@ -1473,7 +1474,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     <span className="text-[10px] uppercase font-bold tracking-widest text-[#EAB308]">
                       Independent Evaluation
                     </span>
-                    <h4 className="text-base font-bold text-white">HeyGoodly Lab Score & Verdict</h4>
+                    <h4 className="text-base font-bold text-white">{SITE_NAME} Lab Score & Verdict</h4>
                     <p className="text-xs text-slate-400">
                       Based on durability benchmarks, pricing accuracy, and hands-on testing.
                     </p>
@@ -1489,7 +1490,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                 <div className="bg-white border border-[#E7E7E5] rounded-2xl p-6 sm:p-10 shadow-2xs space-y-6">
                   <div className="w-full">
                     <div
-                      className="prose prose-slate max-w-none text-slate-800 leading-relaxed font-sans prose-headings:font-bold prose-h2:text-2xl prose-h2:font-editorial prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-xl prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3 prose-p:leading-relaxed prose-a:text-[#C62828] prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-[#C62828] prose-blockquote:italic prose-blockquote:pl-4 prose-blockquote:my-4 prose-img:rounded-xl prose-ul:list-disc prose-ol:list-decimal"
+                      className="prose prose-slate max-w-none text-slate-800 leading-relaxed font-sans prose-headings:font-bold prose-h2:text-2xl prose-h2:font-editorial prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-xl prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3 prose-p:leading-relaxed prose-a:text-brand-primary prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-brand-primary prose-blockquote:italic prose-blockquote:pl-4 prose-blockquote:my-4 prose-img:rounded-xl prose-ul:list-disc prose-ol:list-decimal"
                       dangerouslySetInnerHTML={{ __html: form.content }}
                     />
                   </div>
@@ -1513,7 +1514,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-red-700 bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-full tracking-widest">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
                         <Sparkles size={11} /> Brand Deals • Up to {previewStoreDiscount}
                       </span>
                       <h4 className="font-black text-lg text-slate-900">{previewStoreName}</h4>
@@ -1523,7 +1524,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
                       </p>
                     </div>
-                    <div className="w-full py-3 bg-red-700 text-white font-black text-xs rounded-xl shadow-xs">
+                    <div className="w-full py-3 bg-brand-primary text-white font-black text-xs rounded-xl shadow-xs">
                       {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
                     </div>
                   </div>
@@ -1533,7 +1534,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
                     <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
                       <ShieldCheck size={16} />
-                      <span>{form.guaranteeTitle || 'HeyGoodly Testing Guarantee'}</span>
+                      <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">{form.guaranteeText}</p>
                     <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">

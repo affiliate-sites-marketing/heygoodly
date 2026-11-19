@@ -27,3 +27,4 @@ frontend/yarn-error.log*
 uploads/
 /var/www/heygoodly/uploads/
 postgres_data/
+*.mmdb

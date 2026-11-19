@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
+import { TtlCache } from '@/lib/utils/ttlCache';
 
 export interface CategoryItem {
   id: number;
@@ -59,10 +60,17 @@ function mapBackendCategory(c: Record<string, unknown>, preferStoreCount = false
 }
 
 class CategoryService {
+  private readonly publicCache = new TtlCache();
+  private static readonly CACHE_TTL_MS = 45_000;
+
   /**
-   * Fetch categories directly from PostgreSQL via backend API.
+   * Fetch categories directly from PostgreSQL via backend API (with 45s client cache).
    */
   async getCategories(type: 'post' | 'store' | 'all' = 'post'): Promise<CategoryItem[]> {
+    const cacheKey = `cats:${type}`;
+    const cached = this.publicCache.get<CategoryItem[]>(cacheKey);
+    if (cached) return cached;
+
     try {
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.CATEGORIES, {
         params: { type },
@@ -73,9 +81,11 @@ class CategoryService {
       const list = pageData?.content || pageData?.items || (Array.isArray(pageData) ? pageData : null);
 
       if (list && Array.isArray(list)) {
-        return (list as Array<Record<string, unknown>>).map((c) =>
+        const mapped = (list as Array<Record<string, unknown>>).map((c) =>
           mapBackendCategory(c, type === 'store')
         );
+        this.publicCache.set(cacheKey, mapped, CategoryService.CACHE_TTL_MS);
+        return mapped;
       }
     } catch (err) {
       console.warn('Failed to fetch public categories from backend:', err);
@@ -87,11 +97,17 @@ class CategoryService {
    * Fetch homepage highlighted categories (`showOnHome = true`).
    */
   async getHomeCategories(): Promise<CategoryItem[]> {
+    const cacheKey = 'cats:home';
+    const cached = this.publicCache.get<CategoryItem[]>(cacheKey);
+    if (cached) return cached;
+
     try {
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.CATEGORY_HOME, { timeout: 6000 });
       const list = res.data?.data;
       if (Array.isArray(list) && list.length > 0) {
-        return (list as Array<Record<string, unknown>>).map((c) => mapBackendCategory(c, false));
+        const mapped = (list as Array<Record<string, unknown>>).map((c) => mapBackendCategory(c, false));
+        this.publicCache.set(cacheKey, mapped, CategoryService.CACHE_TTL_MS);
+        return mapped;
       }
     } catch {
       // Fallback to active post categories

@@ -209,14 +209,14 @@ export default function PostsDirectoryPage() {
 
         {/* Breadcrumb Navigation */}
         <nav className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-red-700 transition">Home</Link>
+          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-brand-primary transition">Home</Link>
           <ChevronRight size={12} />
           <span className="text-slate-900 font-semibold">Editorial Archive &amp; Reviews</span>
         </nav>
 
         {/* Page Header Banner */}
         <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xs space-y-6">
-          <div className="flex items-center gap-2 text-xs font-bold text-red-700 dark:text-red-500 uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-xs font-bold text-brand-primary dark:text-brand-primary-light uppercase tracking-widest">
             <BookOpen size={16} /> HeyGoodly Editorial Archive &amp; Test Lab
           </div>
           <div className="space-y-2">
@@ -235,7 +235,7 @@ export default function PostsDirectoryPage() {
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 text-[11px] shrink-0">
-                    <Layers size={13} className="text-red-600 dark:text-red-500" />
+                    <Layers size={13} className="text-brand-primary dark:text-brand-primary-light" />
                     <span>Category</span>
                   </div>
 
@@ -247,12 +247,12 @@ export default function PostsDirectoryPage() {
                         key={cSlug}
                         type="button"
                         onClick={() => removeCategory(cSlug)}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200/80 dark:border-red-900/60 hover:bg-red-100 dark:hover:bg-red-900/40 transition cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-primary-soft text-brand-primary dark:bg-brand-primary/15 dark:text-brand-primary-light border border-brand-primary-border dark:border-brand-primary/35 hover:bg-brand-primary-soft-hover dark:hover:bg-brand-primary/25 transition cursor-pointer"
                         title={`Remove ${name}`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
                         <span>{name}</span>
-                        <X size={11} className="ml-0.5 text-red-500" />
+                        <X size={11} className="ml-0.5 text-brand-primary" />
                       </button>
                     );
                   })}
@@ -261,7 +261,7 @@ export default function PostsDirectoryPage() {
                     <button
                       type="button"
                       onClick={clearAllCategories}
-                      className="text-[11px] font-semibold text-red-600 hover:text-red-700 hover:underline cursor-pointer ml-1"
+                      className="text-[11px] font-semibold text-brand-primary hover:text-brand-primary hover:underline cursor-pointer ml-1"
                     >
                       Clear all ({activeCategories.length})
                     </button>
@@ -281,7 +281,7 @@ export default function PostsDirectoryPage() {
                     onClick={clearAllCategories}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                       activeCategories.length === 0
-                        ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-sm shadow-red-600/30 ring-2 ring-red-600/20'
+                        ? 'bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm shadow-brand-primary/30 ring-2 ring-brand-primary/20'
                         : 'bg-slate-100/90 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
@@ -308,7 +308,7 @@ export default function PostsDirectoryPage() {
                         onClick={() => toggleCategory(cat.slug)}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                           isSelected
-                            ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-sm shadow-red-600/30 font-bold ring-2 ring-red-600/20'
+                            ? 'bg-gradient-to-r from-brand-primary to-brand-primary-hover text-white shadow-sm shadow-brand-primary/30 font-bold ring-2 ring-brand-primary/20'
                             : 'bg-slate-100/90 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 hover:text-slate-900 dark:hover:text-white border border-transparent'
                         }`}
                       >
@@ -331,17 +331,17 @@ export default function PostsDirectoryPage() {
                     }`}
                     aria-expanded={isCategoryPopoverOpen}
                   >
-                    <Layers size={13} className={activeCategories.length > 0 ? 'text-red-400' : 'text-red-500'} />
+                    <Layers size={13} className={activeCategories.length > 0 ? 'text-brand-primary-light' : 'text-brand-primary'} />
                     <span>All Categories ({categories.length})</span>
                     {activeCategories.length > 0 && (
-                      <span className="w-4 h-4 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                      <span className="w-4 h-4 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                         {activeCategories.length}
                       </span>
                     )}
                     <ChevronDown
                       size={13}
                       className={`transition-transform duration-200 ${
-                        isCategoryPopoverOpen ? 'rotate-180 text-red-500' : 'text-slate-400'
+                        isCategoryPopoverOpen ? 'rotate-180 text-brand-primary' : 'text-slate-400'
                       }`}
                     />
                   </button>
@@ -356,7 +356,7 @@ export default function PostsDirectoryPage() {
                           value={categorySearch}
                           onChange={(e) => setCategorySearch(e.target.value)}
                           placeholder={`Search ${categories.length} categories...`}
-                          className="w-full bg-slate-50 dark:bg-zinc-800/80 text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-500 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 dark:border-zinc-700/80 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
+                          className="w-full bg-slate-50 dark:bg-zinc-800/80 text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-500 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 dark:border-zinc-700/80 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition"
                           autoFocus
                         />
                         {categorySearch && (
@@ -377,7 +377,7 @@ export default function PostsDirectoryPage() {
                           <button
                             type="button"
                             onClick={clearAllCategories}
-                            className="text-red-600 dark:text-red-400 hover:underline font-bold cursor-pointer"
+                            className="text-brand-primary dark:text-brand-primary-light hover:underline font-bold cursor-pointer"
                           >
                             Reset ({activeCategories.length})
                           </button>
@@ -397,12 +397,12 @@ export default function PostsDirectoryPage() {
                               onClick={() => toggleCategory(cat.slug)}
                               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer text-left ${
                                 isSel
-                                  ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 font-bold border border-red-200/80 dark:border-red-900/60 shadow-xs'
+                                  ? 'bg-brand-primary-soft dark:bg-brand-primary/15 text-brand-primary dark:text-brand-primary-light font-bold border border-brand-primary-border dark:border-brand-primary/35 shadow-xs'
                                   : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800/80 border border-transparent'
                               }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                {cat.icon ? <span className="text-sm">{cat.icon}</span> : <span className="w-2 h-2 rounded-full bg-red-500/80 shrink-0" />}
+                                {cat.icon ? <span className="text-sm">{cat.icon}</span> : <span className="w-2 h-2 rounded-full bg-brand-primary shrink-0" />}
                                 <span className="truncate">{cat.name}</span>
                               </div>
 
@@ -410,7 +410,7 @@ export default function PostsDirectoryPage() {
                                 <div
                                   className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
                                     isSel
-                                      ? 'bg-red-600 border-red-600 text-white'
+                                      ? 'bg-brand-primary border-brand-primary text-white'
                                       : 'border-slate-300 dark:border-zinc-700'
                                   }`}
                                 >
@@ -442,12 +442,12 @@ export default function PostsDirectoryPage() {
                         key={t}
                         type="button"
                         onClick={() => removeTag(t)}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200/80 dark:border-red-900/60 hover:bg-red-100 dark:hover:bg-red-900/40 transition cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-primary-soft text-brand-primary dark:bg-brand-primary/15 dark:text-brand-primary-light border border-brand-primary-border dark:border-brand-primary/35 hover:bg-brand-primary-soft-hover dark:hover:bg-brand-primary/25 transition cursor-pointer"
                         title={`Remove #${t}`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
                         <span>#{t}</span>
-                        <X size={11} className="ml-0.5 text-red-500" />
+                        <X size={11} className="ml-0.5 text-brand-primary" />
                       </button>
                     ))}
 
@@ -455,7 +455,7 @@ export default function PostsDirectoryPage() {
                       <button
                         type="button"
                         onClick={clearAllTags}
-                        className="text-[11px] font-semibold text-red-600 hover:text-red-700 hover:underline cursor-pointer ml-1"
+                        className="text-[11px] font-semibold text-brand-primary hover:text-brand-primary hover:underline cursor-pointer ml-1"
                       >
                         Clear all ({activeTags.length})
                       </button>
@@ -482,7 +482,7 @@ export default function PostsDirectoryPage() {
                           onClick={() => toggleTag(tag.name)}
                           className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                             isSelected
-                              ? 'bg-slate-900 dark:bg-white text-white dark:text-zinc-950 font-bold shadow-xs ring-2 ring-red-600/40'
+                              ? 'bg-slate-900 dark:bg-white text-white dark:text-zinc-950 font-bold shadow-xs ring-2 ring-brand-primary/40'
                               : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-transparent'
                           }`}
                         >
@@ -514,17 +514,17 @@ export default function PostsDirectoryPage() {
                         }`}
                         aria-expanded={isTopicsPopoverOpen}
                       >
-                        <Hash size={13} className={activeTags.length > 0 ? 'text-red-400' : 'text-indigo-400'} />
+                        <Hash size={13} className={activeTags.length > 0 ? 'text-brand-primary-light' : 'text-indigo-400'} />
                         <span>All Topics ({allTags.length})</span>
                         {activeTags.length > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                          <span className="w-4 h-4 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                             {activeTags.length}
                           </span>
                         )}
                         <ChevronDown
                           size={13}
                           className={`transition-transform duration-200 ${
-                            isTopicsPopoverOpen ? 'rotate-180 text-red-500' : 'text-slate-400'
+                            isTopicsPopoverOpen ? 'rotate-180 text-brand-primary' : 'text-slate-400'
                           }`}
                         />
                       </button>
@@ -539,7 +539,7 @@ export default function PostsDirectoryPage() {
                               value={popoverSearch}
                               onChange={(e) => setPopoverSearch(e.target.value)}
                               placeholder={`Search ${allTags.length} topics & themes...`}
-                              className="w-full bg-slate-50 dark:bg-zinc-800/80 text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-500 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 dark:border-zinc-700/80 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition"
+                              className="w-full bg-slate-50 dark:bg-zinc-800/80 text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-500 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 dark:border-zinc-700/80 focus:outline-hidden focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition"
                               autoFocus
                             />
                             {popoverSearch && (
@@ -560,7 +560,7 @@ export default function PostsDirectoryPage() {
                               <button
                                 type="button"
                                 onClick={() => clearAllTags()}
-                                className="text-red-600 dark:text-red-400 hover:underline font-bold cursor-pointer"
+                                className="text-brand-primary dark:text-brand-primary-light hover:underline font-bold cursor-pointer"
                               >
                                 Clear selected ({activeTags.length})
                               </button>
@@ -587,7 +587,7 @@ export default function PostsDirectoryPage() {
                                     onClick={() => toggleTag(tag.name)}
                                     className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer text-left ${
                                       isSel
-                                        ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 font-bold border border-red-200/80 dark:border-red-900/60 shadow-xs'
+                                        ? 'bg-brand-primary-soft dark:bg-brand-primary/15 text-brand-primary dark:text-brand-primary-light font-bold border border-brand-primary-border dark:border-brand-primary/35 shadow-xs'
                                         : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800/80 border border-transparent'
                                     }`}
                                   >
@@ -603,7 +603,7 @@ export default function PostsDirectoryPage() {
                                       {typeof tag.postsCount === 'number' && tag.postsCount > 0 && (
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                                           isSel
-                                            ? 'bg-red-200/70 dark:bg-red-900/80 text-red-800 dark:text-red-200'
+                                            ? 'bg-brand-primary-soft-hover dark:bg-brand-primary/30 text-brand-primary-active dark:text-brand-primary-light'
                                             : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
                                         }`}>
                                           {tag.postsCount}
@@ -612,7 +612,7 @@ export default function PostsDirectoryPage() {
                                       <div
                                         className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
                                           isSel
-                                            ? 'bg-red-600 border-red-600 text-white'
+                                            ? 'bg-brand-primary border-brand-primary text-white'
                                             : 'border-slate-300 dark:border-zinc-700'
                                         }`}
                                       >
@@ -651,7 +651,7 @@ export default function PostsDirectoryPage() {
                   <BookOpen size={48} className="text-white/25" />
                 </div>
               )}
-              <span className="absolute top-4 left-4 bg-red-700 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+              <span className="absolute top-4 left-4 bg-brand-primary text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
                 Featured Editorial
               </span>
             </div>
@@ -659,7 +659,7 @@ export default function PostsDirectoryPage() {
             <div className="lg:col-span-5 p-5 sm:p-8 flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                  <span className="font-extrabold text-red-700 uppercase tracking-wider">{featuredArticle.category}</span>
+                  <span className="font-extrabold text-brand-primary uppercase tracking-wider">{featuredArticle.category}</span>
                   {featuredArticle.readTime && (
                     <>
                       <span>•</span>
@@ -674,7 +674,7 @@ export default function PostsDirectoryPage() {
                   )}
                 </div>
 
-                <h2 className="text-lg sm:text-2xl font-black text-slate-950 group-hover:text-red-700 transition-colors leading-tight">
+                <h2 className="text-lg sm:text-2xl font-black text-slate-950 group-hover:text-brand-primary transition-colors leading-tight">
                   <Link href={ROUTES.PUBLIC.POST_DETAIL(featuredArticle.slug)}>
                     {featuredArticle.title}
                   </Link>
@@ -707,7 +707,7 @@ export default function PostsDirectoryPage() {
 
                 <Link
                   href={ROUTES.PUBLIC.POST_DETAIL(featuredArticle.slug)}
-                  className="inline-flex items-center gap-1.5 text-xs font-black text-red-700 hover:text-red-800 shrink-0 whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 text-xs font-black text-brand-primary hover:text-brand-primary-hover shrink-0 whitespace-nowrap"
                 >
                   Read Review <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -720,7 +720,7 @@ export default function PostsDirectoryPage() {
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
-              <span className="w-2 h-5 bg-red-700 rounded-xs inline-block" />
+              <span className="w-2 h-5 bg-brand-primary rounded-xs inline-block" />
               Editorial Articles ({totalCount})
             </h2>
             <div className="text-xs text-slate-500">
@@ -755,7 +755,7 @@ export default function PostsDirectoryPage() {
                 <button
                   type="button"
                   onClick={() => { clearAllCategories(); setActiveTags([]); setCurrentPage(1); }}
-                  className="text-xs font-bold text-red-700 hover:underline cursor-pointer"
+                  className="text-xs font-bold text-brand-primary hover:underline cursor-pointer"
                 >
                   Reset all filters
                 </button>
@@ -766,7 +766,7 @@ export default function PostsDirectoryPage() {
               {articles.map((art) => (
                 <div
                   key={art.id}
-                  className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs hover:shadow-md hover:border-red-200 transition-all flex flex-col justify-between group"
+                  className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs hover:shadow-md hover:border-brand-primary-border transition-all flex flex-col justify-between group"
                 >
                   <div>
                     <div className="h-48 overflow-hidden relative bg-slate-100">
@@ -797,7 +797,7 @@ export default function PostsDirectoryPage() {
                         {art.publishedAt && <span>{art.publishedAt}</span>}
                       </div>
 
-                      <h3 className="font-bold text-sm sm:text-base text-slate-900 group-hover:text-red-700 transition-colors line-clamp-2 leading-snug">
+                      <h3 className="font-bold text-sm sm:text-base text-slate-900 group-hover:text-brand-primary transition-colors line-clamp-2 leading-snug">
                         <Link href={ROUTES.PUBLIC.POST_DETAIL(art.slug)}>
                           {art.title}
                         </Link>
@@ -831,7 +831,7 @@ export default function PostsDirectoryPage() {
 
                     <Link
                       href={ROUTES.PUBLIC.POST_DETAIL(art.slug)}
-                      className="text-xs font-bold text-red-700 group-hover:text-red-800 inline-flex items-center gap-1 shrink-0 whitespace-nowrap"
+                      className="text-xs font-bold text-brand-primary group-hover:text-brand-primary-hover inline-flex items-center gap-1 shrink-0 whitespace-nowrap"
                     >
                       Read Review <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
                     </Link>

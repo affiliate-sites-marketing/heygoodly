@@ -213,7 +213,7 @@ export default function AdminRolesPage() {
       >
         <Link
           href={ROUTES.ADMIN.ROLE_CREATE}
-          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
         >
           <Plus size={15} /> Create Custom Role
         </Link>

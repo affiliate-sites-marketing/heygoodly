@@ -196,6 +196,9 @@ class AuthService {
     };
     localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(enrichedUser));
     localStorage.setItem('admin:2fa:lastVerified', new Date().toISOString());
+    window.dispatchEvent(
+      new CustomEvent('heygoodly:auth-session-changed', { detail: { authenticated: true } })
+    );
   }
 
   /**
@@ -242,6 +245,9 @@ class AuthService {
     localStorage.removeItem('admin:tempToken');
     localStorage.removeItem('admin:tempEmail');
     localStorage.removeItem('admin:2fa:lastVerified');
+    window.dispatchEvent(
+      new CustomEvent('heygoodly:auth-session-changed', { detail: { authenticated: false } })
+    );
   }
 
   /**

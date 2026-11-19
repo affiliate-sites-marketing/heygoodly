@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { SITE_DOMAIN, SITE_NAME, SITE_SLUG } from '@/constants/site';
 import {
   Bold,
   Italic,
@@ -148,7 +149,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     html: `<section class="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4 article-component my-6 relative">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; margin-bottom: 12px; user-select: none;">
     <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: #C62828;"></span>
+      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: var(--brand-primary);"></span>
       Overview & Key Highlights Card
     </span>
     <button type="button" class="box-delete-btn" style="background: #ffffff; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
@@ -156,7 +157,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     </button>
   </div>
   <div class="flex items-center gap-3">
-    <span class="w-1.5 h-6 bg-[#C62828] rounded-full"></span>
+    <span class="w-1.5 h-6 bg-brand-primary rounded-full"></span>
     <h2 class="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">1. Product Overview & Key Highlights</h2>
   </div>
   <p class="text-slate-600 leading-relaxed">Detailed overview of the product, standout engineering features, and first-hand impressions from our lab testing sessions.</p>
@@ -173,7 +174,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     html: `<section class="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4 article-component my-6 relative">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; margin-bottom: 12px; user-select: none;">
     <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: #C62828;"></span>
+      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: var(--brand-primary);"></span>
       Lab Benchmark Card
     </span>
     <button type="button" class="box-delete-btn" style="background: #ffffff; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
@@ -181,11 +182,11 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     </button>
   </div>
   <div class="flex items-center gap-3">
-    <span class="w-1.5 h-6 bg-[#C62828] rounded-full"></span>
+    <span class="w-1.5 h-6 bg-brand-primary rounded-full"></span>
     <h2 class="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">2. Real-World Performance & Lab Benchmark Results</h2>
   </div>
   <p class="text-slate-600 leading-relaxed">Under standardized stress-testing conditions, the unit demonstrated consistent output stability and exceptional thermal reliability.</p>
-  <div class="bg-slate-50 border-l-4 border-[#C62828] p-4 rounded-r-xl space-y-1">
+  <div class="bg-slate-50 border-l-4 border-brand-primary p-4 rounded-r-xl space-y-1">
     <p class="font-bold text-slate-900 text-sm">Lab Benchmark Summary: 9.4 / 10</p>
     <p class="text-xs text-slate-600 leading-relaxed">Composite testing score across build precision, acoustic/thermal dissipation, and everyday ergonomic comfort.</p>
   </div>
@@ -198,9 +199,9 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     description: 'Dashed crimson gradient deal box displaying discounted price, promo code badge, and Claim Deal CTA button.',
     previewColor: 'bg-rose-50/50 border-rose-300 text-rose-950',
     badge: 'High Conversion',
-    html: `<div class="editorial-box my-6 rounded-2xl border-2 border-dashed border-[#C62828] bg-gradient-to-br from-red-50 via-white to-orange-50 p-6 sm:p-7 shadow-xs relative overflow-hidden article-component" data-box-type="deal">
+    html: `<div class="editorial-box my-6 rounded-2xl border-2 border-dashed border-brand-primary bg-gradient-to-br from-red-50 via-white to-orange-50 p-6 sm:p-7 shadow-xs relative overflow-hidden article-component" data-box-type="deal">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; user-select: none;">
-    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide uppercase bg-[#C62828] text-white shadow-xs">
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide uppercase bg-brand-primary text-white shadow-xs">
       EXCLUSIVE DEAL - SAVE 45%
     </span>
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -215,7 +216,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
       <h3 class="deal-title text-lg sm:text-xl font-black text-slate-950">Exclusive Reader Discount Offer</h3>
       <p class="text-xs sm:text-sm text-slate-600">Apply our exclusive promo code at the official merchant checkout for an instant price reduction.</p>
       <div class="flex items-baseline gap-2 pt-1 flex-wrap">
-        <span class="deal-price text-2xl sm:text-3xl font-black text-[#C62828]">$49.99</span>
+        <span class="deal-price text-2xl sm:text-3xl font-black text-brand-primary">$49.99</span>
         <span class="deal-original-price text-sm text-slate-400 line-through">$89.99</span>
         <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Save $40</span>
       </div>
@@ -225,7 +226,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
         <span class="text-slate-500 font-medium">Promo Code:</span>
         <span class="deal-code font-mono font-black text-red-600 tracking-wider">HEYGOODLY20</span>
       </div>
-      <a href="https://example.com/deal" target="_blank" rel="noopener noreferrer nofollow" class="deal-button inline-flex items-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow transition">
+      <a href="https://example.com/deal" target="_blank" rel="noopener noreferrer nofollow" class="deal-button inline-flex items-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow transition">
         Claim Deal at Official Store →
       </a>
     </div>
@@ -242,7 +243,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     html: `<div class="editorial-box my-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs article-component relative" data-box-type="pros-cons">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; user-select: none;">
     <h3 class="text-base font-black text-slate-900 flex items-center gap-2" style="margin: 0;">
-      <span class="text-[#C62828]">⚖️</span> Pros & Cons Breakdown
+      <span class="text-brand-primary">⚖️</span> Pros & Cons Breakdown
     </h3>
     <button type="button" class="box-delete-btn" style="background: #ffffff; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
       🗑️ Delete Grid
@@ -292,7 +293,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     <h3 class="text-lg font-black tracking-tight text-white flex items-center gap-2">
       <span>🏆</span> EDITORIAL VERDICT
     </h3>
-    <span class="text-xs font-bold bg-[#C62828] text-white px-3 py-1 rounded-full">Editor's Choice</span>
+    <span class="text-xs font-bold bg-brand-primary text-white px-3 py-1 rounded-full">Editor's Choice</span>
   </div>
   <p class="text-slate-300 text-sm leading-relaxed">If you are looking for an ideal balance between reliable performance and smart value, this stands out as one of the top recommendations in its category right now.</p>
   <div class="flex items-center gap-4 pt-2">
@@ -330,7 +331,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
     html: `<section class="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs article-component my-6 relative">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; margin-bottom: 12px; user-select: none;">
     <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: #C62828;"></span>
+      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: var(--brand-primary);"></span>
       2-Column Media Split
     </span>
     <button type="button" class="box-delete-btn" style="background: #ffffff; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
@@ -342,7 +343,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
       <img src="https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=800&auto=format&fit=crop&q=80" alt="Product design close-up" class="w-full h-auto object-cover" />
     </div>
     <div class="space-y-3">
-      <span class="text-xs font-bold uppercase tracking-wider text-[#C62828]">Design & Craftsmanship</span>
+      <span class="text-xs font-bold uppercase tracking-wider text-brand-primary">Design & Craftsmanship</span>
       <h3 class="text-xl font-black text-slate-950">Precision Engineering Down to Every Detail</h3>
       <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">Constructed with certified high-durability materials, refined finishes, and a solid, confidence-inspiring tactile feel.</p>
     </div>
@@ -367,7 +368,7 @@ const COMPONENT_TEMPLATES: ComponentTemplate[] = [
       <h3 class="text-base sm:text-lg font-black text-white">Ready to Experience It Yourself?</h3>
       <p class="text-xs text-slate-300">Order today to unlock free nationwide shipping and a 24-month official manufacturer warranty.</p>
     </div>
-    <a href="https://example.com/buy" target="_blank" rel="noopener noreferrer nofollow" class="cta-button shrink-0 inline-flex items-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md transition">
+    <a href="https://example.com/buy" target="_blank" rel="noopener noreferrer nofollow" class="cta-button shrink-0 inline-flex items-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md transition">
       Shop Now at Special Price →
     </a>
   </div>
@@ -529,7 +530,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
       return `<section class="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4 article-component my-6 relative">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; margin-bottom: 12px; user-select: none;">
     <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: #C62828;"></span>
+      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: var(--brand-primary);"></span>
       ${badge}
     </span>
     <button type="button" class="box-delete-btn" style="background: #ffffff; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
@@ -537,7 +538,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
     </button>
   </div>
   <div class="flex items-center gap-3">
-    <span class="w-1.5 h-6 bg-[#C62828] rounded-full"></span>
+    <span class="w-1.5 h-6 bg-brand-primary rounded-full"></span>
     <h2 class="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">${title}</h2>
   </div>
   ${p1 ? `<p class="text-slate-600 leading-relaxed">${p1}</p>` : ''}
@@ -554,7 +555,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
       return `<section class="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4 article-component my-6 relative">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; margin-bottom: 12px; user-select: none;">
     <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: #C62828;"></span>
+      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: var(--brand-primary);"></span>
       ${badge}
     </span>
     <button type="button" class="box-delete-btn" style="background: #ffffff; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
@@ -562,11 +563,11 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
     </button>
   </div>
   <div class="flex items-center gap-3">
-    <span class="w-1.5 h-6 bg-[#C62828] rounded-full"></span>
+    <span class="w-1.5 h-6 bg-brand-primary rounded-full"></span>
     <h2 class="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">${title}</h2>
   </div>
   ${bodyText ? `<p class="text-slate-600 leading-relaxed">${bodyText}</p>` : ''}
-  <div class="bg-slate-50 border-l-4 border-[#C62828] p-4 rounded-r-xl space-y-1">
+  <div class="bg-slate-50 border-l-4 border-brand-primary p-4 rounded-r-xl space-y-1">
     <p class="font-bold text-slate-900 text-sm">${scoreTitle}</p>
     ${scoreDesc ? `<p class="text-xs text-slate-600 leading-relaxed">${scoreDesc}</p>` : ''}
   </div>
@@ -584,9 +585,9 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
       const couponCode = params.couponCode || '';
       const buttonText = params.buttonText || 'Claim Deal at Official Store →';
       const buttonUrl = params.buttonUrl || 'https://example.com/deal';
-      return `<div class="editorial-box my-6 rounded-2xl border-2 border-dashed border-[#C62828] bg-gradient-to-br from-red-50 via-white to-orange-50 p-6 sm:p-7 shadow-xs relative overflow-hidden article-component" data-box-type="deal">
+      return `<div class="editorial-box my-6 rounded-2xl border-2 border-dashed border-brand-primary bg-gradient-to-br from-red-50 via-white to-orange-50 p-6 sm:p-7 shadow-xs relative overflow-hidden article-component" data-box-type="deal">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; user-select: none;">
-    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide uppercase bg-[#C62828] text-white shadow-xs">
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide uppercase bg-brand-primary text-white shadow-xs">
       ${badge}
     </span>
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -601,7 +602,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
       <h3 class="deal-title text-lg sm:text-xl font-black text-slate-950">${title}</h3>
       ${desc ? `<p class="text-xs sm:text-sm text-slate-600">${desc}</p>` : ''}
       <div class="flex items-baseline gap-2 pt-1 flex-wrap">
-        <span class="deal-price text-2xl sm:text-3xl font-black text-[#C62828]">${dealPrice}</span>
+        <span class="deal-price text-2xl sm:text-3xl font-black text-brand-primary">${dealPrice}</span>
         ${originalPrice ? `<span class="deal-original-price text-sm text-slate-400 line-through">${originalPrice}</span>` : ''}
         ${savings ? `<span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">${savings}</span>` : ''}
       </div>
@@ -611,7 +612,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
         <span class="text-slate-500 font-medium">Promo Code:</span>
         <span class="deal-code font-mono font-black text-red-600 tracking-wider">${couponCode}</span>
       </div>` : ''}
-      <a href="${buttonUrl}" target="_blank" rel="noopener noreferrer nofollow sponsored" class="deal-button inline-flex items-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow transition">
+      <a href="${buttonUrl}" target="_blank" rel="noopener noreferrer nofollow sponsored" class="deal-button inline-flex items-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow transition">
         ${buttonText}
       </a>
     </div>
@@ -633,7 +634,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
       return `<div class="editorial-box my-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs article-component relative" data-box-type="pros-cons">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; user-select: none;">
     <h3 class="text-base font-black text-slate-900 flex items-center gap-2" style="margin: 0;">
-      <span class="text-[#C62828]">⚖️</span> ${title}
+      <span class="text-brand-primary">⚖️</span> ${title}
     </h3>
     <button type="button" class="box-delete-btn" style="background: #ffffff; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
       🗑️ Delete Grid
@@ -681,7 +682,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
     <h3 class="text-lg font-black tracking-tight text-white flex items-center gap-2">
       <span>🏆</span> ${title}
     </h3>
-    <span class="text-xs font-bold bg-[#C62828] text-white px-3 py-1 rounded-full">${badge}</span>
+    <span class="text-xs font-bold bg-brand-primary text-white px-3 py-1 rounded-full">${badge}</span>
   </div>
   ${conclusion ? `<p class="text-slate-300 text-sm leading-relaxed">${conclusion}</p>` : ''}
   <div class="flex items-center gap-4 pt-2">
@@ -717,7 +718,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
       return `<section class="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs article-component my-6 relative">
   <div contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; margin-bottom: 12px; user-select: none;">
     <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
-      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: #C62828;"></span>
+      <span style="width: 6px; height: 6px; border-radius: 9999px; background-color: var(--brand-primary);"></span>
       2-Column Media Split
     </span>
     <button type="button" class="box-delete-btn" style="background: #ffffff; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
@@ -729,7 +730,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
       <img src="${imageUrl}" alt="${title}" class="w-full h-auto object-cover" />
     </div>
     <div class="space-y-3">
-      <span class="text-xs font-bold uppercase tracking-wider text-[#C62828]">${tag}</span>
+      <span class="text-xs font-bold uppercase tracking-wider text-brand-primary">${tag}</span>
       <h3 class="text-xl font-black text-slate-950">${title}</h3>
       ${desc ? `<p class="text-xs sm:text-sm text-slate-600 leading-relaxed">${desc}</p>` : ''}
     </div>
@@ -754,7 +755,7 @@ export function buildTemplateHTML(templateId: string, params: Record<string, str
       <h3 class="text-base sm:text-lg font-black text-white">${title}</h3>
       ${desc ? `<p class="text-xs text-slate-300">${desc}</p>` : ''}
     </div>
-    <a href="${buttonUrl}" target="_blank" rel="noopener noreferrer nofollow sponsored" class="cta-button shrink-0 inline-flex items-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md transition">
+    <a href="${buttonUrl}" target="_blank" rel="noopener noreferrer nofollow sponsored" class="cta-button shrink-0 inline-flex items-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md transition">
       ${buttonText}
     </a>
   </div>
@@ -805,7 +806,7 @@ export default function RichTextEditor({
     badge: 'Verified Exclusive Deal',
     description: 'Use code HEYGOODLY20 at checkout for an extra 20% off.',
     buttonText: 'Claim Deal at Official Store →',
-    buttonUrl: 'https://www.nilight.com/?ref=heygoodly',
+    buttonUrl: `https://www.nilight.com/?ref=${SITE_SLUG}`,
     buttonStyle: 'crimson' as 'crimson' | 'emerald' | 'dark',
   });
 
@@ -1545,7 +1546,7 @@ export default function RichTextEditor({
               ✕ Delete Verdict Box
             </button>
           </div>
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #C62828; font-weight: 700; margin-bottom: 6px;">HeyGoodly Lab Score: 9.4 / 10</div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--brand-primary); font-weight: 700; margin-bottom: 6px;">${SITE_NAME} Lab Score: 9.4 / 10</div>
           <h4 style="margin: 0 0 8px 0; color: #ffffff; font-size: 18px; font-weight: 700;">The Editorial Verdict</h4>
           <p style="margin: 0; color: #a1a1aa; font-size: 14px; line-height: 1.6;">Our final testing conclusion after 30 days of real-world use. Highly recommended for enthusiasts seeking durable build quality.</p>
         </div>
@@ -1597,12 +1598,12 @@ export default function RichTextEditor({
       toastCtx?.toast.error('Button Destination Link is required');
       return;
     }
-    let btnBg = '#C62828';
+    let btnBg = 'var(--brand-primary)';
     if (dealForm.buttonStyle === 'emerald') btnBg = '#059669';
     if (dealForm.buttonStyle === 'dark') btnBg = '#171717';
 
     const finalBoxHTML = `
-      <div class="editorial-box my-6 border-2 border-[#C62828] bg-white rounded-2xl p-6 shadow-sm relative" data-box-type="deal" style="border: 2px solid #C62828; background-color: #ffffff; padding: 22px; border-radius: 16px; margin: 24px 0;">
+      <div class="editorial-box my-6 border-2 border-brand-primary bg-white rounded-2xl p-6 shadow-sm relative" data-box-type="deal" style="border: 2px solid var(--brand-primary); background-color: #ffffff; padding: 22px; border-radius: 16px; margin: 24px 0;">
         <div contenteditable="false" style="display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 12px; user-select: none;">
           <button type="button" class="box-edit-deal-btn" style="background: #f1f5f9; color: #334155; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer;">
             ✏️ Edit Button Link & Price
@@ -1612,14 +1613,14 @@ export default function RichTextEditor({
           </button>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <span style="background-color: #fef2f2; color: #C62828; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase;">${dealForm.badge}</span>
+          <span style="background-color: var(--brand-primary-soft); color: var(--brand-primary); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase;">${dealForm.badge}</span>
           <span style="font-size: 20px; font-weight: 800; color: #171717;">
             <span class="deal-price">${dealForm.dealPrice}</span>
             <span class="deal-original-price" style="font-size: 13px; text-decoration: line-through; color: #737373; margin-left: 6px;">${dealForm.originalPrice}</span>
           </span>
         </div>
         <h4 class="deal-title" style="margin: 0 0 6px 0; font-size: 18px; font-weight: 700; color: #171717;">${dealForm.title}</h4>
-        <p style="margin: 0 0 16px 0; font-size: 13px; color: #52525b;">${dealForm.description} Promo code: <strong class="deal-code" style="color: #C62828; background: #fef2f2; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${dealForm.couponCode}</strong></p>
+        <p style="margin: 0 0 16px 0; font-size: 13px; color: #52525b;">${dealForm.description} Promo code: <strong class="deal-code" style="color: var(--brand-primary); background: var(--brand-primary-soft); padding: 2px 6px; border-radius: 4px; font-family: monospace;">${dealForm.couponCode}</strong></p>
         <a href="${dealForm.buttonUrl}" target="_blank" rel="noopener noreferrer" class="deal-button" style="display: inline-block; background-color: ${btnBg}; color: #ffffff; font-weight: 700; font-size: 13px; padding: 11px 24px; border-radius: 8px; text-decoration: none;">
           ${dealForm.buttonText}
         </a>
@@ -1646,10 +1647,10 @@ export default function RichTextEditor({
       toastCtx?.toast.error('Destination URL is required');
       return;
     }
-    let btnStyle = 'background-color: #C62828; color: #ffffff; border: none;';
+    let btnStyle = 'background-color: var(--brand-primary); color: #ffffff; border: none;';
     if (buttonForm.style === 'emerald') btnStyle = 'background-color: #059669; color: #ffffff; border: none;';
     if (buttonForm.style === 'dark') btnStyle = 'background-color: #171717; color: #ffffff; border: none;';
-    if (buttonForm.style === 'outline') btnStyle = 'background-color: transparent; color: #C62828; border: 2px solid #C62828;';
+    if (buttonForm.style === 'outline') btnStyle = 'background-color: transparent; color: var(--brand-primary); border: 2px solid var(--brand-primary);';
 
     const alignStyle = buttonForm.alignment === 'center' ? 'text-align: center; margin: 20px auto;' : 'text-align: left; margin: 20px 0;';
 
@@ -2129,11 +2130,11 @@ export default function RichTextEditor({
           onClick={() => setRibbonTab('affiliate')}
           className={`px-4 py-1.5 font-bold transition cursor-pointer border-t-2 rounded-t-md text-xs flex items-center gap-1.5 ${
             ribbonTab === 'affiliate'
-              ? 'bg-white border-[#C62828] text-[#C62828] shadow-xs'
+              ? 'bg-white border-brand-primary text-brand-primary shadow-xs'
               : 'border-transparent text-slate-700 hover:text-slate-950 hover:bg-slate-200/60'
           }`}
         >
-          <Tag size={12} className={ribbonTab === 'affiliate' ? 'text-[#C62828]' : 'text-slate-500'} />
+          <Tag size={12} className={ribbonTab === 'affiliate' ? 'text-brand-primary' : 'text-slate-500'} />
           <span>Affiliate Blocks</span>
         </button>
 
@@ -2409,7 +2410,7 @@ export default function RichTextEditor({
                     title="Font Color"
                   >
                     <span className="font-serif font-black text-sm leading-none text-slate-900">A</span>
-                    <span className="w-4 h-1 bg-[#C62828] rounded-full mt-0.5"></span>
+                    <span className="w-4 h-1 bg-brand-primary rounded-full mt-0.5"></span>
                   </button>
 
                   {colorMenuOpen && (
@@ -2713,7 +2714,7 @@ export default function RichTextEditor({
                 className="h-10 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl font-bold flex items-center gap-2 transition cursor-pointer shadow-2xs"
                 title="Insert CTA Button"
               >
-                <MousePointerClick size={15} className="text-[#C62828]" />
+                <MousePointerClick size={15} className="text-brand-primary" />
                 <span>+ CTA Button</span>
               </button>
 
@@ -2761,7 +2762,7 @@ export default function RichTextEditor({
                 setEditingBoxEl(null);
                 setDealModalOpen(true);
               }}
-              className="h-10 px-4 bg-[#C62828] hover:bg-[#B71C1C] text-white rounded-xl font-black flex items-center gap-2 transition cursor-pointer shadow-sm shrink-0"
+              className="h-10 px-4 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl font-black flex items-center gap-2 transition cursor-pointer shadow-sm shrink-0"
               title="Insert Promo Deal Box"
             >
               <Tag size={15} />
@@ -2794,7 +2795,7 @@ export default function RichTextEditor({
             <button
               type="button"
               onClick={() => setAddCompModalOpen(true)}
-              className="h-10 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center gap-2 transition cursor-pointer shadow-2xs shrink-0"
+              className="h-10 px-3.5 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl font-bold flex items-center gap-2 transition cursor-pointer shadow-2xs shrink-0"
               title="Pre-designed Article Section Templates"
             >
               <LayoutGrid size={15} />
@@ -3232,7 +3233,7 @@ export default function RichTextEditor({
           <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Tag size={16} className="text-[#C62828]" />
+                <Tag size={16} className="text-brand-primary" />
                 <span>{editingBoxEl ? 'Edit Deal Box & Button Link' : 'Insert New Deal Box'}</span>
               </h3>
               <button
@@ -3252,7 +3253,7 @@ export default function RichTextEditor({
                   value={dealForm.title}
                   onChange={(e) => setDealForm({ ...dealForm, title: e.target.value })}
                   placeholder="e.g. Nilight 20-Inch Curved LED Light Bar"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828]"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
                 />
               </div>
 
@@ -3264,7 +3265,7 @@ export default function RichTextEditor({
                     value={dealForm.dealPrice}
                     onChange={(e) => setDealForm({ ...dealForm, dealPrice: e.target.value })}
                     placeholder="$49.99"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828] font-bold text-emerald-600"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary font-bold text-emerald-600"
                   />
                 </div>
                 <div>
@@ -3274,7 +3275,7 @@ export default function RichTextEditor({
                     value={dealForm.originalPrice}
                     onChange={(e) => setDealForm({ ...dealForm, originalPrice: e.target.value })}
                     placeholder="$89.99"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
                   />
                 </div>
               </div>
@@ -3287,7 +3288,7 @@ export default function RichTextEditor({
                     value={dealForm.couponCode}
                     onChange={(e) => setDealForm({ ...dealForm, couponCode: e.target.value })}
                     placeholder="HEYGOODLY20"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828] font-mono font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary font-mono font-bold"
                   />
                 </div>
                 <div>
@@ -3297,7 +3298,7 @@ export default function RichTextEditor({
                     value={dealForm.badge}
                     onChange={(e) => setDealForm({ ...dealForm, badge: e.target.value })}
                     placeholder="Verified Exclusive Deal"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
                   />
                 </div>
               </div>
@@ -3314,7 +3315,7 @@ export default function RichTextEditor({
                     value={dealForm.buttonText}
                     onChange={(e) => setDealForm({ ...dealForm, buttonText: e.target.value })}
                     placeholder="Claim Deal at Official Store →"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828] font-bold"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary font-bold"
                   />
                 </div>
 
@@ -3327,8 +3328,8 @@ export default function RichTextEditor({
                     type="url"
                     value={dealForm.buttonUrl}
                     onChange={(e) => setDealForm({ ...dealForm, buttonUrl: e.target.value })}
-                    placeholder="https://www.nilight.com/?ref=heygoodly"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828] font-mono text-slate-700"
+                    placeholder={`https://www.nilight.com/?ref=${SITE_SLUG}`}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary font-mono text-slate-700"
                   />
                 </div>
               </div>
@@ -3345,7 +3346,7 @@ export default function RichTextEditor({
               <button
                 type="button"
                 onClick={handleSaveDealBox}
-                className="px-5 py-2 text-xs font-bold bg-[#C62828] hover:bg-[#B71C1C] text-white rounded-lg shadow transition"
+                className="px-5 py-2 text-xs font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-lg shadow transition"
               >
                 {editingBoxEl ? 'Update Box & Button Link' : 'Insert Deal Box'}
               </button>
@@ -3362,7 +3363,7 @@ export default function RichTextEditor({
           <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <MousePointerClick size={16} className="text-[#C62828]" />
+                <MousePointerClick size={16} className="text-brand-primary" />
                 <span>Insert New CTA Button</span>
               </h3>
               <button
@@ -3382,7 +3383,7 @@ export default function RichTextEditor({
                   value={buttonForm.text}
                   onChange={(e) => setButtonForm({ ...buttonForm, text: e.target.value })}
                   placeholder="e.g. Check Verified Price on Merchant Store →"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828] font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary font-bold"
                 />
               </div>
 
@@ -3393,7 +3394,7 @@ export default function RichTextEditor({
                   value={buttonForm.url}
                   onChange={(e) => setButtonForm({ ...buttonForm, url: e.target.value })}
                   placeholder="https://example.com/deal"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828] font-mono"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary font-mono"
                 />
               </div>
 
@@ -3403,7 +3404,7 @@ export default function RichTextEditor({
                   <select
                     value={buttonForm.style}
                     onChange={(e) => setButtonForm({ ...buttonForm, style: e.target.value as any })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
                   >
                     <option value="crimson">Crimson Red (HeyGoodly)</option>
                     <option value="emerald">Emerald Green</option>
@@ -3417,7 +3418,7 @@ export default function RichTextEditor({
                   <select
                     value={buttonForm.alignment}
                     onChange={(e) => setButtonForm({ ...buttonForm, alignment: e.target.value as any })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
                   >
                     <option value="center">Center</option>
                     <option value="left">Left</option>
@@ -3438,7 +3439,7 @@ export default function RichTextEditor({
                 type="button"
                 onClick={handleInsertButton}
                 disabled={!buttonForm.text.trim()}
-                className="px-5 py-2 text-xs font-bold bg-[#C62828] hover:bg-[#B71C1C] text-white rounded-lg shadow transition"
+                className="px-5 py-2 text-xs font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-lg shadow transition"
               >
                 Insert Button
               </button>
@@ -3455,7 +3456,7 @@ export default function RichTextEditor({
           <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <ImageIcon size={16} className="text-[#C62828]" />
+                <ImageIcon size={16} className="text-brand-primary" />
                 <span>Upload &amp; Insert Image into Article Body</span>
               </h3>
               <button
@@ -3473,7 +3474,7 @@ export default function RichTextEditor({
                 <label className="font-bold text-slate-800 block mb-1">
                   1. Upload image from computer (PNG, JPG, WEBP, GIF)
                 </label>
-                <label className="border-2 border-dashed border-slate-200 hover:border-[#C62828] rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer bg-slate-50 hover:bg-rose-50/20 transition">
+                <label className="border-2 border-dashed border-slate-200 hover:border-brand-primary rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer bg-slate-50 hover:bg-brand-primary-soft/30 transition">
                   <input
                     type="file"
                     accept="image/*"
@@ -3482,9 +3483,9 @@ export default function RichTextEditor({
                   />
                   {isUploadingImage ? (
                     <div className="space-y-2 text-center py-2">
-                      <div className="text-xs font-bold text-[#C62828]">Uploading image to server...</div>
+                      <div className="text-xs font-bold text-brand-primary">Uploading image to server...</div>
                       <div className="w-40 bg-slate-200 h-1.5 rounded-full overflow-hidden mx-auto">
-                        <div className="bg-[#C62828] h-full" style={{ width: `${uploadProgress}%` }} />
+                        <div className="bg-brand-primary h-full" style={{ width: `${uploadProgress}%` }} />
                       </div>
                     </div>
                   ) : imageUrl ? (
@@ -3495,7 +3496,7 @@ export default function RichTextEditor({
                     </div>
                   ) : (
                     <div className="text-center space-y-1">
-                      <Upload size={22} className="mx-auto text-[#C62828]" />
+                      <Upload size={22} className="mx-auto text-brand-primary" />
                       <span className="font-bold text-slate-800">Select an image file from your computer</span>
                       <p className="text-[10px] text-slate-400">or drag &amp; drop an image directly here</p>
                     </div>
@@ -3523,7 +3524,7 @@ export default function RichTextEditor({
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                   placeholder="https://images.unsplash.com/... or /uploads/..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828] font-mono"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary font-mono"
                 />
               </div>
 
@@ -3534,7 +3535,7 @@ export default function RichTextEditor({
                   <select
                     value={imageAlign}
                     onChange={(e) => setImageAlign(e.target.value as any)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
                   >
                     <option value="center">Center</option>
                     <option value="full">Full Width</option>
@@ -3550,7 +3551,7 @@ export default function RichTextEditor({
                     value={imageCaption}
                     onChange={(e) => setImageCaption(e.target.value)}
                     placeholder="e.g. Real-world brightness test results..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#C62828]"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
                   />
                 </div>
               </div>
@@ -3580,7 +3581,7 @@ export default function RichTextEditor({
                 type="button"
                 onClick={handleApplyImageModal}
                 disabled={!imageUrl.trim() || imageTags.length === 0}
-                className="px-5 py-2 text-xs font-bold bg-[#C62828] hover:bg-[#B71C1C] disabled:bg-slate-300 text-white rounded-lg shadow transition cursor-pointer disabled:cursor-not-allowed"
+                className="px-5 py-2 text-xs font-bold bg-brand-primary hover:bg-brand-primary-hover disabled:bg-slate-300 text-white rounded-lg shadow transition cursor-pointer disabled:cursor-not-allowed"
               >
                 Insert Image ({imageTags.length} {imageTags.length === 1 ? 'tag' : 'tags'})
               </button>
@@ -3903,7 +3904,7 @@ export default function RichTextEditor({
                         onClick={() => setTemplateCategory(cat)}
                         className={`h-7 px-3 rounded-lg text-xs font-bold transition whitespace-nowrap shrink-0 cursor-pointer ${
                           templateCategory === cat
-                            ? 'bg-indigo-600 text-white shadow-xs'
+                            ? 'bg-brand-primary text-white shadow-xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
@@ -3965,7 +3966,7 @@ export default function RichTextEditor({
                               setSelectedTemplateForParams(tpl);
                               setTemplateParams(getDefaultParamsForTemplate(tpl.id));
                             }}
-                            className="h-8 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs whitespace-nowrap"
+                            className="h-8 px-3.5 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs whitespace-nowrap"
                             title="Customize parameters for this component before inserting"
                           >
                             <Settings size={13} />
@@ -4019,7 +4020,7 @@ export default function RichTextEditor({
                         insertTemplate(finalHTML);
                         setSelectedTemplateForParams(null);
                       }}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md"
+                      className="px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md"
                     >
                       <PlusCircle size={14} />
                       <span>Apply &amp; Insert into Article</span>
@@ -4266,7 +4267,7 @@ export default function RichTextEditor({
                 </div>
                 <div className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1 text-[11px] text-slate-500 font-mono flex items-center gap-1.5 truncate">
                   <span className="text-emerald-600 font-bold">🔒</span>
-                  <span>https://heygoodly.com/preview-draft</span>
+                  <span>https://{SITE_DOMAIN}/preview-draft</span>
                 </div>
               </div>
 

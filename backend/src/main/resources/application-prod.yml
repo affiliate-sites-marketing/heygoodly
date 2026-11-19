@@ -43,7 +43,7 @@ spring:
   # ===========================================================================
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:true}
-    change-log: classpath:db/changelog/db.changelog-master.yaml
+    change-log: classpath:db/changelog/db.changelog-master.sql
     drop-first: false
 
   # ===========================================================================

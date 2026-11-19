@@ -118,7 +118,7 @@ export default function CouponModal({
           {/* Ticket Top Row: Discount Pill + Title */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-[#c62828] text-white font-black text-xs px-3 py-1 rounded-lg shadow-2xs">
+              <span className="bg-brand-primary text-white font-black text-xs px-3 py-1 rounded-lg shadow-2xs">
                 {offer.discount}
               </span>
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
@@ -140,7 +140,7 @@ export default function CouponModal({
 
           {/* Promo Code Box or Instant Deal Banner */}
           {offer.code ? (
-            <div className="bg-red-50/40 border-2 border-dashed border-[#c62828]/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="bg-brand-primary-soft/50 border-2 border-dashed border-brand-primary/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center justify-between sm:block gap-2 min-w-0">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block shrink-0">
                   PROMO CODE
@@ -157,7 +157,7 @@ export default function CouponModal({
                   className={`flex-1 sm:flex-initial font-black text-xs px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 ${
                     copied
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      : 'bg-[#c62828] hover:bg-[#b71c1c] text-white'
+                      : 'bg-brand-primary hover:bg-brand-primary-hover text-white'
                   }`}
                 >
                   {copied ? (

@@ -10,6 +10,7 @@ import AdminFormPage, {
   labelClass,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
+import { SITE_DOMAIN } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { useToast } from '@/context/ToastContext';
@@ -275,7 +276,7 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
                     type="checkbox"
                     checked={form.isActive}
                     onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                 </label>
 
@@ -296,7 +297,7 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
             <FormSection title="Google Search Preview">
               <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-1.5 shadow-2xs">
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-mono">
-                  <span>heygoodly.com</span>
+                  <span>{SITE_DOMAIN}</span>
                   <span>›</span>
                   <span className="truncate">{form.slug || 'page-slug'}</span>
                 </div>
@@ -343,7 +344,7 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">Client Static Page Preview</h3>
-                <p className="text-[11px] text-slate-400">Page URL: https://heygoodly.com/{form.slug || 'about-us'}</p>
+                <p className="text-[11px] text-slate-400">Page URL: https://{SITE_DOMAIN}/{form.slug || 'about-us'}</p>
               </div>
             </div>
 
@@ -400,7 +401,7 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
                 </div>
                 <div className="flex-1 bg-white border border-slate-200 rounded px-2.5 py-0.5 text-[11px] text-slate-500 font-mono truncate">
-                  https://heygoodly.com/{form.slug || 'about-us'}
+                  https://{SITE_DOMAIN}/{form.slug || 'about-us'}
                 </div>
               </div>
 

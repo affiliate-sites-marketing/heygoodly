@@ -38,11 +38,11 @@ export default function AdminPageHeader({
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Icon className="text-[#C62828]" size={26} />
+            <Icon className="text-brand-primary" size={26} />
             {t(title)}
           </h1>
           {badge && (
-            <span className="bg-[#C62828]/10 text-[#C62828] text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
+            <span className="bg-brand-primary/10 text-brand-primary text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap">
               {t(badge)}
             </span>
           )}

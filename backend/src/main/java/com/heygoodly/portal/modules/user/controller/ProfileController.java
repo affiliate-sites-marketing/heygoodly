@@ -9,10 +9,12 @@ import com.heygoodly.portal.common.util.SecurityUtils;
 import com.heygoodly.portal.modules.audit.entity.AuditLogEntity;
 import com.heygoodly.portal.modules.user.dto.request.ChangePasswordRequest;
 import com.heygoodly.portal.modules.user.dto.request.UpdateProfileRequest;
+import com.heygoodly.portal.modules.user.dto.request.UpdateUserPreferenceRequest;
 import com.heygoodly.portal.modules.user.dto.request.VerifyPasswordRequest;
 import com.heygoodly.portal.modules.user.dto.response.ProfileResponse;
 import com.heygoodly.portal.modules.user.dto.response.SessionResponse;
 import com.heygoodly.portal.modules.user.dto.response.TwoFactorDetailsResponse;
+import com.heygoodly.portal.modules.user.dto.response.UserPreferenceResponse;
 import com.heygoodly.portal.modules.user.service.ProfileService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -130,6 +132,22 @@ public class ProfileController {
         Long userId = resolveUserId();
         Map<String, Boolean> prefs = profileService.updateNotificationPreferences(userId, preferences);
         return ResponseEntity.ok(ApiResponse.success(prefs, MessageConstants.UPDATED_SUCCESS));
+    }
+
+    @GetMapping("/preferences")
+    public ResponseEntity<ApiResponse<UserPreferenceResponse>> getPreferences() {
+        Long userId = resolveUserId();
+        UserPreferenceResponse response = profileService.getUserPreferences(userId);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PutMapping("/preferences")
+    public ResponseEntity<ApiResponse<UserPreferenceResponse>> updatePreferences(
+            @Valid @RequestBody UpdateUserPreferenceRequest request
+    ) {
+        Long userId = resolveUserId();
+        UserPreferenceResponse response = profileService.updateUserPreferences(userId, request);
+        return ResponseEntity.ok(ApiResponse.success(response, MessageConstants.UPDATED_SUCCESS));
     }
 
     private Long resolveUserId() {

@@ -31,6 +31,9 @@ public final class IpLocationUtils {
                 if (secondOctet >= 16 && secondOctet <= 31) {
                     return "Docker Container / VPC Network";
                 }
+                if (secondOctet >= 64 && secondOctet <= 71) {
+                    return "Cloudflare Edge / Proxy (" + ip + ")";
+                }
             } catch (Exception ignored) {}
         }
 

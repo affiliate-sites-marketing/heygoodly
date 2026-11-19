@@ -168,7 +168,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
           <div className="pt-2">
             <Link
               href={ROUTES.PUBLIC.CATEGORIES}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c62828] hover:bg-[#b71c1c] text-white text-xs font-bold rounded-xl transition"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl transition"
             >
               <ArrowLeft size={14} />
               <span>Browse All Categories</span>
@@ -185,9 +185,9 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
 
         {/* 1. Breadcrumb Navigation */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-500">
-          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-[#c62828] transition">Home</Link>
+          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-brand-primary transition">Home</Link>
           <ChevronRight size={12} className="shrink-0" />
-          <Link href={ROUTES.PUBLIC.CATEGORIES} className="hover:text-[#c62828] transition">Categories</Link>
+          <Link href={ROUTES.PUBLIC.CATEGORIES} className="hover:text-brand-primary transition">Categories</Link>
           <ChevronRight size={12} className="shrink-0" />
           <span className="text-slate-900 font-semibold truncate max-w-[180px] sm:max-w-xs">{meta?.name || normalizedSlug}</span>
         </nav>
@@ -198,7 +198,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
             <div className="space-y-4 max-w-3xl">
               <div className="flex flex-wrap items-center gap-2.5">
                 {meta?.icon && <span className="text-2xl">{meta.icon}</span>}
-                <span className="bg-[#c62828] text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs">
+                <span className="bg-brand-primary text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs">
                   Editorial Desk
                 </span>
                 <span className="text-xs font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
@@ -242,7 +242,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-500 text-[11px] shrink-0">
-                    <Hash size={13} className="text-[#c62828]" />
+                    <Hash size={13} className="text-brand-primary" />
                     <span>Topics &amp; Themes</span>
                   </div>
 
@@ -251,12 +251,12 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                       key={t}
                       type="button"
                       onClick={() => removeTag(t)}
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-[#c62828] border border-red-200 hover:bg-red-100 transition cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-primary-soft text-brand-primary border border-brand-primary-border hover:bg-brand-primary-soft-hover transition cursor-pointer"
                       title={`Remove #${t}`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
                       <span>#{t}</span>
-                      <X size={11} className="ml-0.5 text-red-500" />
+                      <X size={11} className="ml-0.5 text-brand-primary" />
                     </button>
                   ))}
 
@@ -264,7 +264,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                     <button
                       type="button"
                       onClick={clearAllTags}
-                      className="text-[11px] font-semibold text-[#c62828] hover:underline cursor-pointer ml-1"
+                      className="text-[11px] font-semibold text-brand-primary hover:underline cursor-pointer ml-1"
                     >
                       Clear all ({activeTags.length})
                     </button>
@@ -284,7 +284,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                     onClick={clearAllTags}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                       activeTags.length === 0
-                        ? 'bg-[#c62828] text-white shadow-2xs'
+                        ? 'bg-brand-primary text-white shadow-2xs'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
@@ -295,7 +295,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                     const isSelected = activeTags.some(
                       (t) => t.toLowerCase() === tag.name.toLowerCase() || t.toLowerCase() === tag.slug.toLowerCase()
                     );
-                    const dotColor = tag.color || '#c62828';
+                    const dotColor = tag.color || 'var(--brand-primary)';
                     return (
                       <button
                         type="button"
@@ -303,7 +303,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                         onClick={() => toggleTag(tag.name)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                           isSelected
-                            ? 'bg-[#c62828] text-white shadow-2xs ring-2 ring-red-600/20'
+                            ? 'bg-brand-primary text-white shadow-2xs ring-2 ring-brand-primary/20'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
@@ -337,17 +337,17 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                       }`}
                       aria-expanded={isTopicPopoverOpen}
                     >
-                      <Hash size={13} className={activeTags.length > 0 ? 'text-red-400' : 'text-[#c62828]'} />
+                      <Hash size={13} className={activeTags.length > 0 ? 'text-brand-primary-light' : 'text-brand-primary'} />
                       <span>All Topics ({allTags.length})</span>
                       {activeTags.length > 0 && (
-                        <span className="w-4 h-4 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                        <span className="w-4 h-4 rounded-full bg-brand-primary text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                           {activeTags.length}
                         </span>
                       )}
                       <ChevronDown
                         size={13}
                         className={`transition-transform duration-200 ${
-                          isTopicPopoverOpen ? 'rotate-180 text-red-500' : 'text-slate-400'
+                          isTopicPopoverOpen ? 'rotate-180 text-brand-primary' : 'text-slate-400'
                         }`}
                       />
                     </button>
@@ -362,7 +362,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                             value={topicSearch}
                             onChange={(e) => setTopicSearch(e.target.value)}
                             placeholder={`Search ${allTags.length} topics...`}
-                            className="w-full bg-slate-50 text-slate-800 placeholder:text-slate-400 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828] transition"
+                            className="w-full bg-slate-50 text-slate-800 placeholder:text-slate-400 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition"
                             autoFocus
                           />
                           {topicSearch && (
@@ -383,7 +383,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                             <button
                               type="button"
                               onClick={clearAllTags}
-                              className="text-[#c62828] hover:underline font-bold cursor-pointer"
+                              className="text-brand-primary hover:underline font-bold cursor-pointer"
                             >
                               Reset ({activeTags.length})
                             </button>
@@ -396,7 +396,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                             const isSel = activeTags.some(
                               (t) => t.toLowerCase() === tag.name.toLowerCase() || t.toLowerCase() === tag.slug.toLowerCase()
                             );
-                            const dotColor = tag.color || '#c62828';
+                            const dotColor = tag.color || 'var(--brand-primary)';
                             return (
                               <button
                                 type="button"
@@ -404,7 +404,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                                 onClick={() => toggleTag(tag.name)}
                                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer text-left ${
                                   isSel
-                                    ? 'bg-red-50 text-[#c62828] font-bold border border-red-200 shadow-2xs'
+                                    ? 'bg-brand-primary-soft text-brand-primary font-bold border border-brand-primary-border shadow-2xs'
                                     : 'text-slate-700 hover:bg-slate-100 border border-transparent'
                                 }`}
                               >
@@ -419,7 +419,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                                 <div className="flex items-center gap-2 shrink-0 ml-2">
                                   {typeof tag.postsCount === 'number' && tag.postsCount > 0 && (
                                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                      isSel ? 'bg-red-200 text-red-800' : 'bg-slate-100 text-slate-500'
+                                      isSel ? 'bg-brand-primary-soft-hover text-brand-primary-active' : 'bg-slate-100 text-slate-500'
                                     }`}>
                                       {tag.postsCount}
                                     </span>
@@ -427,7 +427,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                                   <div
                                     className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
                                       isSel
-                                        ? 'bg-[#c62828] border-[#c62828] text-white'
+                                        ? 'bg-brand-primary border-brand-primary text-white'
                                         : 'border-slate-300'
                                     }`}
                                   >
@@ -450,7 +450,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
         {/* 3. Toolbar & Sorting */}
         <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-            <Flame size={15} className="text-[#c62828]" />
+            <Flame size={15} className="text-brand-primary" />
             <span>Editorial Articles ({totalArticles})</span>
           </div>
 
@@ -460,7 +460,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
               onClick={() => { setSortBy('newest'); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                 sortBy === 'newest'
-                  ? 'bg-[#c62828] text-white shadow-2xs'
+                  ? 'bg-brand-primary text-white shadow-2xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -471,7 +471,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
               onClick={() => { setSortBy('popular'); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                 sortBy === 'popular'
-                  ? 'bg-[#c62828] text-white shadow-2xs'
+                  ? 'bg-brand-primary text-white shadow-2xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -500,7 +500,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
               <button
                 type="button"
                 onClick={clearAllTags}
-                className="text-xs font-bold text-[#c62828] hover:underline cursor-pointer"
+                className="text-xs font-bold text-brand-primary hover:underline cursor-pointer"
               >
                 Clear topic filters
               </button>
@@ -521,7 +521,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
 
         {/* 6. Editorial Archive Callout */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 text-center space-y-3 shadow-2xs">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#c62828] block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary block">
             Editorial Archive
           </span>
           <h3 className="font-editorial text-2xl font-bold text-slate-900 tracking-tight">
@@ -533,7 +533,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
           <div className="pt-2">
             <Link
               href={ROUTES.PUBLIC.POSTS}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#c62828] hover:bg-[#b71c1c] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-xs cursor-pointer hover:shadow"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-brand-primary hover:bg-brand-primary-hover text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-xs cursor-pointer hover:shadow"
             >
               <span>Explore Full Editorial Archive</span>
               <ArrowRight size={14} />

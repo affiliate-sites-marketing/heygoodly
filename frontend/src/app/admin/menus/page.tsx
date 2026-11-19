@@ -130,7 +130,7 @@ export default function AdminMenusPage() {
       >
         <Link
           href={ROUTES.ADMIN.MENU_CREATE}
-          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
         >
           <Plus size={15} /> Add Menu Item
         </Link>
@@ -162,7 +162,7 @@ export default function AdminMenusPage() {
               onClick={() => setActiveTab('main')}
               className={`h-8 px-3.5 inline-flex items-center justify-center text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'main'
-                  ? 'bg-white text-[#C62828] shadow-2xs'
+                  ? 'bg-white text-brand-primary shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -173,7 +173,7 @@ export default function AdminMenusPage() {
               onClick={() => setActiveTab('footer')}
               className={`h-8 px-3.5 inline-flex items-center justify-center text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'footer'
-                  ? 'bg-white text-[#C62828] shadow-2xs'
+                  ? 'bg-white text-brand-primary shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >

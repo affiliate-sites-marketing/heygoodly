@@ -1,6 +1,11 @@
 target
 .git
 .idea
+.vscode
+.mvn
 *.iml
+*.md
+*.log
+logs
+deploy
 .DS_Store
-

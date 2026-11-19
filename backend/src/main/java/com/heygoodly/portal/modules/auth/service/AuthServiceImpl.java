@@ -1,5 +1,6 @@
 package com.heygoodly.portal.modules.auth.service;
 
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.ErrorCodes;
 import com.heygoodly.portal.common.exception.BadRequestException;
 import com.heygoodly.portal.common.exception.ResourceNotFoundException;
@@ -59,6 +60,7 @@ public class AuthServiceImpl implements AuthService {
     private final SettingService settingService;
     private final TokenBlacklistService tokenBlacklistService;
     private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -228,6 +230,9 @@ public class AuthServiceImpl implements AuthService {
             user.setTwoFactorEnabled(true);
             user.setTwoFactorRecoveryCodes(objectMapper.writeValueAsString(recoveryCodes));
             userRepository.save(user);
+            if (user.getEmail() != null) {
+                redisCacheService.evict(RedisCacheService.AUTH_USER_PREFIX + user.getEmail().trim().toLowerCase());
+            }
             log.info("2FA successfully enabled for user: {}", user.getEmail());
             return recoveryCodes;
         } catch (JsonProcessingException e) {
@@ -244,6 +249,9 @@ public class AuthServiceImpl implements AuthService {
         user.setTwoFactorSecret(null);
         user.setTwoFactorRecoveryCodes(null);
         userRepository.save(user);
+        if (user.getEmail() != null) {
+            redisCacheService.evict(RedisCacheService.AUTH_USER_PREFIX + user.getEmail().trim().toLowerCase());
+        }
         log.info("2FA disabled for user: {}", user.getEmail());
     }
 

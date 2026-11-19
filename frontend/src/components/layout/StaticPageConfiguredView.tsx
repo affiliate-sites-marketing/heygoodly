@@ -71,7 +71,7 @@ export default function StaticPageConfiguredView({ slug, children }: StaticPageC
           </p>
           <Link
             href={ROUTES.PUBLIC.HOME}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#C62828] hover:underline pt-2"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-primary hover:underline pt-2"
           >
             <ArrowLeft size={14} /> Return to Homepage
           </Link>
@@ -86,7 +86,7 @@ export default function StaticPageConfiguredView({ slug, children }: StaticPageC
       <div className="bg-slate-50 min-h-screen py-8 sm:py-10">
         <div className="max-w-4xl mx-auto px-4 space-y-6 sm:space-y-8">
           <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-sm space-y-3">
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-[#C62828] bg-red-50 px-3 py-1 rounded-full uppercase tracking-widest border border-red-200">
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-brand-primary bg-brand-primary-soft px-3 py-1 rounded-full uppercase tracking-widest border border-brand-primary-border">
               <FileText size={14} /> Official Policy &amp; Information
             </div>
             <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight font-editorial">
@@ -121,7 +121,7 @@ export default function StaticPageConfiguredView({ slug, children }: StaticPageC
         <p className="text-xs text-slate-500">The requested page does not exist or has been removed.</p>
         <Link
           href={ROUTES.PUBLIC.HOME}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#C62828] hover:underline pt-2"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-primary hover:underline pt-2"
         >
           <ArrowLeft size={14} /> Return to Homepage
         </Link>

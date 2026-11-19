@@ -50,7 +50,7 @@ export default function AdminFilterBar({
           <button
             type="button"
             onClick={onReset}
-            className="text-[11px] font-bold text-[#C62828] hover:underline cursor-pointer"
+            className="text-[11px] font-bold text-brand-primary hover:underline cursor-pointer"
           >
             {t('Clear all filters')}
           </button>

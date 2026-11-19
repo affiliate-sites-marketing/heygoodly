@@ -11,6 +11,7 @@ import AdminFormPage, {
   labelClass,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
+import { SITE_DOMAIN } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { type MenuItem } from '../_lib/data';
@@ -217,7 +218,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
             {/* Quick Presets */}
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles size={13} className="text-[#C62828]" /> Quick Link Presets
+                <Sparkles size={13} className="text-brand-primary" /> Quick Link Presets
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {QUICK_PRESETS.map((p) => (
@@ -225,7 +226,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                     key={p.label}
                     type="button"
                     onClick={() => applyPreset(p)}
-                    className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-[#C62828] hover:text-[#C62828] transition cursor-pointer shadow-2xs"
+                    className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-brand-primary hover:text-brand-primary transition cursor-pointer shadow-2xs"
                   >
                     + {p.label}
                   </button>
@@ -306,7 +307,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                       onClick={() => setForm({ ...form, position: 'main' })}
                       className={`p-3 rounded-xl border text-left transition cursor-pointer ${
                         form.position === 'main'
-                          ? 'border-[#C62828] bg-rose-50/50 text-[#C62828] font-bold shadow-2xs'
+                          ? 'border-brand-primary bg-rose-50/50 text-brand-primary font-bold shadow-2xs'
                           : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                       }`}
                     >
@@ -319,7 +320,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                       onClick={() => setForm({ ...form, position: 'footer' })}
                       className={`p-3 rounded-xl border text-left transition cursor-pointer ${
                         form.position === 'footer'
-                          ? 'border-[#C62828] bg-rose-50/50 text-[#C62828] font-bold shadow-2xs'
+                          ? 'border-brand-primary bg-rose-50/50 text-brand-primary font-bold shadow-2xs'
                           : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                       }`}
                     >
@@ -355,7 +356,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                     type="checkbox"
                     checked={form.isActive}
                     onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                 </label>
               </div>
@@ -463,7 +464,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                     <div className="flex-1 max-w-md bg-white border border-slate-200 rounded-lg px-3 py-1 flex items-center gap-2 text-xs text-slate-500 font-mono shadow-2xs">
                       <Globe size={12} className="text-slate-400" />
                       <span className="text-slate-700 truncate">
-                        https://heygoodly.com{form.targetValue || ''}
+                        https://{SITE_DOMAIN}{form.targetValue || ''}
                       </span>
                     </div>
 
@@ -480,7 +481,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                       {/* Top Utility Bar */}
                       <div className="bg-[#F8F8F6] border-b border-[#E7E7E5] text-[10px] text-[#737373] py-1.5 px-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#C62828]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand-primary" />
                           <span className="font-semibold text-[#171717]">Thu, Oct 24, 2026</span>
                           <span>•</span>
                           <span className="hidden sm:inline">The Independent Product Review &amp; Smart Deals Journal</span>
@@ -496,7 +497,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                       <div className="bg-white py-4 px-4 sm:px-6 border-b border-[#E7E7E5] flex items-center justify-between gap-4">
                         <div>
                           <span className="font-editorial text-2xl sm:text-3xl font-black text-[#171717] tracking-tight">
-                            HeyGoodly<span className="text-[#C62828]">.</span>
+                            HeyGoodly<span className="text-brand-primary">.</span>
                           </span>
                           <span className="text-[9px] uppercase tracking-widest text-[#737373] block mt-0.5">
                             Product Reviews &amp; Deals
@@ -511,7 +512,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                             </span>
                             <div className="font-bold text-[11px] truncate">Nilight LED Light Bars 65% Off</div>
                           </div>
-                          <span className="text-[10px] font-bold bg-[#C62828] text-white px-2 py-1 rounded shrink-0">
+                          <span className="text-[10px] font-bold bg-brand-primary text-white px-2 py-1 rounded shrink-0">
                             View →
                           </span>
                         </div>
@@ -534,15 +535,15 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                                 key={item.id}
                                 className={`text-[11px] font-bold tracking-wider uppercase px-3 py-2.5 transition-all whitespace-nowrap flex items-center gap-1.5 border-b-2 ${
                                   isLiveItem
-                                    ? 'border-[#C62828] bg-rose-50 text-[#C62828] ring-2 ring-[#C62828]/40 rounded-t-lg'
+                                    ? 'border-brand-primary bg-rose-50 text-brand-primary ring-2 ring-brand-primary/40 rounded-t-lg'
                                     : item.isActive
-                                    ? 'border-transparent text-[#171717] hover:text-[#C62828]'
+                                    ? 'border-transparent text-[#171717] hover:text-brand-primary'
                                     : 'border-transparent text-slate-300 line-through'
                                 }`}
                               >
                                 <span>{item.title || 'Untitled'}</span>
                                 {isLiveItem && (
-                                  <span className="text-[8px] font-black uppercase tracking-widest bg-[#C62828] text-white px-1.5 py-0.2 rounded-full animate-pulse shadow-2xs">
+                                  <span className="text-[8px] font-black uppercase tracking-widest bg-brand-primary text-white px-1.5 py-0.2 rounded-full animate-pulse shadow-2xs">
                                     Live
                                   </span>
                                 )}
@@ -569,7 +570,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                         
                         {/* Flash News Banner */}
                         <div className="flex items-center gap-2 bg-[#F8F8F6] border border-[#E7E7E5] px-3 py-1.5 rounded-lg text-xs">
-                          <span className="bg-[#C62828] text-white font-bold text-[9px] uppercase px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
+                          <span className="bg-brand-primary text-white font-bold text-[9px] uppercase px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
                             <Zap size={10} className="fill-white" /> Flash News
                           </span>
                           <span className="text-[11px] text-slate-800 font-semibold truncate">
@@ -580,17 +581,17 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                         {/* Simulated Store Hero Banner */}
                         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex items-center justify-between gap-4">
                           <div className="space-y-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#C62828]">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">
                               Live Navigation Preview
                             </span>
                             <h3 className="text-sm sm:text-base font-black text-slate-900">
-                              Target Destination: <span className="font-mono text-[#C62828]">{form.targetValue || '/'}</span>
+                              Target Destination: <span className="font-mono text-brand-primary">{form.targetValue || '/'}</span>
                             </h3>
                             <p className="text-[11px] text-slate-500">
                               Clicking this menu item in public will navigate visitors directly to this route.
                             </p>
                           </div>
-                          <span className="shrink-0 bg-[#C62828] text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1">
+                          <span className="shrink-0 bg-brand-primary text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1">
                             Visit Link <ExternalLink size={12} />
                           </span>
                         </div>
@@ -607,7 +608,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                         {/* Brand Column */}
                         <div className="space-y-2">
                           <div className="font-editorial text-xl font-bold text-white">
-                            HeyGoodly<span className="text-[#C62828]">.</span>
+                            HeyGoodly<span className="text-brand-primary">.</span>
                           </div>
                           <p className="text-[11px] text-[#A8A8A2] leading-relaxed">
                             Independent product review journal and curated deal discovery platform.
@@ -633,7 +634,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                         <div className="space-y-2">
                           <div className="text-white font-bold text-[11px] uppercase tracking-wider border-b border-[#262626] pb-1 flex items-center justify-between">
                             <span>Trust &amp; Sitemap</span>
-                            <span className="text-[9px] text-[#C62828] font-bold">Active Column</span>
+                            <span className="text-[9px] text-brand-primary font-bold">Active Column</span>
                           </div>
                           <div className="space-y-1.5 text-[11px]">
                             {footerMenuItems.map((item) => {
@@ -643,7 +644,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                                   key={item.id}
                                   className={`flex items-center justify-between px-2 py-1 rounded transition ${
                                     isLiveItem
-                                      ? 'bg-[#C62828]/20 border border-[#C62828] text-white font-bold'
+                                      ? 'bg-brand-primary/20 border border-brand-primary text-white font-bold'
                                       : item.isActive
                                       ? 'text-[#A8A8A2] hover:text-white'
                                       : 'text-zinc-600 line-through'
@@ -651,7 +652,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                                 >
                                   <span>{item.title || 'Untitled'}</span>
                                   {isLiveItem && (
-                                    <span className="text-[8px] bg-[#C62828] text-white px-1.5 py-0.2 rounded font-black">
+                                    <span className="text-[8px] bg-brand-primary text-white px-1.5 py-0.2 rounded font-black">
                                       Live Item
                                     </span>
                                   )}
@@ -690,14 +691,14 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
 
                     {/* Mobile Browser Address Bar */}
                     <div className="bg-[#f0f0ee] border-b border-[#e5e5e3] px-3 py-1.5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                      <span className="truncate">heygoodly.com{form.targetValue || ''}</span>
+                      <span className="truncate">{SITE_DOMAIN}{form.targetValue || ''}</span>
                       <RotateCcw size={10} />
                     </div>
 
                     {/* Mobile Header Bar */}
                     <div className="bg-white border-b border-slate-200 p-3 flex items-center justify-between">
                       <span className="font-editorial text-xl font-bold tracking-tight text-[#171717]">
-                        HeyGoodly<span className="text-[#C62828]">.</span>
+                        HeyGoodly<span className="text-brand-primary">.</span>
                       </span>
 
                       <div className="flex items-center gap-2">
@@ -718,7 +719,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                         
                         {/* Drawer Section Header */}
                         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#C62828]">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">
                             Mobile Navigation Links
                           </span>
                           <span className="text-[9px] text-slate-400 font-semibold">
@@ -735,7 +736,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                                 key={item.id}
                                 className={`px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${
                                   isLiveItem
-                                    ? 'bg-rose-50 border border-[#C62828] text-[#C62828] font-bold shadow-2xs'
+                                    ? 'bg-rose-50 border border-brand-primary text-brand-primary font-bold shadow-2xs'
                                     : item.isActive
                                     ? 'bg-slate-50 text-slate-800 font-semibold'
                                     : 'bg-slate-50 text-slate-400 line-through'
@@ -743,7 +744,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                               >
                                 <span className="uppercase">{item.title || 'Untitled'}</span>
                                 {isLiveItem ? (
-                                  <span className="text-[9px] font-black bg-[#C62828] text-white px-2 py-0.5 rounded-full animate-pulse">
+                                  <span className="text-[9px] font-black bg-brand-primary text-white px-2 py-0.5 rounded-full animate-pulse">
                                     ★ Live
                                   </span>
                                 ) : (
@@ -762,7 +763,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                             </span>
                             <div className="p-2.5 rounded-xl bg-slate-900 text-white text-xs flex items-center justify-between">
                               <span className="font-bold">{form.title || 'Footer Item'}</span>
-                              <span className="text-[9px] bg-[#C62828] text-white px-2 py-0.5 rounded">Footer</span>
+                              <span className="text-[9px] bg-brand-primary text-white px-2 py-0.5 rounded">Footer</span>
                             </div>
                           </div>
                         )}
@@ -774,7 +775,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                     ) : (
                       /* Mobile Screen Content When Drawer is Closed */
                       <div className="p-4 space-y-3 flex-1 flex flex-col justify-center text-center">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-[#C62828]">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-brand-primary">
                           <MenuIcon size={24} />
                         </div>
                         <h4 className="font-bold text-xs text-slate-800">Mobile Menu Closed</h4>
@@ -784,7 +785,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                         <button
                           type="button"
                           onClick={() => setMobileDrawerOpen(true)}
-                          className="text-xs font-bold text-[#C62828] bg-rose-50 py-2 rounded-xl border border-rose-200 cursor-pointer"
+                          className="text-xs font-bold text-brand-primary bg-rose-50 py-2 rounded-xl border border-rose-200 cursor-pointer"
                         >
                           Open Mobile Drawer Preview
                         </button>

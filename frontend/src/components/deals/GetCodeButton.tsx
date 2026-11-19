@@ -49,11 +49,11 @@ export default function GetCodeButton({
     <button
       type="button"
       onClick={handleClick}
-      className={`group font-black tracking-wide text-white rounded-xl shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 bg-[#c62828] hover:bg-[#b71c1c] hover:shadow-sm active:scale-95 ${
+      className={`group font-black tracking-wide text-white rounded-xl shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover hover:shadow-sm active:scale-95 ${
         size === 'sm' ? 'py-2 px-3 text-xs' : size === 'lg' ? 'py-3 px-5 text-sm' : 'py-2.5 px-4 text-xs'
       } ${fullWidth ? 'w-full' : 'w-full sm:w-auto'} ${className}`}
     >
-      <Scissors size={14} className="text-red-100 group-hover:rotate-12 transition-transform duration-200" />
+      <Scissors size={14} className="text-white/90 group-hover:rotate-12 transition-transform duration-200" />
       <span>Get Code</span>
       <ExternalLink size={13} className="text-white/80 group-hover:translate-x-0.5 transition-transform" />
     </button>

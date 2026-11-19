@@ -1,3 +1,5 @@
+import { SITE_NAME, SITE_SLUG } from '@/constants/site';
+
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'heygoodly_access_token',
   REFRESH_TOKEN: 'heygoodly_refresh_token',
@@ -7,12 +9,12 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const SEO_DEFAULTS = {
-  SITE_NAME: 'HeyGoodly',
+  SITE_NAME,
   TAGLINE: 'Smart News & Hot Deals - Save More Daily',
-  DEFAULT_TITLE: 'HeyGoodly - Verified Coupon Codes, Promo Discounts & Tech Reviews 2026',
+  DEFAULT_TITLE: `${SITE_NAME} - Verified Coupon Codes, Promo Discounts & Tech Reviews 2026`,
   DEFAULT_DESCRIPTION: 'Find 100% verified coupons, promo codes, exclusive deals, and honest shopping reviews to maximize your savings every day.',
   DEFAULT_OG_IMAGE: '/og-default.jpg',
-  TWITTER_HANDLE: '@heygoodly',
+  TWITTER_HANDLE: `@${SITE_SLUG}`,
 } as const;
 
 export const UI_CONSTANTS = {

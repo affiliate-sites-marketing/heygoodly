@@ -72,10 +72,10 @@ export default function ArticleCard({
           <CoverVisual imageUrl={article.imageUrl} title={article.title} sizes="100px" />
         </Link>
         <div className="space-y-1.5 flex-1 min-w-0">
-          <span className="text-[10px] font-black uppercase text-red-700 tracking-wider block">
+          <span className="text-[10px] font-black uppercase text-brand-primary tracking-wider block">
             {article.category}
           </span>
-          <h4 className="font-bold text-xs sm:text-sm text-slate-950 group-hover:text-red-700 transition-colors leading-snug line-clamp-2">
+          <h4 className="font-bold text-xs sm:text-sm text-slate-950 group-hover:text-brand-primary transition-colors leading-snug line-clamp-2">
             <Link href={postHref}>{article.title}</Link>
           </h4>
           <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
@@ -126,7 +126,7 @@ export default function ArticleCard({
               </span>
             </div>
 
-            <h3 className="font-extrabold text-base md:text-lg text-slate-950 group-hover:text-red-700 transition-colors leading-snug line-clamp-2">
+            <h3 className="font-extrabold text-base md:text-lg text-slate-950 group-hover:text-brand-primary transition-colors leading-snug line-clamp-2">
               <Link href={postHref}>{article.title}</Link>
             </h3>
 
@@ -141,7 +141,7 @@ export default function ArticleCard({
 
             <Link
               href={postHref}
-              className="text-xs font-bold text-slate-950 group-hover:text-red-700 flex items-center gap-1.5 transition-colors shrink-0 whitespace-nowrap"
+              className="text-xs font-bold text-slate-950 group-hover:text-brand-primary flex items-center gap-1.5 transition-colors shrink-0 whitespace-nowrap"
             >
               <span>Read report</span>
               <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
@@ -183,7 +183,7 @@ export default function ArticleCard({
             </span>
           </div>
 
-          <h3 className="font-extrabold text-base text-slate-950 group-hover:text-red-700 transition-colors leading-snug line-clamp-2">
+          <h3 className="font-extrabold text-base text-slate-950 group-hover:text-brand-primary transition-colors leading-snug line-clamp-2">
             <Link href={postHref}>{article.title}</Link>
           </h3>
 
@@ -198,7 +198,7 @@ export default function ArticleCard({
 
           <Link
             href={postHref}
-            className="text-xs font-bold text-slate-950 group-hover:text-red-700 flex items-center gap-1 transition-colors shrink-0 whitespace-nowrap"
+            className="text-xs font-bold text-slate-950 group-hover:text-brand-primary flex items-center gap-1 transition-colors shrink-0 whitespace-nowrap"
           >
             <span>Read review</span>
             <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />

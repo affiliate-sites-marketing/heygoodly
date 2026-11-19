@@ -2,6 +2,7 @@ package com.heygoodly.portal.modules.store.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.dto.PageResponse;
@@ -10,6 +11,7 @@ import com.heygoodly.portal.common.exception.ResourceNotFoundException;
 import com.heygoodly.portal.common.util.NullSafeUtils;
 import com.heygoodly.portal.common.util.SecurityUtils;
 import com.heygoodly.portal.common.util.SlugUtils;
+import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.category.entity.CategoryEntity;
 import com.heygoodly.portal.modules.category.repository.CategoryRepository;
 import com.heygoodly.portal.modules.offer.repository.OfferRepository;
@@ -58,6 +60,8 @@ public class StoreServiceImpl implements StoreService {
     private final com.heygoodly.portal.modules.tag.service.TagService tagService;
     private final ObjectMapper objectMapper;
     private final com.heygoodly.portal.modules.store.mapper.StoreMapper storeMapper;
+    private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
 
     @Override
     public PageResponse<StoreSummaryResponse> getPublicStores(
@@ -146,11 +150,23 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public StoreDetailResponse getStoreBySlug(String slug) {
-        StoreEntity store = findStoreByIdOrSlug(slug);
-        if (!NullSafeUtils.safeBoolean(store.getIsActive()) && !SecurityUtils.isStaffOrAdmin()) {
-            throw new ResourceNotFoundException(EntityFieldConstants.ENTITY_STORE, EntityFieldConstants.SLUG, slug);
+        if (SecurityUtils.isStaffOrAdmin()) {
+            StoreEntity store = findStoreByIdOrSlug(slug);
+            return mapToDetail(store);
         }
-        return mapToDetail(store);
+        String cacheKey = RedisCacheService.STORES_PUBLIC_PREFIX + "slug:" + NullSafeUtils.safeLowerTrim(slug);
+        return redisCacheService.getOrLoad(
+                cacheKey,
+                StoreDetailResponse.class,
+                java.time.Duration.ofMinutes(2),
+                () -> {
+                    StoreEntity store = findStoreByIdOrSlug(slug);
+                    if (!NullSafeUtils.safeBoolean(store.getIsActive())) {
+                        throw new ResourceNotFoundException(EntityFieldConstants.ENTITY_STORE, EntityFieldConstants.SLUG, slug);
+                    }
+                    return mapToDetail(store);
+                }
+        );
     }
 
     @Override
@@ -165,11 +181,8 @@ public class StoreServiceImpl implements StoreService {
             } catch (NumberFormatException ignored) {}
         }
         return categoryRepository.findBySlugAndIsDeletedFalse(clean.toLowerCase())
+                .or(() -> categoryRepository.findFirstByNameIgnoreCaseAndIsDeletedFalse(clean))
                 .map(CategoryEntity::getId)
-                .or(() -> categoryRepository.findAll().stream()
-                        .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()) && c.getName() != null && c.getName().equalsIgnoreCase(clean))
-                        .map(CategoryEntity::getId)
-                        .findFirst())
                 .orElse(null);
     }
 
@@ -313,6 +326,8 @@ public class StoreServiceImpl implements StoreService {
             syncStoreReviews(saved.getId(), request.getCustomerReviews(), actor);
         }
 
+        auditLogService.recordAction("CREATE", "stores", String.valueOf(saved.getId()), saved.getName(), null);
+        evictStoreCaches();
         return mapToDetail(saved);
     }
 
@@ -327,6 +342,12 @@ public class StoreServiceImpl implements StoreService {
     public StoreDetailResponse updateByIdOrSlug(String idOrSlug, StoreRequest request) {
         StoreEntity store = findStoreByIdOrSlug(idOrSlug);
         Long id = store.getId();
+
+        String oldName = store.getName();
+        String oldSlug = store.getSlug();
+        Boolean oldActive = store.getIsActive();
+        Boolean oldFeatured = store.getIsFeatured();
+        String oldWebsite = store.getAfWebsite();
 
         String slug = (request.getSlug() != null && !request.getSlug().isBlank())
                 ? SlugUtils.toSlug(request.getSlug())
@@ -390,6 +411,14 @@ public class StoreServiceImpl implements StoreService {
             String actor = SecurityUtils.getCurrentUserEmail().orElse(AppConstants.SYSTEM_USER);
             syncStoreReviews(updated.getId(), request.getCustomerReviews(), actor);
         }
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "name", "Store Name", oldName, updated.getName());
+        AuditLogService.appendDiff(diffs, "slug", "Slug", oldSlug, updated.getSlug());
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, updated.getIsActive());
+        AuditLogService.appendDiff(diffs, "isFeatured", "Featured", oldFeatured, updated.getIsFeatured());
+        AuditLogService.appendDiff(diffs, "afWebsite", "Affiliate Website", oldWebsite, updated.getAfWebsite());
+        auditLogService.recordAction("UPDATE", "stores", String.valueOf(updated.getId()), updated.getName(), diffs);
+        evictStoreCaches();
         return mapToDetail(updated);
     }
 
@@ -404,8 +433,13 @@ public class StoreServiceImpl implements StoreService {
     public StoreSummaryResponse toggleStatusByIdOrSlug(String idOrSlug) {
         StoreEntity store = findStoreByIdOrSlug(idOrSlug);
 
-        store.setIsActive(!Boolean.TRUE.equals(store.getIsActive()));
+        Boolean oldActive = Boolean.TRUE.equals(store.getIsActive());
+        store.setIsActive(!oldActive);
         StoreEntity saved = storeRepository.save(store);
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, saved.getIsActive());
+        auditLogService.recordAction("TOGGLE_STATUS", "stores", String.valueOf(saved.getId()), saved.getName(), diffs);
+        evictStoreCaches();
 
         String catName = null;
         if (saved.getCategoryId() != null) {
@@ -497,6 +531,8 @@ public class StoreServiceImpl implements StoreService {
 
         clone.setCreatedBy(SecurityUtils.getCurrentUserEmail().orElse("system"));
         StoreEntity saved = storeRepository.save(clone);
+        auditLogService.recordAction("CLONE", "stores", String.valueOf(saved.getId()), saved.getName(), null);
+        evictStoreCaches();
         return mapToDetail(saved);
     }
 
@@ -510,9 +546,13 @@ public class StoreServiceImpl implements StoreService {
     @Transactional
     public void deleteByIdOrSlug(String idOrSlug) {
         StoreEntity store = findStoreByIdOrSlug(idOrSlug);
+        String deletedName = store.getName();
+        Long deletedId = store.getId();
         store.setIsDeleted(true);
         store.setSlug(new StringBuilder().append(store.getSlug()).append(AppConstants.HYPHEN).append("deleted").append(AppConstants.HYPHEN).append(System.currentTimeMillis()).toString());
         storeRepository.save(store);
+        auditLogService.recordAction("DELETE", "stores", String.valueOf(deletedId), deletedName, null);
+        evictStoreCaches();
     }
 
     /**
@@ -723,6 +763,14 @@ public class StoreServiceImpl implements StoreService {
     public void reorder(List<Long> orderedIds) {
         com.heygoodly.portal.common.util.SortOrderUtils.reorderEntities(
                 orderedIds, storeRepository, StoreEntity::getId, StoreEntity::setSortOrder);
+        evictStoreCaches();
+    }
+
+    private void evictStoreCaches() {
+        redisCacheService.evictByPrefix(RedisCacheService.STORES_PUBLIC_PREFIX);
+        redisCacheService.evictByPrefix(RedisCacheService.OFFERS_PUBLIC_PREFIX);
+        redisCacheService.evictByPrefix(RedisCacheService.CATEGORIES_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
     }
 
     private <T> T deserializeJson(String json, TypeReference<T> typeRef) {

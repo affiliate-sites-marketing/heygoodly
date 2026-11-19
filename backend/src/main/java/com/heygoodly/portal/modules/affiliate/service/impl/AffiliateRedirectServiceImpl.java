@@ -14,6 +14,7 @@ import com.heygoodly.portal.modules.store.repository.StoreRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,9 @@ public class AffiliateRedirectServiceImpl implements AffiliateRedirectService {
     private final StoreRepository storeRepository;
     private final OfferRepository offerRepository;
     private final ApplicationEventPublisher eventPublisher;
+
+    @Value("${app.affiliate.default-fallback-url:" + AffiliateConstants.DEFAULT_FALLBACK_URL + "}")
+    private String defaultFallbackUrl;
 
     private static final String ENTITY_STORE = "Store";
     private static final String ENTITY_OFFER = "Offer";
@@ -39,7 +43,7 @@ public class AffiliateRedirectServiceImpl implements AffiliateRedirectService {
 
         String rawTargetUrl = (store.getAfWebsite() != null && !store.getAfWebsite().isBlank())
                 ? store.getAfWebsite()
-                : AffiliateConstants.DEFAULT_FALLBACK_URL;
+                : defaultFallbackUrl;
 
         String finalUrl = UrlUtils.appendQueryParams(rawTargetUrl, request.getParameterMap());
 
@@ -70,7 +74,7 @@ public class AffiliateRedirectServiceImpl implements AffiliateRedirectService {
         } else if (parentStore != null && parentStore.getAfWebsite() != null && !parentStore.getAfWebsite().isBlank()) {
             rawTargetUrl = parentStore.getAfWebsite();
         } else {
-            rawTargetUrl = AffiliateConstants.DEFAULT_FALLBACK_URL;
+            rawTargetUrl = defaultFallbackUrl;
         }
 
         String finalUrl = UrlUtils.appendQueryParams(rawTargetUrl, request.getParameterMap());

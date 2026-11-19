@@ -314,7 +314,7 @@ export default function AdminUsersPage() {
       >
         <Link
           href={ROUTES.ADMIN.USER_CREATE}
-          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
         >
           <Plus size={16} /> Add Staff User
         </Link>
@@ -358,7 +358,7 @@ export default function AdminUsersPage() {
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Loader2 size={24} className="animate-spin text-[#C62828]" />
+                      <Loader2 size={24} className="animate-spin text-brand-primary" />
                       <p className="text-xs font-semibold">Loading staff accounts...</p>
                     </div>
                   </td>
@@ -564,7 +564,7 @@ export default function AdminUsersPage() {
                     <button
                       type="button"
                       onClick={handleAddLoginRecord}
-                      className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                      className="px-4 py-1.5 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold shadow-xs transition cursor-pointer"
                     >
                       Save Login Record
                     </button>
@@ -776,7 +776,7 @@ export default function AdminUsersPage() {
             <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-3 shrink-0">
               <Link
                 href={ROUTES.ADMIN.USER_EDIT(traceUser.id)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#C62828] hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-primary hover:underline"
               >
                 <Edit2 size={13} />
                 <span>Edit Full User Profile & Password</span>

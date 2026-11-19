@@ -1,5 +1,7 @@
 package com.heygoodly.portal.modules.category.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.dto.PageResponse;
 import com.heygoodly.portal.common.exception.AppException;
@@ -7,6 +9,7 @@ import com.heygoodly.portal.common.exception.ErrorCode;
 import com.heygoodly.portal.common.util.NullSafeUtils;
 import com.heygoodly.portal.common.util.SecurityUtils;
 import com.heygoodly.portal.common.util.SlugUtils;
+import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.category.dto.request.CategoryRequest;
 import com.heygoodly.portal.modules.category.dto.response.CategoryResponse;
 import com.heygoodly.portal.modules.category.entity.CategoryEntity;
@@ -51,30 +54,37 @@ public class CategoryServiceImpl implements CategoryService {
     private final PostRepository postRepository;
     private final StoreRepository storeRepository;
     private final com.heygoodly.portal.modules.category.mapper.CategoryMapper categoryMapper;
+    private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
 
     @Override
     public List<CategoryResponse> getPublicCategories(String type) {
-        String queryType = NullSafeUtils.safeLowerTrim(type);
-        if (queryType.isEmpty()) {
-            queryType = TYPE_POST;
-        }
+        String rawType = NullSafeUtils.safeLowerTrim(type);
+        final String queryType = rawType.isEmpty() ? TYPE_POST : rawType;
 
-        if (TYPE_ALL.equalsIgnoreCase(queryType)) {
-            List<CategoryEntity> allActive = categoryRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
-            return mapToResponseList(allActive);
-        }
+        return redisCacheService.getOrLoad(
+                RedisCacheService.CATEGORIES_PUBLIC_PREFIX + queryType,
+                new TypeReference<List<CategoryResponse>>() {},
+                java.time.Duration.ofMinutes(3),
+                () -> {
+                    if (TYPE_ALL.equalsIgnoreCase(queryType)) {
+                        List<CategoryEntity> allActive = categoryRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+                        return mapToResponseList(allActive);
+                    }
 
-        if (TYPE_STORE.equalsIgnoreCase(queryType)) {
-            List<CategoryEntity> allActive = categoryRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
-            List<CategoryResponse> mapped = mapToResponseList(allActive);
-            return mapped.stream()
-                    .filter(c -> TYPE_STORE.equalsIgnoreCase(c.type()) || c.storeCount() > 0)
-                    .toList();
-        }
+                    if (TYPE_STORE.equalsIgnoreCase(queryType)) {
+                        List<CategoryEntity> allActive = categoryRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+                        List<CategoryResponse> mapped = mapToResponseList(allActive);
+                        return mapped.stream()
+                                .filter(c -> TYPE_STORE.equalsIgnoreCase(c.type()) || c.storeCount() > 0)
+                                .toList();
+                    }
 
-        List<CategoryEntity> entities = categoryRepository
-                .findByTypeAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc(queryType);
-        return mapToResponseList(entities);
+                    List<CategoryEntity> entities = categoryRepository
+                            .findByTypeAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc(queryType);
+                    return mapToResponseList(entities);
+                }
+        );
     }
 
     @Override
@@ -114,9 +124,16 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryResponse> getHomeCategories() {
-        List<CategoryEntity> entities = categoryRepository
-                .findByShowOnHomeTrueAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
-        return mapToResponseList(entities);
+        return redisCacheService.getOrLoad(
+                RedisCacheService.CATEGORIES_HOME_KEY,
+                new TypeReference<List<CategoryResponse>>() {},
+                java.time.Duration.ofMinutes(3),
+                () -> {
+                    List<CategoryEntity> entities = categoryRepository
+                            .findByShowOnHomeTrueAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+                    return mapToResponseList(entities);
+                }
+        );
     }
 
     @Override
@@ -229,6 +246,9 @@ public class CategoryServiceImpl implements CategoryService {
 
         entity.setCreatedBy(SecurityUtils.getCurrentUserEmail().orElse(AppConstants.SYSTEM_USER));
         CategoryEntity saved = categoryRepository.save(entity);
+        redisCacheService.evictByPrefix(RedisCacheService.CATEGORIES_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        auditLogService.recordAction("CREATE", "categories", String.valueOf(saved.getId()), saved.getName(), null);
 
         String parentName = null;
         if (saved.getParentId() != null) {
@@ -267,6 +287,11 @@ public class CategoryServiceImpl implements CategoryService {
             }
         }
 
+        String oldName = entity.getName();
+        String oldSlug = entity.getSlug();
+        Boolean oldActive = entity.getIsActive();
+        Boolean oldShowOnHome = entity.getShowOnHome();
+
         entity.setName(NullSafeUtils.safeTrim(request.getName()));
         entity.setSlug(slug);
         if (request.getType() != null) {
@@ -289,6 +314,14 @@ public class CategoryServiceImpl implements CategoryService {
         entity.setMetaDescription(request.getMetaDescription());
 
         CategoryEntity updated = categoryRepository.save(entity);
+        redisCacheService.evictByPrefix(RedisCacheService.CATEGORIES_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "name", "Category Name", oldName, updated.getName());
+        AuditLogService.appendDiff(diffs, "slug", "Slug", oldSlug, updated.getSlug());
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, updated.getIsActive());
+        AuditLogService.appendDiff(diffs, "showOnHome", "Show on Home", oldShowOnHome, updated.getShowOnHome());
+        auditLogService.recordAction("UPDATE", "categories", String.valueOf(updated.getId()), updated.getName(), diffs);
 
         String parentName = null;
         if (updated.getParentId() != null) {
@@ -309,6 +342,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .filter(c -> !NullSafeUtils.safeBoolean(c.getIsDeleted()))
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
+        String deletedName = entity.getName();
         entity.setIsDeleted(true);
         entity.setSlug(new StringBuilder()
                 .append(entity.getSlug())
@@ -318,6 +352,9 @@ public class CategoryServiceImpl implements CategoryService {
                 .append(System.currentTimeMillis())
                 .toString());
         categoryRepository.save(entity);
+        redisCacheService.evictByPrefix(RedisCacheService.CATEGORIES_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        auditLogService.recordAction("DELETE", "categories", String.valueOf(id), deletedName, null);
     }
 
     /**
@@ -375,6 +412,7 @@ public class CategoryServiceImpl implements CategoryService {
     public void reorder(List<Long> orderedIds) {
         com.heygoodly.portal.common.util.SortOrderUtils.reorderEntities(
                 orderedIds, categoryRepository, CategoryEntity::getId, CategoryEntity::setSortOrder);
+        redisCacheService.evictByPrefix(RedisCacheService.CATEGORIES_PREFIX);
     }
 
     private CategoryResponse mapToResponse(CategoryEntity entity, String parentName, long postCount, long storeCount) {

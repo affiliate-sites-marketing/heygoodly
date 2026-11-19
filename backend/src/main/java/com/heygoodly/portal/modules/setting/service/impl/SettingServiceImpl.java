@@ -1,7 +1,6 @@
 package com.heygoodly.portal.modules.setting.service.impl;
 
-import com.heygoodly.portal.common.util.SecurityUtils;
-import com.heygoodly.portal.modules.audit.dto.request.CreateAuditLogRequest;
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.setting.dto.response.SettingResponse;
 import com.heygoodly.portal.modules.setting.entity.SystemSettingEntity;
@@ -12,7 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,8 +23,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SettingServiceImpl implements SettingService {
 
+    private static final Duration SETTINGS_CACHE_TTL = Duration.ofMinutes(5);
+
     private final SystemSettingRepository settingRepository;
     private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
 
     private static final Set<String> PUBLIC_KEYS = Set.of(
             "site_name",
@@ -33,6 +36,9 @@ public class SettingServiceImpl implements SettingService {
             "site_logo",
             "site_favicon",
             "footer_copyright",
+            "brand_theme_preset",
+            "brand_primary_color",
+            "brand_hover_color",
             "holiday_theme_mode",
             "holiday_theme_manual",
             "holiday_effects_enabled",
@@ -89,26 +95,39 @@ public class SettingServiceImpl implements SettingService {
     @Override
     @Transactional(readOnly = true)
     public SettingResponse getAllSettings() {
-        Map<String, String> map = settingRepository.findAll().stream()
-                .collect(Collectors.toMap(
-                        SystemSettingEntity::getSettingKey,
-                        e -> e.getSettingValue() != null ? e.getSettingValue() : "",
-                        (v1, v2) -> v2
-                ));
-        return new SettingResponse(map);
+        return redisCacheService.getOrLoad(
+                RedisCacheService.SETTINGS_ALL_KEY,
+                SettingResponse.class,
+                SETTINGS_CACHE_TTL,
+                () -> {
+                    Map<String, String> map = settingRepository.findAll().stream()
+                            .collect(Collectors.toMap(
+                                    SystemSettingEntity::getSettingKey,
+                                    e -> e.getSettingValue() != null ? e.getSettingValue() : "",
+                                    (v1, v2) -> v2
+                            ));
+                    return new SettingResponse(map);
+                }
+        );
     }
 
     @Override
     @Transactional(readOnly = true)
     public SettingResponse getPublicSettings() {
-        Map<String, String> map = settingRepository.findAll().stream()
-                .filter(e -> PUBLIC_KEYS.contains(e.getSettingKey()))
-                .collect(Collectors.toMap(
-                        SystemSettingEntity::getSettingKey,
-                        e -> e.getSettingValue() != null ? e.getSettingValue() : "",
-                        (v1, v2) -> v2
-                ));
-        return new SettingResponse(map);
+        return redisCacheService.getOrLoad(
+                RedisCacheService.SETTINGS_PUBLIC_KEY,
+                SettingResponse.class,
+                SETTINGS_CACHE_TTL,
+                () -> {
+                    Map<String, String> map = settingRepository.findBySettingKeyIn(PUBLIC_KEYS).stream()
+                            .collect(Collectors.toMap(
+                                    SystemSettingEntity::getSettingKey,
+                                    e -> e.getSettingValue() != null ? e.getSettingValue() : "",
+                                    (v1, v2) -> v2
+                            ));
+                    return new SettingResponse(map);
+                }
+        );
     }
 
     @Override
@@ -122,53 +141,72 @@ public class SettingServiceImpl implements SettingService {
         Map<String, SystemSettingEntity> existingMap = existing.stream()
                 .collect(Collectors.toMap(SystemSettingEntity::getSettingKey, e -> e));
 
-        Map<String, String> updatedMap = new HashMap<>();
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        List<String> changedKeys = new ArrayList<>();
+        List<SystemSettingEntity> toSave = new ArrayList<>(settings.size());
 
         for (Map.Entry<String, String> entry : settings.entrySet()) {
             String key = entry.getKey().trim();
             String value = entry.getValue() != null ? entry.getValue().trim() : "";
 
             SystemSettingEntity entity = existingMap.get(key);
+            String oldValue = entity != null && entity.getSettingValue() != null ? entity.getSettingValue() : "";
+
             if (entity != null) {
                 entity.setSettingValue(value);
-                settingRepository.save(entity);
+                toSave.add(entity);
             } else {
                 entity = SystemSettingEntity.builder()
                         .settingKey(key)
                         .settingValue(value)
                         .build();
-                settingRepository.save(entity);
+                toSave.add(entity);
             }
-            updatedMap.put(key, value);
+
+            if (!oldValue.equals(value)) {
+                changedKeys.add(key);
+                boolean isSensitive = key.contains("secret") || key.contains("password") || key.contains("dev_otp");
+                AuditLogService.appendDiff(
+                        diffs,
+                        key,
+                        key,
+                        isSensitive ? "***" : oldValue,
+                        isSensitive ? "***" : value
+                );
+            }
         }
 
-        // Record security audit trail
-        try {
-            String adminEmail = SecurityUtils.getCurrentUserEmail().orElse("admin@heygoodly.com");
-            Long adminId = SecurityUtils.getCurrentUserId().orElse(null);
-            auditLogService.recordLog(CreateAuditLogRequest.builder()
-                    .userId(adminId)
-                    .userEmail(adminEmail)
-                    .action("UPDATE_SYSTEM_SETTINGS")
-                    .module("settings")
-                    .resourceId("system_settings")
-                    .resourceName(String.format("Updated %d system configuration parameters", settings.size()))
-                    .status("SUCCESS")
-                    .build());
-        } catch (Exception ex) {
-            log.warn("Failed to record audit log for settings update: {}", ex.getMessage());
+        if (!toSave.isEmpty()) {
+            settingRepository.saveAll(toSave);
+        }
+        redisCacheService.evict(RedisCacheService.SETTINGS_PUBLIC_KEY, RedisCacheService.SETTINGS_ALL_KEY);
+
+        // Record security audit trail only when at least 1 setting actually changed
+        if (!diffs.isEmpty()) {
+            boolean allHolidayKeys = changedKeys.stream().allMatch(k -> k.startsWith("holiday_"));
+            String previewKeys = changedKeys.stream().limit(3).collect(Collectors.joining(", "));
+            if (changedKeys.size() > 3) {
+                previewKeys = previewKeys + " (+" + (changedKeys.size() - 3) + " more)";
+            }
+            String targetModule = allHolidayKeys ? "holidays" : "settings";
+            String summaryName = String.format("Updated %d setting(s): %s", diffs.size(), previewKeys);
+            auditLogService.recordAction("UPDATE_SYSTEM_SETTINGS", targetModule, targetModule, summaryName, diffs);
         }
 
-        log.info("Updated {} system settings in PostgreSQL", settings.size());
+        log.info("Updated {} system settings in PostgreSQL ({} changed)", settings.size(), diffs.size());
         return getAllSettings();
     }
 
     @Override
     @Transactional(readOnly = true)
     public String getSettingValue(String key, String defaultValue) {
-        return settingRepository.findBySettingKey(key)
-                .map(SystemSettingEntity::getSettingValue)
-                .filter(v -> !v.isBlank())
-                .orElse(defaultValue);
+        Map<String, String> all = getAllSettings().settings();
+        if (all != null) {
+            String cached = all.get(key);
+            if (cached != null && !cached.isBlank()) {
+                return cached;
+            }
+        }
+        return defaultValue;
     }
 }

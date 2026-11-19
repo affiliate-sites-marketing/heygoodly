@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
+import { SITE_DOMAIN } from '@/constants/site';
 import { AuditLogItem } from '@/app/admin/tracing/_lib/data';
 
 export interface AuditQueryCriteria {
@@ -79,7 +80,7 @@ class AuditService {
         timestamp: l.timestamp || l.createdAt || new Date().toISOString(),
         userId: String(l.userId || '1'),
         userName: l.userName || 'Super Administrator',
-        userEmail: l.userEmail || 'admin@heygoodly.com',
+        userEmail: l.userEmail || `admin@${SITE_DOMAIN}`,
         userRole: l.userRole || 'Administrator',
         userAvatar: l.userAvatar,
         action: l.action || 'UPDATE',

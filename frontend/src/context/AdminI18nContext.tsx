@@ -9,6 +9,7 @@ import React, {
   useRef,
 } from 'react';
 import { usePathname } from 'next/navigation';
+import { AUTH_SESSION_CHANGED_EVENT, userPreferenceService } from '@/services/userPreferenceService';
 
 export type AdminLocale = 'en' | 'vi';
 
@@ -904,6 +905,25 @@ const EXACT_VI_MAP: Record<string, string> = {
   'Tagline (SEO Title Suffix)': 'Khẩu hiệu (Hậu tố tiêu đề SEO)',
   'Brand Logo': 'Logo Thương hiệu Website',
   'Upload or select a brand logo from the Media Library (must include tags).': 'Tải lên hoặc chọn logo thương hiệu từ Thư viện Media (bắt buộc gắn tag).',
+  'Brand Color Theme (Client & Admin)': 'Bảng màu Thương hiệu (Client & Admin)',
+  'Choose a curated color palette or enter any custom hex color. Changes apply across both the public Client Portal and Admin ProCMS.': 'Chọn bảng màu gợi ý hoặc nhập mã màu Hex tùy chỉnh. Thay đổi sẽ áp dụng đồng bộ cho cả trang Client và Admin ProCMS.',
+  'Restore Default Crimson': 'Khôi phục màu Đỏ mặc định',
+  'Editorial Crimson': 'Đỏ Biên tập',
+  'Royal Cobalt': 'Xanh Hoàng gia',
+  'Forest Emerald': 'Xanh Ngọc lục bảo',
+  'Modern Indigo': 'Xanh Chàm hiện đại',
+  'Studio Violet': 'Tím Studio',
+  'Ocean Teal': 'Xanh Biển sâu',
+  'Burnt Amber': 'Cam Đất ấm',
+  'Obsidian Slate': 'Xám Đá Obsidian',
+  'Primary Brand Color': 'Màu Thương hiệu Chính',
+  'Hover / Darker Accent Color': 'Màu Hover / Nhấn đậm hơn',
+  'Live Theme Preview': 'Xem trước Giao diện',
+  'Primary CTA Button': 'Nút Hành động Chính',
+  'Soft Pill Badge': 'Nhãn Nổi bật Nhẹ',
+  'Editorial Link': 'Liên kết Bài viết',
+  'Click "Save Changes" above to publish this palette for all visitors and admin users.': 'Nhấn "Lưu thay đổi" ở phía trên để áp dụng bảng màu này cho toàn bộ người dùng và quản trị viên.',
+  'Custom': 'Tùy chỉnh',
   'Contact Support Email': 'Email liên hệ hỗ trợ',
   'Editorial Support Hotline': 'Số điện thoại đường dây nóng',
   'Search Engine Ownership Meta Tags': 'Thẻ Meta Xác minh Quyền sở hữu Công cụ Tìm kiếm',
@@ -2165,40 +2185,69 @@ function applyDomTranslations(root: HTMLElement, locale: AdminLocale) {
 
 export function AdminI18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<AdminLocale>('en');
+  const localeRef = useRef<AdminLocale>('en');
   const rootRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
 
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY) as AdminLocale | null;
       if (saved === 'vi' || saved === 'en') {
+        localeRef.current = saved;
         setLocaleState(saved);
       }
     } catch {
       // ignore
     }
+
+    let active = true;
+    const syncFromServer = async (force = false) => {
+      const prefs = await userPreferenceService.fetchPreferences(force);
+      if (!active || !prefs) return;
+      localeRef.current = prefs.locale;
+      setLocaleState(prefs.locale);
+      try {
+        window.localStorage.setItem(STORAGE_KEY, prefs.locale);
+      } catch {
+        // ignore
+      }
+    };
+
+    void syncFromServer(false);
+
+    const onAuthChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ authenticated?: boolean }>).detail;
+      if (detail?.authenticated) {
+        void syncFromServer(true);
+      }
+    };
+
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChanged);
+    return () => {
+      active = false;
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChanged);
+    };
   }, []);
 
   const setLocale = useCallback((next: AdminLocale) => {
+    localeRef.current = next;
     setLocaleState(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // ignore
     }
+    void userPreferenceService.updatePreferences({ locale: next });
   }, []);
 
   const toggleLocale = useCallback(() => {
-    setLocaleState((prev) => {
-      const next: AdminLocale = prev === 'en' ? 'vi' : 'en';
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }, []);
+    const next: AdminLocale = localeRef.current === 'en' ? 'vi' : 'en';
+    setLocale(next);
+  }, [setLocale]);
 
   const t = useCallback(
     (text: string): string => {

@@ -93,32 +93,38 @@ public class JwtProvider {
         EMPTY
     }
 
-    public JwtStatus validateTokenDetailed(String token) {
+    public record JwtValidationResult(JwtStatus status, Claims claims) {}
+
+    public JwtValidationResult validateAndParse(String token) {
         if (token == null || token.isBlank()) {
-            return JwtStatus.EMPTY;
+            return new JwtValidationResult(JwtStatus.EMPTY, null);
         }
         try {
-            parseClaims(token);
-            return JwtStatus.VALID;
+            Claims claims = parseClaims(token);
+            return new JwtValidationResult(JwtStatus.VALID, claims);
         } catch (ExpiredJwtException ex) {
             log.warn("Expired JWT token: {}", ex.getMessage());
-            return JwtStatus.EXPIRED;
+            return new JwtValidationResult(JwtStatus.EXPIRED, null);
         } catch (SignatureException ex) {
             log.error("Invalid JWT signature: {}", ex.getMessage());
-            return JwtStatus.INVALID_SIGNATURE;
+            return new JwtValidationResult(JwtStatus.INVALID_SIGNATURE, null);
         } catch (MalformedJwtException ex) {
             log.error("Invalid JWT token: {}", ex.getMessage());
-            return JwtStatus.MALFORMED;
+            return new JwtValidationResult(JwtStatus.MALFORMED, null);
         } catch (UnsupportedJwtException ex) {
             log.error("Unsupported JWT token: {}", ex.getMessage());
-            return JwtStatus.UNSUPPORTED;
+            return new JwtValidationResult(JwtStatus.UNSUPPORTED, null);
         } catch (IllegalArgumentException ex) {
             log.error("JWT claims string is empty: {}", ex.getMessage());
-            return JwtStatus.EMPTY;
+            return new JwtValidationResult(JwtStatus.EMPTY, null);
         } catch (Exception ex) {
             log.error("Unexpected JWT validation error: {}", ex.getMessage());
-            return JwtStatus.MALFORMED;
+            return new JwtValidationResult(JwtStatus.MALFORMED, null);
         }
+    }
+
+    public JwtStatus validateTokenDetailed(String token) {
+        return validateAndParse(token).status();
     }
 
     public boolean validateToken(String token) {

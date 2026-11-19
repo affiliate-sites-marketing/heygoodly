@@ -13,6 +13,7 @@ import AdminFormPage, {
   labelClass,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
+import { SITE_DOMAIN, SITE_NAME, SITE_SLUG } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import storeService from '@/services/storeService';
@@ -405,7 +406,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
         onClick={() => setActiveTab('preview')}
         className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
           activeTab === 'preview'
-            ? 'bg-[#C62828] text-white shadow-2xs'
+            ? 'bg-brand-primary text-white shadow-2xs'
             : 'text-slate-600 hover:text-slate-900'
         }`}
       >
@@ -530,7 +531,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                     setForm({ ...form, affiliateUrl: e.target.value });
                     if (errors.affiliateUrl) setErrors((prev) => ({ ...prev, affiliateUrl: '' }));
                   }}
-                  placeholder="https://www.nilight.com/?ref=heygoodly"
+                  placeholder={`https://www.nilight.com/?ref=${SITE_SLUG}`}
                   className={`${inputClass} font-mono ${errors.affiliateUrl ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                 />
                 {errors.affiliateUrl && (
@@ -619,7 +620,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                     type="checkbox"
                     checked={form.isActive}
                     onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                 </label>
 
@@ -632,7 +633,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                     type="checkbox"
                     checked={form.isFeatured}
                     onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                 </label>
 
@@ -710,7 +711,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-200/60">
-                  <span className="font-bold text-[#C62828] bg-rose-50 px-2 py-0.5 rounded">
+                  <span className="font-bold text-brand-primary bg-rose-50 px-2 py-0.5 rounded">
                     Up to {form.maxDiscount || '20% Off'}
                   </span>
                   <span className="text-amber-500 font-bold flex items-center gap-1">
@@ -986,7 +987,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                               type="checkbox"
                               checked={review.isActive !== false}
                               onChange={(e) => handleUpdateReview(idx, 'isActive', e.target.checked)}
-                              className="rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                              className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                             />
                             <span>Active</span>
                           </label>
@@ -1106,12 +1107,12 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
           {/* Preview Toolbar with Device Selector */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-white shadow-xl">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-[#C62828]">
+              <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-brand-primary">
                 <Eye size={16} />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">Client Store Landing Page Preview</h3>
-                <p className="text-[11px] text-slate-400">URL: https://heygoodly.com/stores/{form.slug || 'store-name'}</p>
+                <p className="text-[11px] text-slate-400">URL: https://{SITE_DOMAIN}/stores/{form.slug || 'store-name'}</p>
               </div>
             </div>
 
@@ -1120,7 +1121,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                 type="button"
                 onClick={() => setPreviewDevice('desktop')}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'desktop' ? 'bg-[#C62828] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  previewDevice === 'desktop' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Monitor size={13} />
@@ -1130,7 +1131,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                 type="button"
                 onClick={() => setPreviewDevice('tablet')}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'tablet' ? 'bg-[#C62828] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  previewDevice === 'tablet' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Tablet size={13} />
@@ -1140,7 +1141,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                 type="button"
                 onClick={() => setPreviewDevice('mobile')}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'mobile' ? 'bg-[#C62828] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  previewDevice === 'mobile' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Smartphone size={13} />
@@ -1168,7 +1169,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
                 </div>
                 <div className="flex-1 bg-white border border-slate-200 rounded px-2.5 py-0.5 text-[11px] text-slate-500 font-mono truncate">
-                  https://heygoodly.com/stores/{form.slug || 'store-name'}
+                  https://{SITE_DOMAIN}/stores/{form.slug || 'store-name'}
                 </div>
               </div>
 
@@ -1204,7 +1205,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                       href={form.affiliateUrl || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition"
+                      className="inline-flex items-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition"
                     >
                       <span>Visit Store &amp; Claim Deals</span>
                       <ExternalLink size={13} />
@@ -1325,7 +1326,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                       : [
                           {
                             question: `How do I apply a ${form.name || 'Store'} promo code?`,
-                            answer: `Click 'Get Code' on HeyGoodly to copy the code and open the official ${form.name || 'Store'} website, then paste it into the Promo Code box at checkout.`,
+                            answer: `Click 'Get Code' on ${SITE_NAME} to copy the code and open the official ${form.name || 'Store'} website, then paste it into the Promo Code box at checkout.`,
                           },
                           {
                             question: `Can I stack multiple promo codes at ${form.name || 'Store'}?`,

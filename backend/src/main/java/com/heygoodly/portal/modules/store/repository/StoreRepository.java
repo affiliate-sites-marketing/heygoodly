@@ -33,6 +33,10 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long>, JpaSp
 
     long countByIsActiveTrueAndIsFeaturedTrueAndIsDeletedFalse();
 
+    @Query("SELECT COUNT(s), COALESCE(SUM(CASE WHEN s.isFeatured = true THEN 1L ELSE 0L END), 0L) " +
+           "FROM StoreEntity s WHERE s.isActive = true AND s.isDeleted = false")
+    List<Object[]> summarizeActiveStores();
+
     @Query("SELECT COALESCE(SUM(s.afVisitCount), 0) FROM StoreEntity s WHERE s.isDeleted = false")
     long sumTotalClicks();
 

@@ -38,7 +38,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   indigo:
     'border-slate-200 bg-white text-slate-500 hover:bg-indigo-50/50 hover:text-indigo-600 hover:border-indigo-300',
   primary:
-    'border-[#C62828]/40 bg-white hover:bg-rose-50/60 text-slate-600 hover:text-[#C62828]',
+    'border-brand-primary/40 bg-white hover:bg-brand-primary-soft/60 text-slate-600 hover:text-brand-primary',
 };
 
 const BASE_CLASS =

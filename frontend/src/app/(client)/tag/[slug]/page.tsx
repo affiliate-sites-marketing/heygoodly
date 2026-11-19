@@ -119,9 +119,9 @@ export default function TagArchivePage({ params }: TagPageProps) {
 
         {/* 1. Breadcrumb Navigation */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-500">
-          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-[#c62828] transition">Home</Link>
+          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-brand-primary transition">Home</Link>
           <ChevronRight size={12} className="shrink-0" />
-          <Link href={ROUTES.PUBLIC.POSTS} className="hover:text-[#c62828] transition">Topics</Link>
+          <Link href={ROUTES.PUBLIC.POSTS} className="hover:text-brand-primary transition">Topics</Link>
           <ChevronRight size={12} className="shrink-0" />
           <span className="text-slate-900 font-semibold truncate max-w-[180px] sm:max-w-xs">#{rawTag}</span>
         </nav>
@@ -131,7 +131,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
           <div className="flex flex-wrap items-center gap-2.5">
             <span
               className="text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs flex items-center gap-1.5"
-              style={{ backgroundColor: tagData?.color || '#c62828' }}
+              style={{ backgroundColor: tagData?.color || 'var(--brand-primary)' }}
             >
               <TagIcon size={12} /> Topic Coverage
             </span>
@@ -149,7 +149,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
             <h1 className="text-2xl sm:text-4xl font-black text-slate-950 tracking-tight font-editorial">
               #{tagData?.name || rawTag}
             </h1>
-            <p className="text-xs sm:text-sm font-bold text-[#c62828]">
+            <p className="text-xs sm:text-sm font-bold text-brand-primary">
               Topic Archive &amp; Independent Consumer Analysis
             </p>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -164,7 +164,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
             <div className="pt-4 border-t border-slate-100 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-500 text-[11px] shrink-0">
-                  <Hash size={13} className="text-[#c62828]" />
+                  <Hash size={13} className="text-brand-primary" />
                   <span>Related Topics &amp; Themes</span>
                 </div>
 
@@ -178,14 +178,14 @@ export default function TagArchivePage({ params }: TagPageProps) {
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 flex-1 min-w-0">
                   {visibleTopics.map((tag) => {
                     const isCurrent = normalizedTag === tag.name.toLowerCase().trim() || normalizedTag === tag.slug.toLowerCase().trim();
-                    const dotColor = tag.color || '#c62828';
+                    const dotColor = tag.color || 'var(--brand-primary)';
                     return (
                       <Link
                         key={tag.id}
                         href={ROUTES.PUBLIC.TAG_DETAIL(tag.slug || tag.name.toLowerCase().replace(/\s+/g, '-'))}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
                           isCurrent
-                            ? 'bg-[#c62828] text-white shadow-2xs font-bold ring-2 ring-red-600/20'
+                            ? 'bg-brand-primary text-white shadow-2xs font-bold ring-2 ring-brand-primary/20'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
@@ -219,12 +219,12 @@ export default function TagArchivePage({ params }: TagPageProps) {
                       }`}
                       aria-expanded={isTopicPopoverOpen}
                     >
-                      <Hash size={13} className="text-[#c62828]" />
+                      <Hash size={13} className="text-brand-primary" />
                       <span>All Topics ({allTags.length})</span>
                       <ChevronDown
                         size={13}
                         className={`transition-transform duration-200 ${
-                          isTopicPopoverOpen ? 'rotate-180 text-red-500' : 'text-slate-400'
+                          isTopicPopoverOpen ? 'rotate-180 text-brand-primary' : 'text-slate-400'
                         }`}
                       />
                     </button>
@@ -239,7 +239,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
                             value={topicSearch}
                             onChange={(e) => setTopicSearch(e.target.value)}
                             placeholder={`Search ${allTags.length} topics...`}
-                            className="w-full bg-slate-50 text-slate-800 placeholder:text-slate-400 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828] transition"
+                            className="w-full bg-slate-50 text-slate-800 placeholder:text-slate-400 text-xs py-2 pl-8.5 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition"
                             autoFocus
                           />
                           {topicSearch && (
@@ -262,7 +262,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
                         <div className="max-h-80 overflow-y-auto space-y-1 pt-2 pr-1 select-none">
                           {filteredTopics.map((tag) => {
                             const isCurrent = normalizedTag === tag.name.toLowerCase().trim() || normalizedTag === tag.slug.toLowerCase().trim();
-                            const dotColor = tag.color || '#c62828';
+                            const dotColor = tag.color || 'var(--brand-primary)';
                             return (
                               <Link
                                 key={tag.id}
@@ -270,7 +270,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
                                 onClick={() => setIsTopicPopoverOpen(false)}
                                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer text-left ${
                                   isCurrent
-                                    ? 'bg-red-50 text-[#c62828] font-bold border border-red-200 shadow-2xs'
+                                    ? 'bg-brand-primary-soft text-brand-primary font-bold border border-brand-primary-border shadow-2xs'
                                     : 'text-slate-700 hover:bg-slate-100 border border-transparent'
                                 }`}
                               >
@@ -285,7 +285,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
                                 <div className="flex items-center gap-2 shrink-0 ml-2">
                                   {typeof tag.postsCount === 'number' && tag.postsCount > 0 && (
                                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                      isCurrent ? 'bg-red-200 text-red-800' : 'bg-slate-100 text-slate-500'
+                                      isCurrent ? 'bg-brand-primary-soft-hover text-brand-primary-active' : 'bg-slate-100 text-slate-500'
                                     }`}>
                                       {tag.postsCount}
                                     </span>
@@ -307,7 +307,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
         {/* 3. Toolbar & Sorting */}
         <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-            <Flame size={15} className="text-[#c62828]" />
+            <Flame size={15} className="text-brand-primary" />
             <span>Editorial Articles ({totalArticles})</span>
           </div>
 
@@ -317,7 +317,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
               onClick={() => { setSortBy('newest'); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                 sortBy === 'newest'
-                  ? 'bg-[#c62828] text-white shadow-2xs'
+                  ? 'bg-brand-primary text-white shadow-2xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -328,7 +328,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
               onClick={() => { setSortBy('popular'); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                 sortBy === 'popular'
-                  ? 'bg-[#c62828] text-white shadow-2xs'
+                  ? 'bg-brand-primary text-white shadow-2xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
@@ -369,7 +369,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
 
         {/* 6. Editorial Archive Callout */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 text-center space-y-3 shadow-2xs">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#c62828] block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary block">
             Editorial Archive
           </span>
           <h3 className="font-editorial text-2xl font-bold text-slate-900 tracking-tight">
@@ -381,7 +381,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
           <div className="pt-2">
             <Link
               href={ROUTES.PUBLIC.POSTS}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#c62828] hover:bg-[#b71c1c] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-xs cursor-pointer hover:shadow"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-brand-primary hover:bg-brand-primary-hover text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-xs cursor-pointer hover:shadow"
             >
               <span>Explore Full Editorial Archive</span>
               <ArrowRight size={14} />

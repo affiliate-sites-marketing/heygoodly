@@ -247,7 +247,7 @@ export default function AdminDashboardPage() {
             </Button>
           </Link>
           <Link href={ROUTES.ADMIN.POST_CREATE}>
-            <Button size="sm" className="shadow-2xs bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button size="sm" className="shadow-2xs bg-brand-primary hover:bg-brand-primary-hover text-white">
               <Plus size={14} className="mr-1" /> {t('Write Review')}
             </Button>
           </Link>

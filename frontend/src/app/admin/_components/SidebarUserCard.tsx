@@ -29,11 +29,11 @@ export default function SidebarUserCard({
             className="flex items-center gap-2.5 overflow-hidden hover:opacity-90 transition group cursor-pointer"
             title={t('View My Profile & 2FA')}
           >
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-brand-primary text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
               {initials}
             </div>
             <div className="truncate text-xs">
-              <div className="font-semibold text-white truncate group-hover:text-indigo-300 transition-colors">
+              <div className="font-semibold text-white truncate group-hover:text-brand-primary-light transition-colors">
                 {roleName}
               </div>
               <div className="text-[10px] text-emerald-400 flex items-center gap-1">
@@ -53,7 +53,7 @@ export default function SidebarUserCard({
         <div className="flex flex-col items-center gap-2">
           <Link
             href={ROUTES.ADMIN.PROFILE}
-            className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs hover:ring-2 hover:ring-indigo-400 transition"
+            className="w-8 h-8 rounded-lg bg-brand-primary text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs hover:ring-2 hover:ring-brand-primary-light transition"
             title={`${roleName} - ${t('2FA & Profile')}`}
           >
             {initials}

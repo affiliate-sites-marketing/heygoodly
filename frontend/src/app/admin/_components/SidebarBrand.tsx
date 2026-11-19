@@ -29,7 +29,7 @@ export default function SidebarBrand({ collapsed, onCollapse, onExpand }: Sideba
         <div className="w-full flex items-center justify-between gap-1">
           <Link
             href={ROUTES.ADMIN.DASHBOARD}
-            className="w-8 h-8 rounded-lg bg-[#C62828] hover:bg-[#B71C1C] text-white font-extrabold flex items-center justify-center text-sm shadow-sm shrink-0 transition overflow-hidden"
+            className="w-8 h-8 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white font-extrabold flex items-center justify-center text-sm shadow-sm shrink-0 transition overflow-hidden"
             title={`${brandName} CMS Dashboard`}
           >
             {settings.logoUrl ? (
@@ -50,7 +50,7 @@ export default function SidebarBrand({ collapsed, onCollapse, onExpand }: Sideba
       ) : (
         <>
           <Link href={ROUTES.ADMIN.DASHBOARD} className="flex items-center gap-2.5 overflow-hidden group">
-            <div className="w-8 h-8 rounded-lg bg-[#C62828] text-white font-extrabold flex items-center justify-center text-sm shadow-sm shrink-0 overflow-hidden">
+            <div className="w-8 h-8 rounded-lg bg-brand-primary text-white font-extrabold flex items-center justify-center text-sm shadow-sm shrink-0 overflow-hidden">
               {settings.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={settings.logoUrl} alt={brandName} className="w-full h-full object-cover" />
@@ -60,7 +60,7 @@ export default function SidebarBrand({ collapsed, onCollapse, onExpand }: Sideba
             </div>
             <div className="flex flex-col">
               <span className="font-editorial font-bold text-white text-base tracking-tight leading-none">
-                {brandName}<span className="text-[#C62828]">.</span>
+                {brandName}<span className="text-brand-primary">.</span>
               </span>
               <span className="text-[10px] text-zinc-400 font-mono mt-0.5">
                 {t('Editorial CMS & Ops')}

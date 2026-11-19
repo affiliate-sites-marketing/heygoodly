@@ -56,14 +56,14 @@ export default function CategoryTableRow({
         />
       </td>
       <td className="py-3 px-4 min-w-[200px]">
-        <span className="font-bold text-slate-900 text-sm block group-hover:text-[#C62828] transition-colors">
+        <span className="font-bold text-slate-900 text-sm block group-hover:text-brand-primary transition-colors">
           {cat.name}
         </span>
         <span className="text-[11px] text-slate-500 line-clamp-1">
           {cat.description}
         </span>
       </td>
-      <td className="py-3 px-4 font-mono text-[#C62828] font-semibold whitespace-nowrap">
+      <td className="py-3 px-4 font-mono text-brand-primary font-semibold whitespace-nowrap">
         <Link
           href={`/category/${cat.slug}`}
           target="_blank"
@@ -77,11 +77,11 @@ export default function CategoryTableRow({
         <button
           type="button"
           onClick={() => onOpenArticlesModal(cat)}
-          className="w-36 h-8 inline-flex items-center justify-between bg-slate-100 hover:bg-[#C62828] hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer group shadow-2xs whitespace-nowrap border border-slate-200/80 shrink-0"
+          className="w-36 h-8 inline-flex items-center justify-between bg-slate-100 hover:bg-brand-primary hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer group shadow-2xs whitespace-nowrap border border-slate-200/80 shrink-0"
           title={t('Click to view all articles in this category')}
         >
           <div className="flex items-center gap-1.5 min-w-0">
-            <BookOpen size={13} className="text-[#C62828] group-hover:text-white transition-colors shrink-0" />
+            <BookOpen size={13} className="text-brand-primary group-hover:text-white transition-colors shrink-0" />
             <span className="font-bold text-xs">{liveCount}</span>
             <span className="text-slate-500 group-hover:text-white/90 text-xs font-medium">stories</span>
           </div>

@@ -53,7 +53,7 @@ export default function ContactUsPage() {
 
         {/* Header */}
         <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-sm space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#c62828] uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-xs font-bold text-brand-primary uppercase tracking-widest">
             <MessageSquare size={16} /> Get In Touch
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -80,7 +80,7 @@ export default function ContactUsPage() {
                 <button
                   type="button"
                   onClick={() => setSubmitted(false)}
-                  className="mt-4 text-xs font-bold text-[#c62828] hover:text-red-800 underline cursor-pointer"
+                  className="mt-4 text-xs font-bold text-brand-primary hover:text-brand-primary-hover underline cursor-pointer"
                 >
                   Send another inquiry
                 </button>
@@ -106,7 +106,7 @@ export default function ContactUsPage() {
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       placeholder="e.g. John Doe"
-                      className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828]"
+                      className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                     />
                   </div>
 
@@ -117,7 +117,7 @@ export default function ContactUsPage() {
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       placeholder="john@example.com"
-                      className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828]"
+                      className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                     />
                   </div>
                 </div>
@@ -129,7 +129,7 @@ export default function ContactUsPage() {
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     placeholder={settings.supportHotline || '+1 (555) 000-0000'}
-                    className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828]"
+                    className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   />
                 </div>
 
@@ -140,14 +140,14 @@ export default function ContactUsPage() {
                     value={form.message}
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                     placeholder="Describe your inquiry, store partnership request, or feedback..."
-                    className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828] resize-none"
+                    className="w-full text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary resize-none"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#c62828] hover:bg-[#b71c1c] text-white text-xs font-bold px-8 py-3 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold px-8 py-3 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
                   {loading ? 'Submitting...' : (
                     <>
@@ -167,12 +167,12 @@ export default function ContactUsPage() {
               <div className="space-y-4 text-xs">
                 {settings.contactEmail && (
                   <div className="flex items-start gap-3">
-                    <div className="p-2.5 bg-red-50 text-[#c62828] rounded-xl shrink-0">
+                    <div className="p-2.5 bg-brand-primary-soft text-brand-primary rounded-xl shrink-0">
                       <Mail size={16} />
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">Email Editorial Team</p>
-                      <a href={`mailto:${settings.contactEmail}`} className="text-slate-600 hover:text-[#c62828] transition">
+                      <a href={`mailto:${settings.contactEmail}`} className="text-slate-600 hover:text-brand-primary transition">
                         {settings.contactEmail}
                       </a>
                     </div>
@@ -181,12 +181,12 @@ export default function ContactUsPage() {
 
                 {settings.supportHotline && (
                   <div className="flex items-start gap-3">
-                    <div className="p-2.5 bg-red-50 text-[#c62828] rounded-xl shrink-0">
+                    <div className="p-2.5 bg-brand-primary-soft text-brand-primary rounded-xl shrink-0">
                       <Phone size={16} />
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">Support Hotline</p>
-                      <a href={`tel:${settings.supportHotline}`} className="text-slate-600 hover:text-[#c62828] transition">
+                      <a href={`tel:${settings.supportHotline}`} className="text-slate-600 hover:text-brand-primary transition">
                         {settings.supportHotline}
                       </a>
                     </div>
@@ -195,7 +195,7 @@ export default function ContactUsPage() {
 
                 {settings.contactAddress && (
                   <div className="flex items-start gap-3">
-                    <div className="p-2.5 bg-red-50 text-[#c62828] rounded-xl shrink-0">
+                    <div className="p-2.5 bg-brand-primary-soft text-brand-primary rounded-xl shrink-0">
                       <MapPin size={16} />
                     </div>
                     <div>
@@ -220,7 +220,7 @@ export default function ContactUsPage() {
 
             {/* Merchant Application Box */}
             <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-8 space-y-3">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-400">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-primary-light">
                 Are You an Affiliate Merchant?
               </span>
               <h3 className="text-lg font-bold">List Your Brand on {siteName}</h3>
@@ -229,7 +229,7 @@ export default function ContactUsPage() {
               </p>
               {settings.contactEmail && (
                 <div className="pt-2">
-                  <a href={`mailto:${settings.contactEmail}`} className="inline-block text-xs font-bold text-red-300 hover:text-white transition">
+                  <a href={`mailto:${settings.contactEmail}`} className="inline-block text-xs font-bold text-brand-primary-light hover:text-white transition">
                     Email: {settings.contactEmail}
                   </a>
                 </div>

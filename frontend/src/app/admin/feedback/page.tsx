@@ -126,7 +126,7 @@ export default function AdminFeedbackPage() {
             onClick={() => setStatusFilter('all')}
             className={`h-9 px-4 inline-flex items-center justify-center text-xs font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
               statusFilter === 'all'
-                ? 'bg-[#C62828] text-white shadow-xs'
+                ? 'bg-brand-primary text-white shadow-xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -137,7 +137,7 @@ export default function AdminFeedbackPage() {
             onClick={() => setStatusFilter('unread')}
             className={`h-9 px-4 inline-flex items-center justify-center text-xs font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0 gap-1.5 ${
               statusFilter === 'unread'
-                ? 'bg-[#C62828] text-white shadow-xs'
+                ? 'bg-brand-primary text-white shadow-xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >

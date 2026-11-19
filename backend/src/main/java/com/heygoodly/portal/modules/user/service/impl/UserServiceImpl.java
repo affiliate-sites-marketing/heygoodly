@@ -1,5 +1,6 @@
 package com.heygoodly.portal.modules.user.service.impl;
 
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.dto.PageResponse;
@@ -9,6 +10,7 @@ import com.heygoodly.portal.common.exception.ResourceNotFoundException;
 import com.heygoodly.portal.common.util.IpLocationUtils;
 import com.heygoodly.portal.common.util.NullSafeUtils;
 import com.heygoodly.portal.common.util.UserAgentUtils;
+import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.role.entity.RoleEntity;
 import com.heygoodly.portal.modules.role.enums.RoleCode;
 import com.heygoodly.portal.modules.role.repository.RoleRepository;
@@ -37,6 +39,7 @@ import org.springframework.util.StringUtils;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
@@ -49,6 +52,8 @@ public class UserServiceImpl implements UserService {
     private final UserLoginRecordRepository loginRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
 
     @Override
     @Transactional(readOnly = true)
@@ -148,6 +153,14 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         UserEntity saved = userRepository.save(user);
+        evictAuthCache(saved.getEmail());
+        auditLogService.recordAction(
+                "CREATE",
+                "users",
+                String.valueOf(saved.getId()),
+                saved.getFullName() + " (" + saved.getEmail() + ")",
+                null
+        );
         return mapToUserResponse(saved);
     }
 
@@ -162,6 +175,11 @@ public class UserServiceImpl implements UserService {
         if (userRepository.existsByEmailAndIdNotAndIsDeletedFalse(email, id)) {
             throw new DuplicateResourceException(String.format("User with %s '%s' already exists.", EntityFieldConstants.EMAIL, email));
         }
+
+        String oldName = user.getFullName();
+        String oldEmail = user.getEmail();
+        String oldRole = user.getRole() != null ? user.getRole().getName() : "";
+        Boolean oldActive = user.getIsActive();
 
         RoleEntity role = resolveRole(request.getRoleId(), request.getRoleName());
 
@@ -183,12 +201,25 @@ public class UserServiceImpl implements UserService {
             user.setIsActive(request.getIsActive());
         }
 
+        boolean passwordChanged = false;
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.getPassword().trim()));
             user.setPasswordUpdatedAt(Instant.now());
+            passwordChanged = true;
         }
 
         UserEntity updated = userRepository.save(user);
+        evictAuthCache(oldEmail);
+        evictAuthCache(updated.getEmail());
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "fullName", "Full Name", oldName, updated.getFullName());
+        AuditLogService.appendDiff(diffs, "email", "Email", oldEmail, updated.getEmail());
+        AuditLogService.appendDiff(diffs, "role", "Assigned Role", oldRole, role != null ? role.getName() : "");
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, updated.getIsActive());
+        if (passwordChanged) {
+            AuditLogService.appendDiff(diffs, "password", "Password", "********", "Updated");
+        }
+        auditLogService.recordAction("UPDATE", "users", String.valueOf(updated.getId()), updated.getFullName(), diffs);
         return mapToUserResponse(updated);
     }
 
@@ -205,6 +236,14 @@ public class UserServiceImpl implements UserService {
 
         user.setIsDeleted(true);
         userRepository.save(user);
+        evictAuthCache(user.getEmail());
+        auditLogService.recordAction(
+                "DELETE",
+                "users",
+                String.valueOf(id),
+                user.getFullName() + " (" + user.getEmail() + ")",
+                null
+        );
     }
 
     @Override
@@ -218,8 +257,13 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException("Super Administrator account cannot be deactivated.");
         }
 
+        Boolean oldActive = user.getIsActive();
         user.setIsActive(isActive);
         userRepository.save(user);
+        evictAuthCache(user.getEmail());
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, isActive);
+        auditLogService.recordAction("TOGGLE_STATUS", "users", String.valueOf(id), user.getFullName(), diffs);
     }
 
     @Override
@@ -233,6 +277,14 @@ public class UserServiceImpl implements UserService {
         user.setTwoFactorSecret(null);
         user.setTwoFactorRecoveryCodes(null);
         userRepository.save(user);
+        evictAuthCache(user.getEmail());
+        auditLogService.recordAction(
+                "SECURITY_2FA_RESET",
+                "users",
+                String.valueOf(id),
+                user.getFullName() + " (" + user.getEmail() + ")",
+                null
+        );
         log.info("2FA reset successfully for user id: {}", id);
     }
 
@@ -378,24 +430,30 @@ public class UserServiceImpl implements UserService {
         });
     }
 
+    private void evictAuthCache(String email) {
+        if (email != null && !email.isBlank()) {
+            redisCacheService.evict(RedisCacheService.AUTH_USER_PREFIX + email.trim().toLowerCase());
+        }
+    }
+
     private RoleEntity resolveRole(Long roleId, String roleName) {
         if (roleId != null) {
             return roleRepository.findById(roleId)
                     .orElseThrow(() -> new ResourceNotFoundException(String.format("Role not found with %s: %d", EntityFieldConstants.ID, roleId)));
         }
         if (roleName != null && !roleName.isBlank()) {
-            String clean = roleName.trim().toLowerCase();
-            return roleRepository.findBySlug(clean)
-                    .or(() -> roleRepository.findAll().stream()
-                            .filter(r -> r.getName().equalsIgnoreCase(roleName.trim()))
-                            .findFirst())
-                    .orElseGet(() -> roleRepository.findBySlug(RoleCode.STAFF.getSlug())
-                            .orElseGet(() -> roleRepository.findAll().stream().findFirst()
-                                    .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_ROLE, EntityFieldConstants.SLUG, RoleCode.STAFF.getSlug()))));
+            String cleanName = roleName.trim();
+            return roleRepository.findBySlug(cleanName.toLowerCase())
+                    .or(() -> roleRepository.findFirstByNameIgnoreCase(cleanName))
+                    .orElseGet(this::resolveDefaultStaffRole);
         }
+        return resolveDefaultStaffRole();
+    }
+
+    private RoleEntity resolveDefaultStaffRole() {
         return roleRepository.findBySlug(RoleCode.STAFF.getSlug())
-                .orElseGet(() -> roleRepository.findAll().stream().findFirst()
-                        .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_ROLE, EntityFieldConstants.SLUG, RoleCode.STAFF.getSlug())));
+                .or(roleRepository::findFirstByOrderByIdAsc)
+                .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_ROLE, EntityFieldConstants.SLUG, RoleCode.STAFF.getSlug()));
     }
 
     private UserResponse mapToUserResponse(UserEntity user) {

@@ -41,7 +41,7 @@ export default function MediaUploadStagedModal({
       <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-[#C62828]">
+            <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-brand-primary">
               <Tag size={16} />
             </div>
             <div>
@@ -113,7 +113,7 @@ export default function MediaUploadStagedModal({
             type="button"
             onClick={onConfirmUpload}
             disabled={stagedTags.length === 0 || uploading}
-            className="px-5 py-2.5 bg-[#C62828] hover:bg-[#B71C1C] disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+            className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary-hover disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
           >
             {uploading ? (
               <>

@@ -104,7 +104,7 @@ export default function MediaAssetDetailModal({
         <div className="bg-rose-50/40 border border-rose-200/80 rounded-2xl p-4 space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
-              <Tag size={13} className="text-[#C62828]" /> {t('Manage Search Tags')} ({asset.tags?.length || 0})
+              <Tag size={13} className="text-brand-primary" /> {t('Manage Search Tags')} ({asset.tags?.length || 0})
             </span>
             <div className="flex items-center gap-3">
               <Link
@@ -127,7 +127,7 @@ export default function MediaAssetDetailModal({
               asset.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-[#C62828] border border-rose-200 shadow-2xs"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-brand-primary border border-rose-200 shadow-2xs"
                 >
                   <span>#{tag}</span>
                   <button
@@ -158,13 +158,13 @@ export default function MediaAssetDetailModal({
                 }
               }}
               placeholder={t('Enter a new tag for this image...')}
-              className="flex-1 text-xs px-3 py-1.5 bg-white border border-zinc-200 rounded-xl focus:outline-none focus:border-[#C62828] text-zinc-800"
+              className="flex-1 text-xs px-3 py-1.5 bg-white border border-zinc-200 rounded-xl focus:outline-none focus:border-brand-primary text-zinc-800"
             />
             <button
               type="button"
               onClick={onAddTag}
               disabled={!newTagInput.trim()}
-              className="h-8 px-3.5 bg-[#C62828] hover:bg-[#B71C1C] disabled:bg-zinc-200 disabled:text-zinc-400 text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0"
+              className="h-8 px-3.5 bg-brand-primary hover:bg-brand-primary-hover disabled:bg-zinc-200 disabled:text-zinc-400 text-white text-xs font-bold rounded-xl transition cursor-pointer shrink-0"
             >
               {t('+ Add Tag')}
             </button>
@@ -246,7 +246,7 @@ export default function MediaAssetDetailModal({
             <button
               type="button"
               onClick={() => onCopyUrl(asset.url, asset.id)}
-              className="h-9 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 shadow-xs"
+              className="h-9 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-brand-primary hover:bg-brand-primary-hover rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 shadow-xs"
             >
               {copiedId === asset.id ? <Check size={14} /> : <Copy size={14} />}
               <span>{copiedId === asset.id ? t('Copied!') : t('Copy Link')}</span>

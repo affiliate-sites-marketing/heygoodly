@@ -182,7 +182,7 @@ export default function CategoryArticlesModal({
         {/* Modal Header */}
         <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-[#C62828]/10 border border-[#C62828]/20 flex items-center justify-center text-[#C62828] shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary shrink-0">
               <BookOpen size={20} />
             </div>
             <div className="min-w-0">
@@ -190,12 +190,12 @@ export default function CategoryArticlesModal({
                 <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">
                   Articles in &ldquo;{category.name}&rdquo;
                 </h2>
-                <span className="text-[11px] font-bold bg-[#C62828] text-white px-2.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
+                <span className="text-[11px] font-bold bg-brand-primary text-white px-2.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
                   {articles.length} Stories
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                <span className="font-mono text-[#C62828] font-semibold whitespace-nowrap">
+                <span className="font-mono text-brand-primary font-semibold whitespace-nowrap">
                   /category/{category.slug}
                 </span>
                 <span className="hidden sm:inline">•</span>
@@ -210,7 +210,7 @@ export default function CategoryArticlesModal({
             <Link
               href={`/category/${category.slug}`}
               target="_blank"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#C62828] bg-white border border-slate-200 hover:border-[#C62828]/40 px-3 py-1.5 rounded-xl transition shadow-2xs cursor-pointer whitespace-nowrap"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-brand-primary bg-white border border-slate-200 hover:border-brand-primary/40 px-3 py-1.5 rounded-xl transition shadow-2xs cursor-pointer whitespace-nowrap"
               title="View on client website"
             >
               <span>View Live</span>
@@ -238,7 +238,7 @@ export default function CategoryArticlesModal({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search articles by title, author, keyword..."
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828]"
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
               />
               {search && (
                 <button
@@ -254,7 +254,7 @@ export default function CategoryArticlesModal({
             {/* Create New Article in this Category Button */}
             <Link
               href={`${ROUTES.ADMIN.POST_CREATE}?category=${encodeURIComponent(category.name)}&categoryId=${category.id}`}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#C62828] hover:bg-[#B71C1C] px-3.5 py-2 rounded-xl transition shadow-xs cursor-pointer shrink-0 justify-center whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand-primary hover:bg-brand-primary-hover px-3.5 py-2 rounded-xl transition shadow-xs cursor-pointer shrink-0 justify-center whitespace-nowrap"
             >
               <Plus size={14} />
               <span>Write Article in &ldquo;{category.name}&rdquo;</span>
@@ -322,7 +322,7 @@ export default function CategoryArticlesModal({
           {loading ? (
             <div className="py-16 text-center text-slate-400">
               <div className="flex flex-col items-center justify-center gap-2">
-                <Loader2 size={24} className="animate-spin text-[#C62828]" />
+                <Loader2 size={24} className="animate-spin text-brand-primary" />
                 <p className="text-xs font-semibold">Loading articles from database...</p>
               </div>
             </div>
@@ -360,7 +360,7 @@ export default function CategoryArticlesModal({
 
                     <div className="space-y-1 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap text-[11px]">
-                        <span className="bg-[#C62828]/10 text-[#C62828] font-bold px-2 py-0.5 rounded whitespace-nowrap">
+                        <span className="bg-brand-primary/10 text-brand-primary font-bold px-2 py-0.5 rounded whitespace-nowrap">
                           {art.category}
                         </span>
                         {art.status === 'PUBLISHED' && (
@@ -386,7 +386,7 @@ export default function CategoryArticlesModal({
                         </span>
                       </div>
 
-                      <h4 className="font-bold text-sm text-slate-900 group-hover:text-[#C62828] transition-colors leading-snug line-clamp-1 sm:line-clamp-2">
+                      <h4 className="font-bold text-sm text-slate-900 group-hover:text-brand-primary transition-colors leading-snug line-clamp-1 sm:line-clamp-2">
                         <Link href={ROUTES.ADMIN.POST_EDIT(art.id)}>{art.title}</Link>
                       </h4>
 
@@ -421,7 +421,7 @@ export default function CategoryArticlesModal({
 
                     <Link
                       href={ROUTES.ADMIN.POST_EDIT(art.id)}
-                      className="h-8 px-3 rounded-lg bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-bold inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer whitespace-nowrap"
+                      className="h-8 px-3 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer whitespace-nowrap"
                       title="Edit article"
                     >
                       <Edit2 size={12} />
@@ -449,7 +449,7 @@ export default function CategoryArticlesModal({
               <div>
                 <Link
                   href={`${ROUTES.ADMIN.POST_CREATE}?category=${encodeURIComponent(category.name)}&categoryId=${category.id}`}
-                  className="inline-flex items-center gap-2 text-xs font-bold text-white bg-[#C62828] hover:bg-[#B71C1C] px-4 py-2 rounded-xl transition shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-2 text-xs font-bold text-white bg-brand-primary hover:bg-brand-primary-hover px-4 py-2 rounded-xl transition shadow-xs cursor-pointer"
                 >
                   <Plus size={14} />
                   <span>Create First Article</span>

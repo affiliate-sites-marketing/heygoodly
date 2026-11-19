@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -17,6 +18,14 @@ public interface MediaItemRepository extends JpaRepository<MediaItemEntity, Long
     Optional<MediaItemEntity> findByObjectKey(String objectKey);
 
     Optional<MediaItemEntity> findByUrl(String url);
+
+    @Query(value = "SELECT LOWER(TRIM(tag_val)) AS tag, COUNT(*) AS cnt " +
+            "FROM media_items m, LATERAL jsonb_array_elements_text(m.tags) AS tag_val " +
+            "WHERE m.tags IS NOT NULL AND jsonb_typeof(m.tags) = 'array' AND TRIM(tag_val) <> '' " +
+            "GROUP BY LOWER(TRIM(tag_val)) " +
+            "ORDER BY LOWER(TRIM(tag_val)) ASC",
+            nativeQuery = true)
+    List<Object[]> findTagCountsRaw();
 
     @Query(value = "SELECT * FROM media_items m WHERE " +
             "(:category IS NULL OR :category = '' OR :category = 'all' " +

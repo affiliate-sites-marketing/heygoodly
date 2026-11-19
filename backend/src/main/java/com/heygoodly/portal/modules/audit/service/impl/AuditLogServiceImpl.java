@@ -105,6 +105,34 @@ public class AuditLogServiceImpl implements AuditLogService {
         auditLogRepository.save(entity);
     }
 
+    @Override
+    public void recordAction(
+            String action,
+            String module,
+            String resourceId,
+            String resourceName,
+            List<Map<String, Object>> changes
+    ) {
+        try {
+            String changesJson = null;
+            if (changes != null && !changes.isEmpty()) {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("changes", changes);
+                changesJson = objectMapper.writeValueAsString(payload);
+            }
+            recordLog(CreateAuditLogRequest.builder()
+                    .action(action)
+                    .module(module)
+                    .resourceId(resourceId)
+                    .resourceName(resourceName)
+                    .changes(changesJson)
+                    .status("SUCCESS")
+                    .build());
+        } catch (Exception ex) {
+            log.warn("Failed to record audit log for action={} module={}: {}", action, module, ex.getMessage());
+        }
+    }
+
     private HttpServletRequest getCurrentHttpRequest() {
         try {
             RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
@@ -233,15 +261,7 @@ public class AuditLogServiceImpl implements AuditLogService {
         }
         String actionTitle = titleBuilder.toString();
 
-        // Target Href
-        StringBuilder hrefBuilder = new StringBuilder();
-        if (entity.getModule() != null && entity.getResourceId() != null) {
-            hrefBuilder.append("/admin/")
-                    .append(entity.getModule().toLowerCase())
-                    .append(AppConstants.SLASH)
-                    .append(entity.getResourceId());
-        }
-        String targetHref = hrefBuilder.length() > 0 ? hrefBuilder.toString() : null;
+        String targetHref = resolveTargetHref(entity.getModule(), entity.getResourceId(), entity.getAction());
 
         // Determine severity
         String severity = resolveSeverity(entity.getAction(), entity.getStatus());
@@ -250,8 +270,14 @@ public class AuditLogServiceImpl implements AuditLogService {
         Map<String, Object> detailsMap = new HashMap<>();
         if (entity.getChanges() != null && !entity.getChanges().isBlank()) {
             try {
-                Map<String, Object> parsed = objectMapper.readValue(entity.getChanges(), new TypeReference<Map<String, Object>>() {});
-                detailsMap.putAll(parsed);
+                String trimmed = entity.getChanges().trim();
+                if (trimmed.startsWith("[")) {
+                    List<Object> changeList = objectMapper.readValue(trimmed, new TypeReference<List<Object>>() {});
+                    detailsMap.put("changes", changeList);
+                } else {
+                    Map<String, Object> parsed = objectMapper.readValue(trimmed, new TypeReference<Map<String, Object>>() {});
+                    detailsMap.putAll(parsed);
+                }
             } catch (Exception ex) {
                 detailsMap.put("rawChanges", entity.getChanges());
             }
@@ -300,14 +326,39 @@ public class AuditLogServiceImpl implements AuditLogService {
                 .build();
     }
 
+    private String resolveTargetHref(String module, String resourceId, String action) {
+        if (module == null || module.isBlank()) {
+            return null;
+        }
+        String cleanAction = action != null ? action.toUpperCase() : "";
+        if (cleanAction.contains("DELETE")) {
+            // Deleted entities no longer have an edit page; link to the module directory
+            resourceId = null;
+        }
+        String mod = module.trim().toLowerCase();
+        boolean isNumericId = resourceId != null && resourceId.trim().matches("^\\d+$");
+
+        return switch (mod) {
+            case "settings" -> "/admin/settings";
+            case "holidays" -> "/admin/holidays";
+            case "auth", "security", "profile" -> "/admin/profile";
+            case "tags", "media", "roles", "subscribers" -> "/admin/" + mod;
+            case "feedback", "feedbacks" -> "/admin/feedback";
+            case "posts", "stores", "offers", "pages", "menus", "users", "categories" ->
+                    isNumericId ? "/admin/" + mod + "/" + resourceId.trim() + "/edit" : "/admin/" + mod;
+            default -> null;
+        };
+    }
+
     private String resolveSeverity(String action, String status) {
-        if ("FAILED".equalsIgnoreCase(status) || "DELETE".equalsIgnoreCase(action) || "SECURITY_LOCKDOWN".equalsIgnoreCase(action)) {
+        String upper = action != null ? action.toUpperCase() : "";
+        if ("FAILED".equalsIgnoreCase(status) || upper.contains("DELETE") || upper.contains("LOCK")) {
             return AuditSeverity.DANGER.getValue();
         }
-        if ("CREATE".equalsIgnoreCase(action) || "PUBLISH".equalsIgnoreCase(action) || "SUCCESS".equalsIgnoreCase(status)) {
+        if (upper.contains("CREATE") || upper.contains("PUBLISH") || upper.contains("UPLOAD") || upper.contains("CLONE") || upper.contains("VERIFY")) {
             return AuditSeverity.SUCCESS.getValue();
         }
-        if ("UPDATE".equalsIgnoreCase(action) || "RBAC_CHANGE".equalsIgnoreCase(action) || "WARNING".equalsIgnoreCase(status)) {
+        if (upper.contains("UPDATE") || upper.contains("RBAC") || upper.contains("TOGGLE") || upper.contains("PASSWORD") || upper.contains("2FA")) {
             return AuditSeverity.WARNING.getValue();
         }
         return AuditSeverity.INFO.getValue();

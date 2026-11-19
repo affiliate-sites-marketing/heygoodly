@@ -14,6 +14,7 @@ import AdminFormPage, {
   labelClass,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
+import { SITE_DOMAIN } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { useToast } from '@/context/ToastContext';
@@ -213,7 +214,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
         }}
         className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
           activeTab === 'preview'
-            ? 'bg-[#C62828] text-white shadow-2xs'
+            ? 'bg-brand-primary text-white shadow-2xs'
             : 'text-slate-600 hover:text-slate-900'
         }`}
       >
@@ -315,7 +316,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                       type="checkbox"
                       checked={form.isActive}
                       onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-300 text-[#C62828] focus:ring-[#C62828]"
+                      className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                     />
                   </label>
                 </div>
@@ -394,14 +395,14 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                     )}
                     <Link
                       href={`/admin/posts?category=${encodeURIComponent(existing.name)}`}
-                      className="text-xs font-bold text-slate-600 hover:text-[#C62828] inline-flex items-center gap-1"
+                      className="text-xs font-bold text-slate-600 hover:text-brand-primary inline-flex items-center gap-1"
                     >
                       <span>Manage All</span>
                       <ExternalLink size={11} />
                     </Link>
                     <Link
                       href={`/admin/posts/create?category=${encodeURIComponent(existing.name)}`}
-                      className="text-xs font-bold text-white bg-[#C62828] hover:bg-[#B71C1C] px-2.5 py-1 rounded-lg inline-flex items-center gap-1 shadow-2xs"
+                      className="text-xs font-bold text-white bg-brand-primary hover:bg-brand-primary-hover px-2.5 py-1 rounded-lg inline-flex items-center gap-1 shadow-2xs"
                     >
                       <Plus size={12} />
                       <span>Write Article</span>
@@ -416,7 +417,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                       type="button"
                       onClick={loadCategoryArticlesOnDemand}
                       disabled={loadingArticles}
-                      className="inline-flex items-center gap-1.5 font-bold text-[#C62828] hover:underline cursor-pointer"
+                      className="inline-flex items-center gap-1.5 font-bold text-brand-primary hover:underline cursor-pointer"
                     >
                       <RefreshCw size={13} className={loadingArticles ? 'animate-spin' : ''} />
                       <span>{loadingArticles ? 'Fetching articles...' : 'Click to load category articles on demand'}</span>
@@ -438,7 +439,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                             </div>
                           )}
                           <div className="min-w-0">
-                            <h5 className="text-xs font-bold text-slate-900 truncate group-hover:text-[#C62828] transition-colors">
+                            <h5 className="text-xs font-bold text-slate-900 truncate group-hover:text-brand-primary transition-colors">
                               {art.title}
                             </h5>
                             <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
@@ -462,7 +463,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                           </Link>
                           <Link
                             href={`/admin/posts/${art.id}/edit`}
-                            className="w-7 h-7 rounded-lg bg-[#C62828] hover:bg-[#B71C1C] text-white flex items-center justify-center transition shadow-2xs"
+                            className="w-7 h-7 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white flex items-center justify-center transition shadow-2xs"
                             title="Edit article"
                           >
                             <Edit2 size={12} />
@@ -476,7 +477,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                     <p>No articles currently assigned to this category.</p>
                     <Link
                       href={`/admin/posts/create?category=${encodeURIComponent(existing.name)}`}
-                      className="inline-flex items-center gap-1.5 font-bold text-[#C62828] hover:underline"
+                      className="inline-flex items-center gap-1.5 font-bold text-brand-primary hover:underline"
                     >
                       <Plus size={13} />
                       <span>Write the first article in &ldquo;{existing.name}&rdquo;</span>
@@ -493,12 +494,12 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
           {/* Preview Toolbar with Device Selector */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-white shadow-xl">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-[#C62828]">
+              <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-brand-primary">
                 <Eye size={16} />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">Category Landing Page Preview</h3>
-                <p className="text-[11px] text-slate-400">URL: https://heygoodly.com/categories/{form.slug || 'category-name'}</p>
+                <p className="text-[11px] text-slate-400">URL: https://{SITE_DOMAIN}/categories/{form.slug || 'category-name'}</p>
               </div>
             </div>
 
@@ -507,7 +508,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                 type="button"
                 onClick={() => setPreviewDevice('desktop')}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'desktop' ? 'bg-[#C62828] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  previewDevice === 'desktop' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Monitor size={13} />
@@ -517,7 +518,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                 type="button"
                 onClick={() => setPreviewDevice('tablet')}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'tablet' ? 'bg-[#C62828] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  previewDevice === 'tablet' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Tablet size={13} />
@@ -527,7 +528,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                 type="button"
                 onClick={() => setPreviewDevice('mobile')}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'mobile' ? 'bg-[#C62828] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  previewDevice === 'mobile' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Smartphone size={13} />
@@ -555,7 +556,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
                 </div>
                 <div className="flex-1 bg-white border border-slate-200 rounded px-2.5 py-0.5 text-[11px] text-slate-500 font-mono truncate">
-                  https://heygoodly.com/categories/{form.slug || 'category-name'}
+                  https://{SITE_DOMAIN}/categories/{form.slug || 'category-name'}
                 </div>
               </div>
 
@@ -579,7 +580,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                   </div>
 
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#C62828] text-white">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-brand-primary text-white">
                       Editorial Category
                     </span>
                     <span className="px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-white/10 text-slate-200 border border-white/15">
@@ -601,7 +602,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
               <div className="p-6 sm:p-10 space-y-10">
                 {/* Editorial Description / Buying Guide Box */}
                 <div className="bg-slate-50/70 rounded-2xl border border-slate-200 p-6 sm:p-8">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#C62828] mb-4">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-primary mb-4">
                     <FolderTree size={16} />
                     <span>Editorial Buying Guide &amp; Category Overview</span>
                   </div>
@@ -627,7 +628,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                       </h2>
                       <p className="text-xs text-slate-500">Curated and updated continuously by our editorial team</p>
                     </div>
-                    <span className="text-xs font-bold text-[#C62828] bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
+                    <span className="text-xs font-bold text-brand-primary bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
                       {categoryArticles.length} articles
                     </span>
                   </div>
@@ -647,7 +648,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                                 className="w-full h-36 object-cover rounded-lg border border-slate-100"
                               />
                             )}
-                            <h4 className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-[#C62828] transition-colors">
+                            <h4 className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-brand-primary transition-colors">
                               {art.title}
                             </h4>
                           </div>

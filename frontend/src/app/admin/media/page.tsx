@@ -281,7 +281,7 @@ export default function AdminMediaPage() {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
         >
           <Upload size={15} /> {t('Upload Image (Tag Required)')}
         </button>
@@ -292,7 +292,7 @@ export default function AdminMediaPage() {
         <button
           type="button"
           onClick={() => setShowUploadZone(!showUploadZone)}
-          className="text-xs font-bold text-zinc-600 hover:text-[#C62828] flex items-center gap-1.5 cursor-pointer"
+          className="text-xs font-bold text-zinc-600 hover:text-brand-primary flex items-center gap-1.5 cursor-pointer"
         >
           <FolderOpen size={14} />
           <span>{showUploadZone ? t('Hide Drag & Drop Upload Zone') : t('Open Drag & Drop Upload Zone')}</span>
@@ -300,11 +300,11 @@ export default function AdminMediaPage() {
       </div>
 
       {showUploadZone && (
-        <Card className="p-6 bg-rose-50/40 border-dashed border-2 border-[#C62828]/30 rounded-2xl space-y-4 animate-in fade-in duration-200">
+        <Card className="p-6 bg-rose-50/40 border-dashed border-2 border-brand-primary/30 rounded-2xl space-y-4 animate-in fade-in duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
-                <Sparkles size={16} className="text-[#C62828]" /> {t('Upload & Optimize New Image')}
+                <Sparkles size={16} className="text-brand-primary" /> {t('Upload & Optimize New Image')}
               </h3>
               <p className="text-xs text-zinc-500 mt-0.5">
                 {t('Automatically converts to optimized WebP. You will be prompted to add at least one search tag.')}
@@ -316,7 +316,7 @@ export default function AdminMediaPage() {
               <select
                 value={uploadFolder}
                 onChange={(e) => setUploadFolder(e.target.value as any)}
-                className="text-xs bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 font-semibold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] cursor-pointer"
+                className="text-xs bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 font-semibold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary cursor-pointer"
               >
                 <option value="articles">{t('Articles')}</option>
                 <option value="stores">{t('Stores')}</option>
@@ -336,9 +336,9 @@ export default function AdminMediaPage() {
 
           <div
             onClick={() => dropzoneInputRef.current?.click()}
-            className="border border-dashed border-zinc-300 hover:border-[#C62828] bg-white rounded-xl p-8 text-center cursor-pointer transition hover:bg-zinc-50/50 space-y-2"
+            className="border border-dashed border-zinc-300 hover:border-brand-primary bg-white rounded-xl p-8 text-center cursor-pointer transition hover:bg-zinc-50/50 space-y-2"
           >
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-[#C62828] flex items-center justify-center mx-auto shadow-2xs">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-brand-primary flex items-center justify-center mx-auto shadow-2xs">
               <Upload size={24} />
             </div>
             <div>
@@ -387,13 +387,13 @@ export default function AdminMediaPage() {
                   setCurrentPage(1);
                 }}
                 placeholder={t('Search by file name, tag (#review, #apple, #tech)...')}
-                className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] text-zinc-800 placeholder:text-zinc-400"
+                className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary text-zinc-800 placeholder:text-zinc-400"
               />
             </div>
 
             {/* Active Tag Chip Indicator */}
             {selectedTag && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-[#C62828] border border-rose-200/80 shrink-0 shadow-2xs">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-brand-primary border border-rose-200/80 shrink-0 shadow-2xs">
                 <Tag size={12} />
                 <span>#{selectedTag}</span>
                 <button
@@ -421,7 +421,7 @@ export default function AdminMediaPage() {
                     setSelectedTag(e.target.value === 'all' ? null : e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] cursor-pointer"
+                  className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary cursor-pointer"
                 >
                   <option value="all">
                     {locale === 'vi' ? 'Tất cả thẻ' : 'All Tags'} ({Object.keys(tagCounts).length})
@@ -449,7 +449,7 @@ export default function AdminMediaPage() {
                 setFormatFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] cursor-pointer"
+              className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary cursor-pointer"
             >
               <option value="all">{t('All Formats')}</option>
               <option value="webp">WebP</option>
@@ -464,7 +464,7 @@ export default function AdminMediaPage() {
                 setSortBy(e.target.value as any);
                 setCurrentPage(1);
               }}
-              className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] cursor-pointer"
+              className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary cursor-pointer"
             >
               <option value="newest">{t('Newest Uploaded')}</option>
               <option value="oldest">{t('Oldest First')}</option>
@@ -565,7 +565,7 @@ export default function AdminMediaPage() {
                   <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
                     <div>
                       <h4
-                        className="text-xs font-bold text-zinc-900 truncate hover:text-[#C62828] cursor-pointer"
+                        className="text-xs font-bold text-zinc-900 truncate hover:text-brand-primary cursor-pointer"
                         title={item.name}
                         onClick={() => setSelectedAsset(item)}
                       >
@@ -587,7 +587,7 @@ export default function AdminMediaPage() {
                                 setSelectedTag(tag);
                                 setCurrentPage(1);
                               }}
-                              className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-[#C62828] hover:bg-rose-100 border border-rose-200/60 truncate max-w-[80px] cursor-pointer"
+                              className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-brand-primary hover:bg-rose-100 border border-rose-200/60 truncate max-w-[80px] cursor-pointer"
                               title={`${t('Filter by')} #${tag}`}
                             >
                               #{tag}
@@ -664,7 +664,7 @@ export default function AdminMediaPage() {
                       <td className="py-2.5 px-4">
                         <span
                           onClick={() => setSelectedAsset(item)}
-                          className="font-bold text-zinc-900 block hover:text-[#C62828] cursor-pointer"
+                          className="font-bold text-zinc-900 block hover:text-brand-primary cursor-pointer"
                         >
                           {item.name}
                         </span>
@@ -683,7 +683,7 @@ export default function AdminMediaPage() {
                                   setSelectedTag(tItem);
                                   setCurrentPage(1);
                                 }}
-                                className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 hover:bg-rose-100 text-[#C62828] border border-rose-200/60 cursor-pointer"
+                                className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 hover:bg-rose-100 text-brand-primary border border-rose-200/60 cursor-pointer"
                               >
                                 #{tItem}
                               </button>
@@ -725,7 +725,7 @@ export default function AdminMediaPage() {
                           <button
                             type="button"
                             onClick={() => setSelectedAsset(item)}
-                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-rose-50/60 text-zinc-600 hover:text-[#C62828] hover:border-[#C62828]/40 transition shrink-0 shadow-2xs cursor-pointer"
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-rose-50/60 text-zinc-600 hover:text-brand-primary hover:border-brand-primary/40 transition shrink-0 shadow-2xs cursor-pointer"
                             title={t('View Details & Manage Tags')}
                           >
                             <Maximize2 size={13} />

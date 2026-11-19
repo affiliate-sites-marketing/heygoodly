@@ -318,9 +318,9 @@ function AdminOffersPageContent() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-              <Tag className="text-[#C62828]" size={24} /> Coupons, Promo Codes &amp; Deals
+              <Tag className="text-brand-primary" size={24} /> Coupons, Promo Codes &amp; Deals
             </h1>
-            <span className="bg-[#C62828]/10 text-[#C62828] text-xs font-bold px-2.5 py-0.5 rounded-full">
+            <span className="bg-brand-primary/10 text-brand-primary text-xs font-bold px-2.5 py-0.5 rounded-full">
               {`${totalItems} Offers Total`}
             </span>
           </div>
@@ -383,7 +383,7 @@ function AdminOffersPageContent() {
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-zinc-500">Found <strong className="text-zinc-900">{totalItems}</strong> matching offers</span>
             {isFiltered && (
-              <button type="button" onClick={handleResetFilters} className="text-[11px] font-bold text-[#C62828] hover:underline cursor-pointer flex items-center gap-1">
+              <button type="button" onClick={handleResetFilters} className="text-[11px] font-bold text-brand-primary hover:underline cursor-pointer flex items-center gap-1">
                 <RotateCcw size={11} /> Reset filters
               </button>
             )}

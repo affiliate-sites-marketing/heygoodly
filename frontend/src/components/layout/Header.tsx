@@ -265,7 +265,7 @@ export default function Header() {
         <div className="max-w-[1240px] mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#171717]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C62828]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-primary" />
               <span>{currentDate}</span>
             </span>
 
@@ -365,7 +365,7 @@ export default function Header() {
                   <span className="mr-2 text-2xl sm:text-4xl align-middle">{activeHoliday.brandEmoji}</span>
                 )}
                 {brandName}
-                <span className="text-[#C62828]">.</span>
+                <span className="text-brand-primary">.</span>
               </span>
             </div>
             {brandTagline && (
@@ -414,7 +414,7 @@ export default function Header() {
                   href={sponsorDestinationUrl}
                   target={sponsorDestinationUrl.startsWith('http') ? '_blank' : undefined}
                   rel={sponsorDestinationUrl.startsWith('http') ? 'nofollow sponsored noopener noreferrer' : undefined}
-                  className="bg-[#C62828] hover:bg-[#B71C1C] text-white font-semibold text-xs px-3.5 py-2 sm:py-1.5 rounded transition inline-flex items-center gap-1.5 whitespace-nowrap"
+                  className="bg-brand-primary hover:bg-brand-primary-hover text-white font-semibold text-xs px-3.5 py-2 sm:py-1.5 rounded transition inline-flex items-center gap-1.5 whitespace-nowrap"
                 >
                   <span>{settings.headerAdsButtonText || 'Discover'}</span>
                   <ArrowRight size={12} />
@@ -437,8 +437,8 @@ export default function Header() {
                   href={link.href}
                   className={`text-xs font-semibold tracking-wider uppercase px-3 xl:px-3.5 py-3 transition-colors border-b-2 whitespace-nowrap shrink-0 ${
                     isActive
-                      ? 'border-[#C62828] text-[#C62828]'
-                      : 'border-transparent text-[#171717] hover:text-[#C62828]'
+                      ? 'border-brand-primary text-brand-primary'
+                      : 'border-transparent text-[#171717] hover:text-brand-primary'
                   }`}
                 >
                   {link.label}
@@ -450,7 +450,7 @@ export default function Header() {
           <div className="lg:hidden py-1.5 flex items-center gap-2.5 min-w-0">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="min-h-[38px] px-2 -ml-2 text-[#171717] hover:text-[#C62828] rounded-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0"
+              className="min-h-[38px] px-2 -ml-2 text-[#171717] hover:text-brand-primary rounded-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <MenuIcon size={20} />}
@@ -464,7 +464,7 @@ export default function Header() {
                 <span className="mr-1.5 text-base sm:text-lg align-middle">{activeHoliday.brandEmoji}</span>
               )}
               {brandName}
-              <span className="text-[#C62828]">.</span>
+              <span className="text-brand-primary">.</span>
             </Link>
           </div>
 
@@ -509,11 +509,11 @@ export default function Header() {
                   autoFocus
                 />
                 {isSearchingLive && (
-                  <Loader2 size={15} className="animate-spin text-[#C62828] absolute right-[88px] pointer-events-none" />
+                  <Loader2 size={15} className="animate-spin text-brand-primary absolute right-[88px] pointer-events-none" />
                 )}
                 <button
                   type="submit"
-                  className="absolute right-1.5 bg-[#171717] hover:bg-[#C62828] text-white text-xs font-medium px-3.5 py-1.5 rounded transition-colors cursor-pointer"
+                  className="absolute right-1.5 bg-[#171717] hover:bg-brand-primary text-white text-xs font-medium px-3.5 py-1.5 rounded transition-colors cursor-pointer"
                 >
                   Search
                 </button>
@@ -524,7 +524,7 @@ export default function Header() {
                 <div className="bg-white border border-[#E7E7E5] rounded-lg overflow-hidden shadow-xs divide-y divide-[#E7E7E5]">
                   {isSearchingLive && !liveResults ? (
                     <div className="px-4 py-4 text-xs text-[#737373] flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin text-[#C62828]" />
+                      <Loader2 size={14} className="animate-spin text-brand-primary" />
                       <span>Searching stores, coupons, and reviews...</span>
                     </div>
                   ) : liveResults &&
@@ -535,7 +535,7 @@ export default function Header() {
                       {liveResults.stores.length > 0 && (
                         <div className="p-2.5 space-y-1">
                           <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#737373] flex items-center gap-1.5">
-                            <StoreIcon size={12} className="text-[#C62828]" />
+                            <StoreIcon size={12} className="text-brand-primary" />
                             <span>Stores ({liveResults.stores.length})</span>
                           </div>
                           {liveResults.stores.map((store) => (
@@ -546,7 +546,7 @@ export default function Header() {
                               className="flex items-center justify-between px-2.5 py-2 rounded-md hover:bg-[#F8F8F6] transition-colors group"
                             >
                               <div className="min-w-0 pr-3">
-                                <p className="text-xs font-bold text-[#171717] group-hover:text-[#C62828] truncate">
+                                <p className="text-xs font-bold text-[#171717] group-hover:text-brand-primary truncate">
                                   {store.name}
                                 </p>
                                 <p className="text-[11px] text-[#737373] truncate">{store.category}</p>
@@ -562,7 +562,7 @@ export default function Header() {
                       {liveResults.coupons.length > 0 && (
                         <div className="p-2.5 space-y-1">
                           <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#737373] flex items-center gap-1.5">
-                            <Tag size={12} className="text-[#C62828]" />
+                            <Tag size={12} className="text-brand-primary" />
                             <span>Coupons &amp; Deals ({liveResults.coupons.length})</span>
                           </div>
                           {liveResults.coupons.map((coupon) => (
@@ -577,7 +577,7 @@ export default function Header() {
                               className="flex items-center justify-between gap-3 px-2.5 py-2 rounded-md hover:bg-[#F8F8F6] transition-colors group"
                             >
                               <div className="min-w-0">
-                                <p className="text-xs font-semibold text-[#171717] group-hover:text-[#C62828] truncate">
+                                <p className="text-xs font-semibold text-[#171717] group-hover:text-brand-primary truncate">
                                   {coupon.title}
                                 </p>
                                 <p className="text-[11px] text-[#737373] truncate">
@@ -586,7 +586,7 @@ export default function Header() {
                                 </p>
                               </div>
                               {coupon.discount && (
-                                <span className="text-[10px] font-black text-[#C62828] bg-red-50 border border-red-100 px-2 py-0.5 rounded shrink-0">
+                                <span className="text-[10px] font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded shrink-0">
                                   {coupon.discount}
                                 </span>
                               )}
@@ -598,7 +598,7 @@ export default function Header() {
                       {liveResults.posts.length > 0 && (
                         <div className="p-2.5 space-y-1">
                           <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#737373] flex items-center gap-1.5">
-                            <BookOpen size={12} className="text-[#C62828]" />
+                            <BookOpen size={12} className="text-brand-primary" />
                             <span>Articles &amp; Reviews ({liveResults.posts.length})</span>
                           </div>
                           {liveResults.posts.map((post) => (
@@ -609,7 +609,7 @@ export default function Header() {
                               className="flex items-center justify-between gap-3 px-2.5 py-2 rounded-md hover:bg-[#F8F8F6] transition-colors group"
                             >
                               <div className="min-w-0">
-                                <p className="text-xs font-semibold text-[#171717] group-hover:text-[#C62828] truncate">
+                                <p className="text-xs font-semibold text-[#171717] group-hover:text-brand-primary truncate">
                                   {post.title}
                                 </p>
                                 <p className="text-[11px] text-[#737373] truncate">
@@ -617,7 +617,7 @@ export default function Header() {
                                   {post.readTime ? ` • ${post.readTime}` : ''}
                                 </p>
                               </div>
-                              <ArrowRight size={12} className="text-[#737373] group-hover:text-[#C62828] shrink-0" />
+                              <ArrowRight size={12} className="text-[#737373] group-hover:text-brand-primary shrink-0" />
                             </Link>
                           ))}
                         </div>
@@ -632,7 +632,7 @@ export default function Header() {
                   <Link
                     href={`${ROUTES.PUBLIC.SEARCH}?q=${encodeURIComponent(searchQuery.trim())}`}
                     onClick={() => setSearchOpen(false)}
-                    className="flex items-center justify-between px-4 py-2.5 bg-[#F8F8F6] hover:bg-[#EFEFEA] text-xs font-semibold text-[#C62828] transition-colors"
+                    className="flex items-center justify-between px-4 py-2.5 bg-[#F8F8F6] hover:bg-[#EFEFEA] text-xs font-semibold text-brand-primary transition-colors"
                   >
                     <span>View all results for &ldquo;{searchQuery.trim()}&rdquo;</span>
                     <ArrowRight size={13} />
@@ -648,7 +648,7 @@ export default function Header() {
                       key={tag}
                       href={`${ROUTES.PUBLIC.SEARCH}?q=${encodeURIComponent(tag)}`}
                       onClick={() => setSearchOpen(false)}
-                      className="px-2.5 py-1 bg-white border border-[#E7E7E5] rounded-full text-[#171717] hover:border-[#C62828] hover:text-[#C62828] transition-colors"
+                      className="px-2.5 py-1 bg-white border border-[#E7E7E5] rounded-full text-[#171717] hover:border-brand-primary hover:text-brand-primary transition-colors"
                     >
                       #{tag}
                     </Link>
@@ -663,7 +663,7 @@ export default function Header() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-[#E7E7E5] p-4 sm:p-5 bg-white space-y-4 animate-fadeIn shadow-lg max-h-[calc(100dvh-4.5rem)] overflow-y-auto">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C62828] mb-2 block">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-primary mb-2 block">
                 Navigation
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -677,8 +677,8 @@ export default function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center justify-between min-h-[44px] px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition ${
                         isActive
-                          ? 'bg-[#C62828]/10 text-[#C62828] border-l-2 border-[#C62828]'
-                          : 'text-[#171717] hover:bg-[#F8F8F6] hover:text-[#C62828]'
+                          ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary'
+                          : 'text-[#171717] hover:bg-[#F8F8F6] hover:text-brand-primary'
                       }`}
                     >
                       <span className="truncate pr-2">{link.label}</span>
@@ -750,7 +750,7 @@ export default function Header() {
 
           <div className="max-w-[1240px] mx-auto flex items-center h-6 relative">
             <div className="z-10 bg-[#F8F8F6] pr-2.5 sm:pr-3 shrink-0 flex items-center border-r border-[#E7E7E5] mr-2.5 sm:mr-3">
-              <span className="bg-[#C62828] text-white font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded shrink-0 flex items-center gap-1 shadow-2xs whitespace-nowrap">
+              <span className="bg-brand-primary text-white font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded shrink-0 flex items-center gap-1 shadow-2xs whitespace-nowrap">
                 <Zap size={11} className="fill-white" />
                 <span>Flash News</span>
               </span>
@@ -762,11 +762,11 @@ export default function Header() {
                   <Link
                     key={`${news.slug}-${idx}`}
                     href={ROUTES.PUBLIC.POST_DETAIL(news.slug)}
-                    className="inline-flex items-center text-xs sm:text-sm text-[#171717] hover:text-[#C62828] font-medium whitespace-nowrap transition-colors px-4 sm:px-6 group shrink-0"
+                    className="inline-flex items-center text-xs sm:text-sm text-[#171717] hover:text-brand-primary font-medium whitespace-nowrap transition-colors px-4 sm:px-6 group shrink-0"
                   >
                     <span className="relative flex h-2 w-2 mr-2.5 shrink-0 items-center justify-center">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C62828] opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#C62828] live-blink-dot" />
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-primary live-blink-dot" />
                     </span>
                     <span className="group-hover:underline">{news.title}</span>
                   </Link>

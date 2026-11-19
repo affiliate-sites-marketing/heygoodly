@@ -1,11 +1,14 @@
 package com.heygoodly.portal.modules.page.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.exception.DuplicateResourceException;
 import com.heygoodly.portal.common.exception.ResourceNotFoundException;
 import com.heygoodly.portal.common.util.NullSafeUtils;
 import com.heygoodly.portal.common.util.SlugUtils;
+import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.page.dto.request.PageRequest;
 import com.heygoodly.portal.modules.page.dto.response.PageResponse;
 import com.heygoodly.portal.modules.page.dto.response.PageSummaryResponse;
@@ -25,6 +28,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
@@ -34,22 +38,39 @@ public class PageServiceImpl implements PageService {
 
     private final PageRepository pageRepository;
     private final PageMapper pageMapper;
+    private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
 
     @Override
     @Transactional(readOnly = true)
     public List<PageSummaryResponse> getPublicPages() {
-        log.info("Fetching all active public pages");
-        List<PageEntity> pages = pageRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
-        return pageMapper.toSummaryResponseList(pages);
+        return redisCacheService.getOrLoad(
+                RedisCacheService.PAGES_PUBLIC_LIST_KEY,
+                new TypeReference<List<PageSummaryResponse>>() {},
+                java.time.Duration.ofMinutes(5),
+                () -> {
+                    log.info("Fetching all active public pages");
+                    List<PageEntity> pages = pageRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+                    return pageMapper.toSummaryResponseList(pages);
+                }
+        );
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse getPublicPageBySlug(String slug) {
-        log.info("Fetching public page by slug: {}", slug);
-        PageEntity entity = pageRepository.findBySlugAndIsActiveTrueAndIsDeletedFalse(slug)
-                .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_PAGE, EntityFieldConstants.SLUG, slug));
-        return pageMapper.toDetailResponse(entity);
+        String cleanSlug = slug != null ? slug.trim().toLowerCase() : "";
+        return redisCacheService.getOrLoad(
+                RedisCacheService.PAGES_PUBLIC_SLUG_PREFIX + cleanSlug,
+                PageResponse.class,
+                java.time.Duration.ofMinutes(5),
+                () -> {
+                    log.info("Fetching public page by slug: {}", slug);
+                    PageEntity entity = pageRepository.findBySlugAndIsActiveTrueAndIsDeletedFalse(slug)
+                            .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_PAGE, EntityFieldConstants.SLUG, slug));
+                    return pageMapper.toDetailResponse(entity);
+                }
+        );
     }
 
     @Override
@@ -122,6 +143,9 @@ public class PageServiceImpl implements PageService {
                 .build();
 
         PageEntity saved = pageRepository.save(entity);
+        redisCacheService.evictByPrefix(RedisCacheService.PAGES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        auditLogService.recordAction("CREATE", "pages", String.valueOf(saved.getId()), saved.getTitle(), null);
         log.info("Successfully created CMS page id={}", saved.getId());
         return pageMapper.toDetailResponse(saved);
     }
@@ -133,6 +157,10 @@ public class PageServiceImpl implements PageService {
         PageEntity entity = pageRepository.findById(id)
                 .filter(p -> !Boolean.TRUE.equals(p.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_PAGE, EntityFieldConstants.ID, id));
+
+        String oldTitle = entity.getTitle();
+        String oldSlug = entity.getSlug();
+        Boolean oldActive = entity.getIsActive();
 
         String slug = StringUtils.hasText(request.getSlug())
                 ? SlugUtils.toSlug(request.getSlug())
@@ -157,6 +185,13 @@ public class PageServiceImpl implements PageService {
         entity.setMetaDescription(request.getMetaDescription());
 
         PageEntity updated = pageRepository.save(entity);
+        redisCacheService.evictByPrefix(RedisCacheService.PAGES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "title", "Page Title", oldTitle, updated.getTitle());
+        AuditLogService.appendDiff(diffs, "slug", "Slug", oldSlug, updated.getSlug());
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, updated.getIsActive());
+        auditLogService.recordAction("UPDATE", "pages", String.valueOf(updated.getId()), updated.getTitle(), diffs);
         log.info("Successfully updated CMS page id={}", updated.getId());
         return pageMapper.toDetailResponse(updated);
     }
@@ -169,8 +204,12 @@ public class PageServiceImpl implements PageService {
                 .filter(p -> !Boolean.TRUE.equals(p.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_PAGE, EntityFieldConstants.ID, id));
 
+        String deletedTitle = entity.getTitle();
         entity.setIsDeleted(true);
         pageRepository.save(entity);
+        redisCacheService.evictByPrefix(RedisCacheService.PAGES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+        auditLogService.recordAction("DELETE", "pages", String.valueOf(id), deletedTitle, null);
         log.info("Successfully deleted CMS page id={}", id);
     }
 }

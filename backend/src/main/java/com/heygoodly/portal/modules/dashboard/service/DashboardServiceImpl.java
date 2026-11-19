@@ -1,5 +1,6 @@
 package com.heygoodly.portal.modules.dashboard.service;
 
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.util.NullSafeUtils;
@@ -61,6 +62,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final MenuRepository menuRepository;
     private final PageRepository pageRepository;
     private final AffiliateClickRepository affiliateClickRepository;
+    private final RedisCacheService redisCacheService;
 
     private static final DateTimeFormatter ISO_DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DISPLAY_DAY_FMT = DateTimeFormatter.ofPattern("EEE", Locale.US);
@@ -69,20 +71,39 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     @Transactional(readOnly = true)
     public DashboardStatsResponse getDashboardStats() {
+        return redisCacheService.getOrLoad(
+                RedisCacheService.DASHBOARD_STATS_KEY,
+                DashboardStatsResponse.class,
+                Duration.ofSeconds(30),
+                this::computeDashboardStats
+        );
+    }
+
+    private DashboardStatsResponse computeDashboardStats() {
         long totalClicks = storeRepository.sumTotalClicks();
-        long activeStoresCount = storeRepository.countByIsActiveTrueAndIsDeletedFalse();
-        long featuredStoresCount = storeRepository.countByIsActiveTrueAndIsFeaturedTrueAndIsDeletedFalse();
-        long activeOffersCount = offerRepository.countByIsActiveTrueAndIsDeletedFalse();
-        long couponCodesCount = offerRepository.countCouponCodes();
-        long dealsCount = offerRepository.countDeals();
-        long exclusiveOffersCount = offerRepository.countByIsActiveTrueAndIsVerifiedTrueAndIsDeletedFalse();
-        long totalArticleViews = postRepository.sumTotalViews();
-        long postsCount = postRepository.countByIsActiveTrueAndIsDeletedFalse();
+
+        Object[] storeSummary = firstRow(storeRepository.summarizeActiveStores());
+        long activeStoresCount = toLong(storeSummary, 0);
+        long featuredStoresCount = toLong(storeSummary, 1);
+
+        Object[] offerSummary = firstRow(offerRepository.summarizeActiveOffers());
+        long activeOffersCount = toLong(offerSummary, 0);
+        long couponCodesCount = toLong(offerSummary, 1);
+        long dealsCount = toLong(offerSummary, 2);
+        long exclusiveOffersCount = toLong(offerSummary, 3);
+
+        Object[] postSummary = firstRow(postRepository.summarizePosts());
+        long postsCount = toLong(postSummary, 1) + toLong(postSummary, 2);
+        long totalArticleViews = toLong(postSummary, 4);
+
         long categoriesCount = categoryRepository.countByIsDeletedFalse();
         long subscribersCount = subscriberRepository.countByStatus(SubscriberStatus.ACTIVE);
-        long unreadFeedbackCount = feedbackRepository.countByIsReadFalse();
-        long pendingUserReportsCount = feedbackRepository.countByIsReadFalseAndType(FeedbackType.COUPON_REPORT);
-        long unreadInquiriesCount = feedbackRepository.countByIsReadFalseAndTypeNot(FeedbackType.COUPON_REPORT);
+
+        Object[] feedbackSummary = firstRow(feedbackRepository.summarizeUnreadFeedback());
+        long unreadFeedbackCount = toLong(feedbackSummary, 0);
+        long pendingUserReportsCount = toLong(feedbackSummary, 1);
+        long unreadInquiriesCount = toLong(feedbackSummary, 2);
+
         long usersCount = userRepository.countByIsDeletedFalse();
         long rolesCount = roleRepository.count();
         long auditLogsCount = auditLogRepository.count();
@@ -164,9 +185,10 @@ public class DashboardServiceImpl implements DashboardService {
                 .map(this::mapToRecentActivityDto)
                 .collect(Collectors.toList());
 
-        // Real Telemetry Charts from affiliate_clicks table in PostgreSQL
-        List<DashboardStatsResponse.ChartPointDto> chart7d = buildRealDailyChart(7, DISPLAY_DAY_FMT);
-        List<DashboardStatsResponse.ChartPointDto> chart30d = buildRealDailyChart(30, DISPLAY_DATE_FMT);
+        // Real Telemetry Charts from affiliate_clicks table in PostgreSQL (single 30d daily query reused for 7d + 30d)
+        Map<String, Long> clicksByDay30 = fetchDailyClicksMap(30);
+        List<DashboardStatsResponse.ChartPointDto> chart7d = buildChartPointsFromMap(7, DISPLAY_DAY_FMT, clicksByDay30);
+        List<DashboardStatsResponse.ChartPointDto> chart30d = buildChartPointsFromMap(30, DISPLAY_DATE_FMT, clicksByDay30);
         List<DashboardStatsResponse.ChartPointDto> chart90d = buildRealWeeklyChart(90);
 
         // Peak Clicks & Average Daily calculated from real DB data
@@ -228,7 +250,18 @@ public class DashboardServiceImpl implements DashboardService {
         }
     }
 
-    private List<DashboardStatsResponse.ChartPointDto> buildRealDailyChart(int days, DateTimeFormatter displayFmt) {
+    private Object[] firstRow(List<Object[]> rows) {
+        return (rows != null && !rows.isEmpty()) ? rows.get(0) : null;
+    }
+
+    private long toLong(Object[] row, int idx) {
+        if (row != null && idx < row.length && row[idx] instanceof Number num) {
+            return num.longValue();
+        }
+        return 0L;
+    }
+
+    private Map<String, Long> fetchDailyClicksMap(int days) {
         ZoneId zoneId = resolveZoneId();
         String tz = zoneId.getId();
         Instant since = Instant.now().minus(Duration.ofDays(days));
@@ -242,7 +275,12 @@ public class DashboardServiceImpl implements DashboardService {
                 clicksByDay.put(dayStr, count);
             }
         }
+        return clicksByDay;
+    }
 
+    private List<DashboardStatsResponse.ChartPointDto> buildChartPointsFromMap(
+            int days, DateTimeFormatter displayFmt, Map<String, Long> clicksByDay) {
+        ZoneId zoneId = resolveZoneId();
         LocalDate today = LocalDate.now(zoneId);
         List<DashboardStatsResponse.ChartPointDto> points = new ArrayList<>(days);
 

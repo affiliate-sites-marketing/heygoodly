@@ -127,7 +127,7 @@ function SearchPageContent() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search stores, promo codes, or product reviews..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 sm:py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-[#c62828]/20 focus:border-[#c62828] shadow-inner"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 sm:py-3.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary shadow-inner"
               autoFocus
             />
           </div>
@@ -141,7 +141,7 @@ function SearchPageContent() {
                   key={tag}
                   type="button"
                   onClick={() => setQuery(tag)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#c62828] text-slate-700 hover:text-white text-[11px] font-semibold transition cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-primary text-slate-700 hover:text-white text-[11px] font-semibold transition cursor-pointer"
                 >
                   #{tag}
                 </button>
@@ -156,7 +156,7 @@ function SearchPageContent() {
                 type="button"
                 onClick={() => setTab('all')}
                 className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer ${
-                  tab === 'all' ? 'bg-[#c62828] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  tab === 'all' ? 'bg-brand-primary text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 All Results ({stores.length + coupons.length + posts.length})
@@ -165,7 +165,7 @@ function SearchPageContent() {
                 type="button"
                 onClick={() => setTab('stores')}
                 className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer ${
-                  tab === 'stores' ? 'bg-[#c62828] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  tab === 'stores' ? 'bg-brand-primary text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 Stores ({stores.length})
@@ -174,7 +174,7 @@ function SearchPageContent() {
                 type="button"
                 onClick={() => setTab('offers')}
                 className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer ${
-                  tab === 'offers' ? 'bg-[#c62828] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  tab === 'offers' ? 'bg-brand-primary text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 Coupons ({coupons.length})
@@ -183,7 +183,7 @@ function SearchPageContent() {
                 type="button"
                 onClick={() => setTab('posts')}
                 className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer ${
-                  tab === 'posts' ? 'bg-[#c62828] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  tab === 'posts' ? 'bg-brand-primary text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 Articles &amp; Guides ({posts.length})
@@ -203,7 +203,7 @@ function SearchPageContent() {
           </div>
         ) : isLoading ? (
           <div className="py-16 text-center text-slate-400 text-sm font-medium flex flex-col items-center justify-center gap-2">
-            <Loader2 size={24} className="animate-spin text-[#c62828]" />
+            <Loader2 size={24} className="animate-spin text-brand-primary" />
             <span>Searching stores, promo codes, and editorial reviews...</span>
           </div>
         ) : (
@@ -212,17 +212,17 @@ function SearchPageContent() {
             {(tab === 'all' || tab === 'stores') && stores.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <StoreIcon size={18} className="text-[#c62828]" /> Stores Matching Search ({stores.length})
+                  <StoreIcon size={18} className="text-brand-primary" /> Stores Matching Search ({stores.length})
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {stores.map((s) => (
                     <Link
                       key={s.slug}
                       href={ROUTES.PUBLIC.STORE_DETAIL(s.slug)}
-                      className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-[#c62828] hover:shadow transition-all group"
+                      className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-brand-primary hover:shadow transition-all group"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold text-[#c62828] bg-red-50 px-2 py-0.5 rounded">
+                        <span className="text-[10px] font-bold text-brand-primary bg-brand-primary-soft px-2 py-0.5 rounded">
                           {s.category}
                         </span>
                         {s.rating > 0 && (
@@ -231,7 +231,7 @@ function SearchPageContent() {
                           </span>
                         )}
                       </div>
-                      <h3 className="font-bold text-slate-900 group-hover:text-[#c62828] transition-colors text-sm">
+                      <h3 className="font-bold text-slate-900 group-hover:text-brand-primary transition-colors text-sm">
                         {s.name}
                       </h3>
                       <p className="text-[11px] text-slate-500 mt-1">{s.couponsCount ?? 0} active coupons</p>
@@ -245,7 +245,7 @@ function SearchPageContent() {
             {(tab === 'all' || tab === 'offers') && coupons.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Tag size={18} className="text-[#c62828]" /> Coupons &amp; Promo Codes ({coupons.length})
+                  <Tag size={18} className="text-brand-primary" /> Coupons &amp; Promo Codes ({coupons.length})
                 </h2>
                 <div className="space-y-3">
                   {coupons.map((o) => (
@@ -272,13 +272,13 @@ function SearchPageContent() {
 
                         <div className="space-y-0.5 min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-black text-[#c62828] bg-red-50 border border-red-100 px-2 py-0.5 rounded shrink-0">
+                            <span className="text-[11px] font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded shrink-0">
                               {o.discount}
                             </span>
                             {o.storeSlug && (
                               <Link
                                 href={ROUTES.PUBLIC.STORE_DETAIL(o.storeSlug)}
-                                className="text-[11px] font-bold text-slate-500 hover:text-[#c62828] transition truncate"
+                                className="text-[11px] font-bold text-slate-500 hover:text-brand-primary transition truncate"
                               >
                                 {o.storeName}
                               </Link>
@@ -308,17 +308,17 @@ function SearchPageContent() {
             {(tab === 'all' || tab === 'posts') && posts.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <BookOpen size={18} className="text-[#c62828]" /> Articles &amp; Buying Guides ({posts.length})
+                  <BookOpen size={18} className="text-brand-primary" /> Articles &amp; Buying Guides ({posts.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {posts.map((p) => (
                     <Link
                       key={p.slug}
                       href={ROUTES.PUBLIC.POST_DETAIL(p.slug)}
-                      className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-[#c62828] transition-all group block space-y-2"
+                      className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-brand-primary transition-all group block space-y-2"
                     >
                       <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                        <span className="font-bold text-[#c62828]">{p.category}</span>
+                        <span className="font-bold text-brand-primary">{p.category}</span>
                         {p.readTime && (
                           <>
                             <span>•</span>
@@ -326,7 +326,7 @@ function SearchPageContent() {
                           </>
                         )}
                       </div>
-                      <h3 className="font-bold text-sm text-slate-900 group-hover:text-[#c62828] transition-colors">
+                      <h3 className="font-bold text-sm text-slate-900 group-hover:text-brand-primary transition-colors">
                         {p.title}
                       </h3>
                       {p.excerpt && (

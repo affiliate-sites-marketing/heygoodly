@@ -282,28 +282,24 @@ public class MediaServiceImpl implements MediaService {
     @Override
     @Transactional(readOnly = true)
     public List<String> getAllUniqueTags() {
-        return mediaItemRepository.findAll().stream()
-                .map(MediaItemEntity::getTags)
-                .filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .distinct()
-                .sorted()
-                .toList();
+        return new ArrayList<>(getTagCounts().keySet());
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> getTagCounts() {
-        return mediaItemRepository.findAll().stream()
-                .map(MediaItemEntity::getTags)
-                .filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .collect(Collectors.groupingBy(tag -> tag, TreeMap::new, Collectors.counting()));
+        Map<String, Long> result = new TreeMap<>();
+        List<Object[]> rows = mediaItemRepository.findTagCountsRaw();
+        if (rows != null) {
+            for (Object[] row : rows) {
+                if (row != null && row.length >= 2 && row[0] != null && row[1] instanceof Number num) {
+                    String tag = row[0].toString().trim().toLowerCase();
+                    if (!tag.isEmpty()) {
+                        result.merge(tag, num.longValue(), Long::sum);
+                    }
+                }
+            }
+        }
+        return result;
     }
 }

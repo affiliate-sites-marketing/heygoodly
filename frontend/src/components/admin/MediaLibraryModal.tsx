@@ -427,7 +427,7 @@ export default function MediaLibraryModal({
 
                 {/* Active Tag Chip Indicator */}
                 {selectedTag && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-50 text-[#C62828] border border-rose-200/80 shrink-0 shadow-2xs">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-50 text-brand-primary border border-rose-200/80 shrink-0 shadow-2xs">
                     <Tag size={12} />
                     <span>#{selectedTag}</span>
                     <button
@@ -454,7 +454,7 @@ export default function MediaLibraryModal({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
               >
                 <Upload size={14} /> Upload New Image (Tag Required)
               </button>
@@ -469,7 +469,7 @@ export default function MediaLibraryModal({
           <div className="md:col-span-8 p-5 overflow-y-auto max-h-[52vh]">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-2 text-slate-400">
-                <Loader2 size={32} className="animate-spin text-indigo-600" />
+                <Loader2 size={32} className="animate-spin text-brand-primary" />
                 <p className="text-xs font-semibold text-slate-500">Loading media assets...</p>
               </div>
             ) : items.length === 0 ? (
@@ -490,7 +490,7 @@ export default function MediaLibraryModal({
                       onClick={() => setSelectedItem(item)}
                       className={`group relative rounded-2xl border overflow-hidden cursor-pointer transition-all ${
                         isSelected
-                          ? 'border-indigo-600 ring-2 ring-indigo-600/30 shadow-md bg-indigo-50/20'
+                          ? 'border-brand-primary ring-2 ring-brand-primary/30 shadow-md bg-brand-primary-soft/30'
                           : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-xs'
                       }`}
                     >
@@ -507,7 +507,7 @@ export default function MediaLibraryModal({
                           </span>
                         </div>
                         {isSelected && (
-                          <div className="absolute top-2 right-2 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-sm">
+                          <div className="absolute top-2 right-2 w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-sm">
                             <Check size={14} />
                           </div>
                         )}
@@ -524,7 +524,7 @@ export default function MediaLibraryModal({
                             {item.tags.slice(0, 2).map((tag) => (
                               <span
                                 key={tag}
-                                className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-[#C62828] border border-rose-200/60 truncate max-w-[80px]"
+                                className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-brand-primary border border-rose-200/60 truncate max-w-[80px]"
                                 title={`#${tag}`}
                               >
                                 #{tag}
@@ -603,7 +603,7 @@ export default function MediaLibraryModal({
                 {/* Tag Inspector & Management */}
                 <div className="space-y-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                    <Tag size={11} className="text-[#C62828]" /> Search Tags ({selectedItem.tags?.length || 0})
+                    <Tag size={11} className="text-brand-primary" /> Search Tags ({selectedItem.tags?.length || 0})
                   </span>
 
                   <div className="bg-white rounded-xl p-3 border border-slate-200/80 space-y-2">
@@ -613,7 +613,7 @@ export default function MediaLibraryModal({
                         selectedItem.tags.map((t) => (
                           <span
                             key={t}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-rose-50 text-[#C62828] border border-rose-200/80"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-rose-50 text-brand-primary border border-rose-200/80"
                           >
                             <span>#{t}</span>
                             <button
@@ -650,7 +650,7 @@ export default function MediaLibraryModal({
                         type="button"
                         onClick={handleAddTagToSelectedItem}
                         disabled={!newTagInput.trim()}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-indigo-600 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition cursor-pointer"
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-brand-primary disabled:opacity-40 text-white rounded-lg text-xs font-bold transition cursor-pointer"
                       >
                         Add
                       </button>
@@ -814,7 +814,7 @@ export default function MediaLibraryModal({
                       onClick={() => setCurrentPage(p)}
                       className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition cursor-pointer ${
                         isActive
-                          ? 'bg-indigo-600 text-white shadow-2xs'
+                          ? 'bg-brand-primary text-white shadow-2xs'
                           : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
                       }`}
                     >
@@ -867,7 +867,7 @@ export default function MediaLibraryModal({
               type="button"
               onClick={handleConfirmSelect}
               disabled={!selectedItem}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition disabled:opacity-40 cursor-pointer flex items-center gap-1.5"
+              className="px-5 py-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition disabled:opacity-40 cursor-pointer flex items-center gap-1.5"
             >
               <Check size={14} /> Insert Selected Image
             </button>
@@ -883,7 +883,7 @@ export default function MediaLibraryModal({
               
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-[#C62828]">
+                  <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-brand-primary">
                     <Tag size={16} />
                   </div>
                   <div>
@@ -957,7 +957,7 @@ export default function MediaLibraryModal({
                   type="button"
                   onClick={handleConfirmUpload}
                   disabled={stagingTags.length === 0 || uploading}
-                  className="px-5 py-2.5 bg-[#C62828] hover:bg-[#B71C1C] disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary-hover disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {uploading ? (
                     <>

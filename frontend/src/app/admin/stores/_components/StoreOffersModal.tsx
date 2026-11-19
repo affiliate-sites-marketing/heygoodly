@@ -152,7 +152,7 @@ export default function StoreOffersModal({
         {/* Modal Header */}
         <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-[#C62828] shrink-0 overflow-hidden shadow-2xs">
+            <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-brand-primary shrink-0 overflow-hidden shadow-2xs">
               {store.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={store.logoUrl} alt={store.name} className="w-full h-full object-cover" />
@@ -165,12 +165,12 @@ export default function StoreOffersModal({
                 <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">
                   Coupons, Promo Codes &amp; Deals in &ldquo;{store.name}&rdquo;
                 </h2>
-                <span className="text-[11px] font-bold bg-[#C62828] text-white px-2.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
+                <span className="text-[11px] font-bold bg-brand-primary text-white px-2.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap">
                   {totalElements || store.activeCoupons || 0} Offers
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                <span className="font-mono text-[#C62828] font-semibold whitespace-nowrap">
+                <span className="font-mono text-brand-primary font-semibold whitespace-nowrap">
                   /store/{store.slug}
                 </span>
                 <span className="hidden sm:inline">•</span>
@@ -185,7 +185,7 @@ export default function StoreOffersModal({
             <Link
               href={`/store/${store.slug}`}
               target="_blank"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#C62828] bg-white border border-slate-200 hover:border-[#C62828]/40 px-3 py-1.5 rounded-xl transition shadow-2xs cursor-pointer whitespace-nowrap"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-brand-primary bg-white border border-slate-200 hover:border-brand-primary/40 px-3 py-1.5 rounded-xl transition shadow-2xs cursor-pointer whitespace-nowrap"
               title="View store page on client website"
             >
               <span>View Live</span>
@@ -213,7 +213,7 @@ export default function StoreOffersModal({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by offer title, promo code, discount..."
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-7 py-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828]"
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-7 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
               />
               {search && (
                 <button
@@ -230,7 +230,7 @@ export default function StoreOffersModal({
             <div className="flex items-center gap-2 shrink-0">
               <Link
                 href={`/admin/offers?store=${encodeURIComponent(store.name)}`}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#C62828] bg-slate-100 hover:bg-slate-200/80 px-3 py-2 rounded-xl transition cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-brand-primary bg-slate-100 hover:bg-slate-200/80 px-3 py-2 rounded-xl transition cursor-pointer whitespace-nowrap"
               >
                 <SlidersHorizontal size={13} />
                 <span>Manage in Offers</span>
@@ -238,7 +238,7 @@ export default function StoreOffersModal({
 
               <Link
                 href={`/admin/offers/create?store=${encodeURIComponent(store.name)}`}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#C62828] hover:bg-[#B71C1C] px-3.5 py-2 rounded-xl transition shadow-xs cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-brand-primary hover:bg-brand-primary-hover px-3.5 py-2 rounded-xl transition shadow-xs cursor-pointer whitespace-nowrap"
               >
                 <Plus size={14} />
                 <span>Create Offer</span>
@@ -264,8 +264,8 @@ export default function StoreOffersModal({
               onClick={() => setTypeFilter('CODES')}
               className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer whitespace-nowrap ${
                 typeFilter === 'CODES'
-                  ? 'bg-[#C62828] text-white shadow-2xs'
-                  : 'bg-red-50 text-[#C62828] hover:bg-red-100'
+                  ? 'bg-brand-primary text-white shadow-2xs'
+                  : 'bg-red-50 text-brand-primary hover:bg-red-100'
               }`}
             >
               Promo Codes {typeFilter === 'CODES' ? `(${totalElements})` : ''}
@@ -299,7 +299,7 @@ export default function StoreOffersModal({
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 relative min-h-[220px]">
           {loading ? (
             <div className="py-16 flex flex-col items-center justify-center gap-2 text-slate-400">
-              <Loader2 size={24} className="animate-spin text-[#C62828]" />
+              <Loader2 size={24} className="animate-spin text-brand-primary" />
               <span className="text-xs font-semibold text-slate-600">Loading coupons &amp; deals from PostgreSQL...</span>
             </div>
           ) : offers.length > 0 ? (
@@ -315,7 +315,7 @@ export default function StoreOffersModal({
                     <div className="flex items-start gap-3 sm:gap-3.5 flex-1 min-w-0">
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-100 relative shrink-0 border border-slate-200 flex items-center justify-center">
                         <Tag size={22} className="text-slate-400" />
-                        <span className="absolute bottom-1 left-1 bg-[#C62828] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs max-w-[90%] truncate">
+                        <span className="absolute bottom-1 left-1 bg-brand-primary text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs max-w-[90%] truncate">
                           {offer.discount}
                         </span>
                         {offer.isExclusive && (
@@ -334,7 +334,7 @@ export default function StoreOffersModal({
                             <button
                               type="button"
                               onClick={() => handleCopyCode(offer.id, offer.couponCode!)}
-                              className="inline-flex items-center gap-1 font-mono font-bold text-[#C62828] bg-red-50 hover:bg-red-100 border border-dashed border-red-300 px-2 py-0.5 rounded cursor-pointer transition"
+                              className="inline-flex items-center gap-1 font-mono font-bold text-brand-primary bg-red-50 hover:bg-red-100 border border-dashed border-red-300 px-2 py-0.5 rounded cursor-pointer transition"
                               title="Click to copy promo code"
                             >
                               <span>{offer.couponCode}</span>
@@ -361,7 +361,7 @@ export default function StoreOffersModal({
                           </span>
                         </div>
 
-                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-[#C62828] transition-colors leading-snug line-clamp-1 sm:line-clamp-2">
+                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-brand-primary transition-colors leading-snug line-clamp-1 sm:line-clamp-2">
                           <Link href={`/admin/offers/${offer.id}/edit`}>{offer.title}</Link>
                         </h4>
 
@@ -385,7 +385,7 @@ export default function StoreOffersModal({
 
                       <Link
                         href={`/admin/offers/${offer.id}/edit`}
-                        className="h-8 px-3 rounded-lg bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-bold inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer whitespace-nowrap"
+                        className="h-8 px-3 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer whitespace-nowrap"
                         title="Edit offer"
                       >
                         <Edit2 size={12} />
@@ -414,7 +414,7 @@ export default function StoreOffersModal({
               <div>
                 <Link
                   href={`/admin/offers/create?store=${encodeURIComponent(store.name)}`}
-                  className="inline-flex items-center gap-2 text-xs font-bold text-white bg-[#C62828] hover:bg-[#B71C1C] px-4 py-2 rounded-xl transition shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-2 text-xs font-bold text-white bg-brand-primary hover:bg-brand-primary-hover px-4 py-2 rounded-xl transition shadow-xs cursor-pointer"
                 >
                   <Plus size={14} />
                   <span>Create First Offer</span>
@@ -440,7 +440,7 @@ export default function StoreOffersModal({
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:border-[#C62828] cursor-pointer"
+              className="text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:border-brand-primary cursor-pointer"
               title="Items per page"
             >
               <option value={3}>3 / page</option>
@@ -480,7 +480,7 @@ export default function StoreOffersModal({
                   onClick={() => setCurrentPage(p)}
                   className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
                     safePage === p
-                      ? 'bg-[#C62828] text-white shadow-2xs'
+                      ? 'bg-brand-primary text-white shadow-2xs'
                       : 'border border-slate-200 bg-white hover:bg-slate-100 text-slate-700'
                   }`}
                 >

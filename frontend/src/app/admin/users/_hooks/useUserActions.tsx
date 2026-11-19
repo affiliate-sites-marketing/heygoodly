@@ -145,7 +145,7 @@ export function useUserActions() {
         <span>
           Are you sure you want to reset the password for{' '}
           <strong className="text-slate-900 font-bold">{user.fullName}</strong> ({user.email}) back to the system default password{' '}
-          <code className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-xs font-bold text-[#C62828]">
+          <code className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-xs font-bold text-brand-primary">
             {DEFAULT_USER_PASSWORD}
           </code>
           ?

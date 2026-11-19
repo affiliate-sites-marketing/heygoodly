@@ -177,7 +177,7 @@ export default function EditorialArticlesOnlyHomePage() {
                     className="object-cover group-hover:scale-105 transition-transform duration-700 opacity-90"
                   />
                 ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-red-950 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-primary-active flex items-center justify-center">
                     <BookOpen size={64} className="text-white/15" />
                   </div>
                 )}
@@ -186,7 +186,7 @@ export default function EditorialArticlesOnlyHomePage() {
 
                 <div className="relative z-10 p-5 sm:p-8 lg:p-10 space-y-3 sm:space-y-3.5 text-white max-w-2xl">
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="bg-[#C62828] text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded shadow-xs inline-flex items-center gap-1.5">
+                    <span className="bg-brand-primary text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded shadow-xs inline-flex items-center gap-1.5">
                       <span>{leadArticle.category}</span>
                     </span>
                     <span className="text-xs text-white/90 font-medium hidden sm:inline-flex items-center gap-1">
@@ -229,7 +229,7 @@ export default function EditorialArticlesOnlyHomePage() {
               <div>
                 <div className="border-b border-[#E7E7E5] pb-3 mb-4 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#C62828] block mb-0.5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary block mb-0.5">
                       Curated Desk
                     </span>
                     <h2 className="font-editorial text-lg font-bold text-[#171717] tracking-tight">
@@ -257,7 +257,7 @@ export default function EditorialArticlesOnlyHomePage() {
               <div className="mt-4 pt-3 border-t border-[#E7E7E5] text-center">
                 <Link
                   href={ROUTES.PUBLIC.POSTS}
-                  className="text-xs font-bold text-[#171717] hover:text-[#C62828] inline-flex items-center gap-1 transition-colors"
+                  className="text-xs font-bold text-[#171717] hover:text-brand-primary inline-flex items-center gap-1 transition-colors"
                 >
                   <span>Browse all editorial tests</span>
                   <ChevronRight size={13} />
@@ -272,8 +272,8 @@ export default function EditorialArticlesOnlyHomePage() {
         <section aria-label="Spotlight Reviews" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-200/90 pb-4 gap-3">
             <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-50 border border-red-200/80 text-red-700 text-[10px] font-black uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-brand-primary-soft border border-brand-primary-border text-brand-primary text-[10px] font-black uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary" />
                 <span>In-Depth Field Tests</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
@@ -282,7 +282,7 @@ export default function EditorialArticlesOnlyHomePage() {
             </div>
             <Link
               href={ROUTES.PUBLIC.POSTS}
-              className="text-xs font-bold text-slate-600 hover:text-red-700 inline-flex items-center gap-1 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100 shrink-0 self-start sm:self-auto"
+              className="text-xs font-bold text-slate-600 hover:text-brand-primary inline-flex items-center gap-1 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100 shrink-0 self-start sm:self-auto"
             >
               <span>View All Evaluations</span>
               <ChevronRight size={14} />
@@ -306,8 +306,8 @@ export default function EditorialArticlesOnlyHomePage() {
         <section aria-label="Latest Articles" className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-slate-200/90">
             <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-50 border border-red-200/80 text-red-700 text-[10px] font-black uppercase tracking-wider">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-brand-primary-soft border border-brand-primary-border text-brand-primary text-[10px] font-black uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
                 <span>The Journal Stream</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
@@ -354,7 +354,7 @@ export default function EditorialArticlesOnlyHomePage() {
                 <button
                   type="button"
                   onClick={clearAllCategories}
-                  className="text-xs font-semibold text-[#C62828] hover:underline cursor-pointer ml-1"
+                  className="text-xs font-semibold text-brand-primary hover:underline cursor-pointer ml-1"
                 >
                   Clear all ({selectedCategories.length})
                 </button>
@@ -461,7 +461,7 @@ export default function EditorialArticlesOnlyHomePage() {
                         <button
                           type="button"
                           onClick={clearAllCategories}
-                          className="text-[#C62828] hover:underline font-bold cursor-pointer"
+                          className="text-brand-primary hover:underline font-bold cursor-pointer"
                         >
                           Reset to All
                         </button>
@@ -558,7 +558,7 @@ export default function EditorialArticlesOnlyHomePage() {
                 <button
                   type="button"
                   onClick={clearAllCategories}
-                  className="text-xs font-bold text-[#C62828] hover:underline cursor-pointer"
+                  className="text-xs font-bold text-brand-primary hover:underline cursor-pointer"
                 >
                   View all articles
                 </button>
@@ -582,7 +582,7 @@ export default function EditorialArticlesOnlyHomePage() {
         {newsletter.newsletterEnabled && (
           <section aria-label="Editorial Dispatch Newsletter" className="bg-white border border-[#E7E7E5] rounded-2xl p-6 sm:p-10 shadow-xs">
             <div className="max-w-2xl mx-auto text-center space-y-3">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#C62828] block">
+              <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary block">
                 {newsletter.newsletterEyebrow}
               </span>
               <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[#171717] tracking-tight">
@@ -603,11 +603,11 @@ export default function EditorialArticlesOnlyHomePage() {
                     value={subscribeEmail}
                     onChange={(e) => setSubscribeEmail(e.target.value)}
                     placeholder={newsletter.newsletterPlaceholder}
-                    className="w-full px-4 py-2.5 bg-[#F8F8F6] border border-[#E7E7E5] rounded-xl text-xs sm:text-sm text-[#171717] focus:outline-none focus:border-[#C62828]"
+                    className="w-full px-4 py-2.5 bg-[#F8F8F6] border border-[#E7E7E5] rounded-xl text-xs sm:text-sm text-[#171717] focus:outline-none focus:border-brand-primary"
                   />
                   <button
                     type="submit"
-                    className="w-full sm:w-auto bg-[#C62828] hover:bg-[#b71c1c] text-white font-bold text-xs sm:text-sm px-6 py-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
+                    className="w-full sm:w-auto bg-brand-primary hover:bg-brand-primary-hover text-white font-bold text-xs sm:text-sm px-6 py-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
                   >
                     {newsletter.newsletterButtonText}
                   </button>

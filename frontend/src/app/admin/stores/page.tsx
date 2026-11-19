@@ -296,7 +296,7 @@ export default function AdminStoresPage() {
         {hasPermission('store.create') && (
           <Link
             href={ROUTES.ADMIN.STORE_CREATE}
-            className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-[#C62828] hover:bg-[#B71C1C] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
           >
             <Plus size={16} /> Add New Store
           </Link>
@@ -384,7 +384,7 @@ export default function AdminStoresPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-slate-900 text-sm group-hover:text-[#C62828] transition-colors">
+                      <span className="font-bold text-slate-900 text-sm group-hover:text-brand-primary transition-colors">
                         {store.name}
                       </span>
                       {store.isFeatured && (
@@ -415,11 +415,11 @@ export default function AdminStoresPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedStoreForOffers(store)}
-                  className="w-40 h-8 inline-flex items-center justify-between bg-slate-100 hover:bg-[#C62828] hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer group/btn shadow-2xs whitespace-nowrap border border-slate-200/80 shrink-0"
+                  className="w-40 h-8 inline-flex items-center justify-between bg-slate-100 hover:bg-brand-primary hover:text-white text-slate-700 font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer group/btn shadow-2xs whitespace-nowrap border border-slate-200/80 shrink-0"
                   title="Click to view all coupons, promo codes & deals in this store"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <Tag size={13} className="text-[#C62828] group-hover/btn:text-white transition-colors shrink-0" />
+                    <Tag size={13} className="text-brand-primary group-hover/btn:text-white transition-colors shrink-0" />
                     <span className="font-bold text-xs">{liveOffersCount}</span>
                     <span className="text-slate-500 group-hover/btn:text-white/90 text-xs font-medium">offers</span>
                   </div>

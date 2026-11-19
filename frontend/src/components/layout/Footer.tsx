@@ -76,7 +76,7 @@ export default function Footer() {
             )}
             <span className="font-editorial text-2xl font-bold tracking-tight text-white">
               {brandName}
-              <span className="text-[#C62828]">.</span>
+              <span className="text-brand-primary">.</span>
             </span>
           </div>
           <p className="text-xs text-[#A8A8A2] leading-relaxed">
@@ -85,7 +85,7 @@ export default function Footer() {
           </p>
           <div className="space-y-2 text-xs text-[#A8A8A2] pt-1">
             <div className="flex items-center gap-2 text-white font-medium">
-              <CheckCircle2 size={14} className="text-[#C62828]" /> 100% Hand-Tested Promo Codes
+              <CheckCircle2 size={14} className="text-brand-primary" /> 100% Hand-Tested Promo Codes
             </div>
             <div className="flex items-center gap-2 text-[#A8A8A2]">
               <ShieldCheck size={14} className="text-[#A8A8A2]" /> Zero Sponsored Ranking Manipulation
@@ -112,7 +112,7 @@ export default function Footer() {
             <li>
               <Link
                 href={ROUTES.PUBLIC.POSTS}
-                className="hover:text-[#C62828] transition-colors font-semibold"
+                className="hover:text-brand-primary transition-colors font-semibold"
               >
                 All Feature Articles →
               </Link>
@@ -149,7 +149,7 @@ export default function Footer() {
           <div className="pt-1">
             <Link
               href={ROUTES.PUBLIC.AFFILIATE_DISCLOSURE}
-              className="text-xs font-semibold text-[#C62828] hover:underline inline-flex items-center gap-1"
+              className="text-xs font-semibold text-brand-primary hover:underline inline-flex items-center gap-1"
             >
               Learn about our commission ethics →
             </Link>

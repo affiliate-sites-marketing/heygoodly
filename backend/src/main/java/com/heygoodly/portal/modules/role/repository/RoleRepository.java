@@ -11,6 +11,8 @@ import java.util.Optional;
 @Repository
 public interface RoleRepository extends JpaRepository<RoleEntity, Long>, JpaSpecificationExecutor<RoleEntity> {
     Optional<RoleEntity> findBySlug(String slug);
+    Optional<RoleEntity> findFirstByNameIgnoreCase(String name);
+    Optional<RoleEntity> findFirstByOrderByIdAsc();
     boolean existsBySlug(String slug);
 
     @EntityGraph(attributePaths = {"permissions"})

@@ -1,11 +1,14 @@
 package com.heygoodly.portal.modules.offer.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.heygoodly.portal.common.cache.RedisCacheService;
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.dto.PageResponse;
 import com.heygoodly.portal.common.exception.ResourceNotFoundException;
 import com.heygoodly.portal.common.util.SecurityUtils;
 import com.heygoodly.portal.modules.affiliate.repository.AffiliateClickRepository;
+import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.offer.dto.request.OfferRequest;
 import com.heygoodly.portal.modules.offer.dto.response.OfferResponse;
 import com.heygoodly.portal.modules.offer.entity.OfferEntity;
@@ -48,32 +51,42 @@ public class OfferServiceImpl implements OfferService {
     private final com.heygoodly.portal.modules.tag.service.TagService tagService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final com.heygoodly.portal.modules.offer.mapper.OfferMapper offerMapper;
+    private final AuditLogService auditLogService;
+    private final RedisCacheService redisCacheService;
 
     @Override
     public List<OfferResponse> getPublicOffersByStore(String storeSlug) {
-        StoreEntity store = storeRepository.findBySlugAndIsDeletedFalse(storeSlug)
-                .orElseThrow(() -> new ResourceNotFoundException(ENTITY_STORE, FIELD_SLUG, storeSlug));
+        String key = RedisCacheService.OFFERS_PUBLIC_PREFIX + "store:" + (storeSlug != null ? storeSlug.trim().toLowerCase() : "");
+        return redisCacheService.getOrLoad(
+                key,
+                new TypeReference<List<OfferResponse>>() {},
+                java.time.Duration.ofMinutes(2),
+                () -> {
+                    StoreEntity store = storeRepository.findBySlugAndIsDeletedFalse(storeSlug)
+                            .orElseThrow(() -> new ResourceNotFoundException(ENTITY_STORE, FIELD_SLUG, storeSlug));
 
-        if (!Boolean.TRUE.equals(store.getIsActive())) {
-            return Collections.emptyList();
-        }
+                    if (!Boolean.TRUE.equals(store.getIsActive())) {
+                        return Collections.emptyList();
+                    }
 
-        List<OfferEntity> offers = offerRepository
-                .findByStoreIdAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDesc(store.getId());
+                    List<OfferEntity> offers = offerRepository
+                            .findByStoreIdAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDesc(store.getId());
 
-        List<Long> offerIds = offers.stream().map(OfferEntity::getId).toList();
-        Map<Long, Long> clicksMap = offerIds.isEmpty() ? Map.of() :
-                affiliateClickRepository.countClicksByOfferIds(offerIds).stream()
-                        .filter(arr -> arr != null && arr.length >= 2 && arr[0] != null && arr[1] != null)
-                        .collect(Collectors.toMap(
-                                arr -> (Long) arr[0],
-                                arr -> ((Number) arr[1]).longValue(),
-                                (a, b) -> a
-                        ));
+                    List<Long> offerIds = offers.stream().map(OfferEntity::getId).toList();
+                    Map<Long, Long> clicksMap = offerIds.isEmpty() ? Map.of() :
+                            affiliateClickRepository.countClicksByOfferIds(offerIds).stream()
+                                    .filter(arr -> arr != null && arr.length >= 2 && arr[0] != null && arr[1] != null)
+                                    .collect(Collectors.toMap(
+                                            arr -> (Long) arr[0],
+                                            arr -> ((Number) arr[1]).longValue(),
+                                            (a, b) -> a
+                                    ));
 
-        return offers.stream()
-                .map(o -> mapToResponse(o, store, clicksMap.getOrDefault(o.getId(), 0L)))
-                .collect(Collectors.toList());
+                    return offers.stream()
+                            .map(o -> mapToResponse(o, store, clicksMap.getOrDefault(o.getId(), 0L)))
+                            .collect(Collectors.toList());
+                }
+        );
     }
 
     @Override
@@ -232,6 +245,8 @@ public class OfferServiceImpl implements OfferService {
             saved = offerRepository.save(saved);
         }
 
+        auditLogService.recordAction("CREATE", "offers", String.valueOf(saved.getId()), saved.getName(), null);
+        evictOfferCaches();
         return mapToResponse(saved, store);
     }
 
@@ -241,6 +256,12 @@ public class OfferServiceImpl implements OfferService {
         OfferEntity entity = offerRepository.findById(id)
                 .filter(o -> !Boolean.TRUE.equals(o.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_OFFER, EntityFieldConstants.ID, id));
+
+        String oldName = entity.getName();
+        String oldDiscount = entity.getDiscountValue();
+        String oldCode = entity.getCode();
+        Boolean oldActive = entity.getIsActive();
+        Boolean oldVerified = entity.getIsVerified();
 
         StoreEntity store = storeRepository.findById(request.getStoreId())
                 .filter(s -> !Boolean.TRUE.equals(s.getIsDeleted()))
@@ -274,6 +295,14 @@ public class OfferServiceImpl implements OfferService {
         }
 
         OfferEntity updated = offerRepository.save(entity);
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "name", "Offer Title", oldName, updated.getName());
+        AuditLogService.appendDiff(diffs, "discountValue", "Discount", oldDiscount, updated.getDiscountValue());
+        AuditLogService.appendDiff(diffs, "code", "Coupon Code", oldCode, updated.getCode());
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, updated.getIsActive());
+        AuditLogService.appendDiff(diffs, "isVerified", "Verified", oldVerified, updated.getIsVerified());
+        auditLogService.recordAction("UPDATE", "offers", String.valueOf(updated.getId()), updated.getName(), diffs);
+        evictOfferCaches();
         return mapToResponse(updated, store);
     }
 
@@ -284,8 +313,13 @@ public class OfferServiceImpl implements OfferService {
                 .filter(o -> !Boolean.TRUE.equals(o.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_OFFER, EntityFieldConstants.ID, id));
 
-        entity.setIsVerified(!Boolean.TRUE.equals(entity.getIsVerified()));
+        Boolean oldVerified = Boolean.TRUE.equals(entity.getIsVerified());
+        entity.setIsVerified(!oldVerified);
         OfferEntity updated = offerRepository.save(entity);
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "isVerified", "Verified", oldVerified, updated.getIsVerified());
+        auditLogService.recordAction("VERIFY", "offers", String.valueOf(updated.getId()), updated.getName(), diffs);
+        evictOfferCaches();
 
         StoreEntity store = (updated.getStoreId() != null)
                 ? storeRepository.findById(updated.getStoreId()).orElse(null)
@@ -301,8 +335,13 @@ public class OfferServiceImpl implements OfferService {
                 .filter(o -> !Boolean.TRUE.equals(o.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_OFFER, EntityFieldConstants.ID, id));
 
-        entity.setIsActive(!Boolean.TRUE.equals(entity.getIsActive()));
+        Boolean oldActive = Boolean.TRUE.equals(entity.getIsActive());
+        entity.setIsActive(!oldActive);
         OfferEntity updated = offerRepository.save(entity);
+        List<Map<String, Object>> diffs = new ArrayList<>();
+        AuditLogService.appendDiff(diffs, "isActive", "Active Status", oldActive, updated.getIsActive());
+        auditLogService.recordAction("TOGGLE_STATUS", "offers", String.valueOf(updated.getId()), updated.getName(), diffs);
+        evictOfferCaches();
 
         StoreEntity store = (updated.getStoreId() != null)
                 ? storeRepository.findById(updated.getStoreId()).orElse(null)
@@ -337,6 +376,8 @@ public class OfferServiceImpl implements OfferService {
 
         clone.setCreatedBy(SecurityUtils.getCurrentUserEmail().orElse("system"));
         OfferEntity saved = offerRepository.save(clone);
+        auditLogService.recordAction("CLONE", "offers", String.valueOf(saved.getId()), saved.getName(), null);
+        evictOfferCaches();
 
         StoreEntity store = (saved.getStoreId() != null)
                 ? storeRepository.findById(saved.getStoreId()).orElse(null)
@@ -352,8 +393,11 @@ public class OfferServiceImpl implements OfferService {
                 .filter(o -> !Boolean.TRUE.equals(o.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException(EntityFieldConstants.ENTITY_OFFER, EntityFieldConstants.ID, id));
 
+        String deletedName = entity.getName();
         entity.setIsDeleted(true);
         offerRepository.save(entity);
+        auditLogService.recordAction("DELETE", "offers", String.valueOf(id), deletedName, null);
+        evictOfferCaches();
     }
 
     /**
@@ -430,6 +474,13 @@ public class OfferServiceImpl implements OfferService {
     public void reorder(List<Long> orderedIds) {
         com.heygoodly.portal.common.util.SortOrderUtils.reorderEntities(
                 orderedIds, offerRepository, OfferEntity::getId, OfferEntity::setSortOrder);
+        evictOfferCaches();
+    }
+
+    private void evictOfferCaches() {
+        redisCacheService.evictByPrefix(RedisCacheService.OFFERS_PUBLIC_PREFIX);
+        redisCacheService.evictByPrefix(RedisCacheService.STORES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
     }
 
     private List<String> deserializeJson(String json) {

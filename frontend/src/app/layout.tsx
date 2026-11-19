@@ -17,8 +17,9 @@ const newsreader = Newsreader({
   display: 'swap',
 });
 
-import { SITE_URL } from '@/constants/site';
+import { SITE_SLUG, SITE_URL } from '@/constants/site';
 import { parseCustomHeadHtml } from '@/components/seo/parseCustomHeadHtml';
+import { getBrandCssVariablesStyle, resolveBrandPalette } from '@/lib/brandTheme';
 
 const BACKEND_BASE = (
   process.env.BACKEND_INTERNAL_URL ||
@@ -35,7 +36,7 @@ export const viewport: Viewport = {
 async function fetchPublicSettingsMap(): Promise<Record<string, string>> {
   try {
     const res = await fetch(`${BACKEND_BASE}/api/v1/settings/public`, {
-      next: { revalidate: 30 },
+      next: { revalidate: 5 },
     });
     if (res.ok) {
       const json = await res.json();
@@ -85,19 +86,29 @@ export default async function RootLayout({
 }) {
   const map = await fetchPublicSettingsMap();
   const customHeadNodes = parseCustomHeadHtml(map.custom_head_code);
+  const brandPalette = resolveBrandPalette(
+    map.brand_theme_preset,
+    map.brand_primary_color,
+    map.brand_hover_color
+  );
 
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${newsreader.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${newsreader.variable}`}
+      style={getBrandCssVariablesStyle(brandPalette)}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var m=localStorage.getItem('heygoodly:theme');if(m==='dark'){document.documentElement.classList.add('dark');document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark';}}catch(e){}`,
+            __html: `try{var m=localStorage.getItem('${SITE_SLUG}:theme');if(m==='dark'){document.documentElement.classList.add('dark');document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark';}}catch(e){}`,
           }}
         />
         {customHeadNodes}
       </head>
-      <body className={`${inter.className} min-h-screen bg-[#F8F8F6] text-[#171717] antialiased selection:bg-[#c62828] selection:text-white transition-colors duration-200`}>
-        <ThemeProvider>
+      <body className={`${inter.className} min-h-screen bg-[#F8F8F6] text-[#171717] antialiased selection:bg-brand-primary selection:text-white transition-colors duration-200`}>
+        <ThemeProvider initialSettings={map}>
           <QueryProvider>
             {children}
           </QueryProvider>

@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
+import {
+  DEFAULT_BRAND_HOVER,
+  DEFAULT_BRAND_PRESET,
+  DEFAULT_BRAND_PRIMARY,
+  applyBrandThemeToDocument,
+  resolveBrandPalette,
+} from '@/lib/brandTheme';
 
 export interface SiteSettings {
   // General & Identity
@@ -15,6 +22,9 @@ export interface SiteSettings {
   contactAddress: string;
   footerCopyright: string;
   affiliateDisclosure: string;
+  brandThemePreset: string;
+  brandPrimaryColor: string;
+  brandHoverColor: string;
   holidayThemeMode: 'off' | 'auto' | 'manual';
   holidayThemeManual: string;
   holidayEffectsEnabled: boolean;
@@ -77,6 +87,9 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   contactAddress: '',
   footerCopyright: '',
   affiliateDisclosure: '',
+  brandThemePreset: DEFAULT_BRAND_PRESET,
+  brandPrimaryColor: DEFAULT_BRAND_PRIMARY,
+  brandHoverColor: DEFAULT_BRAND_HOVER,
   holidayThemeMode: 'off',
   holidayThemeManual: 'none',
   holidayEffectsEnabled: true,
@@ -146,6 +159,15 @@ function mapResponseToSettings(map: Record<string, string>): Partial<SiteSetting
   if (map.contact_address !== undefined) result.contactAddress = map.contact_address;
   if (map.footer_copyright !== undefined) result.footerCopyright = map.footer_copyright;
   if (map.affiliate_disclosure !== undefined) result.affiliateDisclosure = map.affiliate_disclosure;
+  if (map.brand_theme_preset !== undefined) {
+    result.brandThemePreset = map.brand_theme_preset || DEFAULT_BRAND_PRESET;
+  }
+  if (map.brand_primary_color !== undefined) {
+    result.brandPrimaryColor = map.brand_primary_color || DEFAULT_BRAND_PRIMARY;
+  }
+  if (map.brand_hover_color !== undefined) {
+    result.brandHoverColor = map.brand_hover_color || DEFAULT_BRAND_HOVER;
+  }
   if (map.holiday_theme_mode !== undefined) {
     const mode = map.holiday_theme_mode;
     result.holidayThemeMode = mode === 'auto' || mode === 'manual' ? mode : 'off';
@@ -210,6 +232,9 @@ function mapSettingsToRequest(settings: SiteSettings): Record<string, string> {
     contact_address: settings.contactAddress,
     footer_copyright: settings.footerCopyright,
     affiliate_disclosure: settings.affiliateDisclosure,
+    brand_theme_preset: settings.brandThemePreset,
+    brand_primary_color: settings.brandPrimaryColor,
+    brand_hover_color: settings.brandHoverColor,
     holiday_theme_mode: settings.holidayThemeMode,
     holiday_theme_manual: settings.holidayThemeManual,
     holiday_effects_enabled: String(Boolean(settings.holidayEffectsEnabled)),
@@ -250,6 +275,14 @@ function mapSettingsToRequest(settings: SiteSettings): Record<string, string> {
   };
 }
 
+const BRAND_SYNC_STORAGE_KEY = 'heygoodly:brand-theme-sync';
+
+function syncBrandVars(next: SiteSettings) {
+  applyBrandThemeToDocument(
+    resolveBrandPalette(next.brandThemePreset, next.brandPrimaryColor, next.brandHoverColor)
+  );
+}
+
 async function fetchFromBackend(force = false) {
   if (isFetched && !force) return;
   if (inFlightPromise && !force) return inFlightPromise;
@@ -262,6 +295,7 @@ async function fetchFromBackend(force = false) {
       if (settingsMap && typeof settingsMap === 'object') {
         const mapped = mapResponseToSettings(settingsMap);
         cache = { ...DEFAULT_SITE_SETTINGS, ...mapped, loaded: true };
+        syncBrandVars(cache);
         notify();
       } else {
         cache = { ...cache, loaded: true };
@@ -278,8 +312,22 @@ async function fetchFromBackend(force = false) {
   return inFlightPromise;
 }
 
+export function hydrateSiteSettingsFromServer(settingsMap?: Record<string, string>) {
+  if (typeof window === 'undefined' || isFetched) return;
+  if (settingsMap && typeof settingsMap === 'object' && Object.keys(settingsMap).length > 0) {
+    const mapped = mapResponseToSettings(settingsMap);
+    cache = { ...DEFAULT_SITE_SETTINGS, ...mapped, loaded: true };
+    isFetched = true;
+  }
+}
+
 export function invalidateSiteSettingsCache() {
   isFetched = false;
+  try {
+    window.localStorage.setItem(BRAND_SYNC_STORAGE_KEY, String(Date.now()));
+  } catch {
+    // ignore storage errors
+  }
   void fetchFromBackend(true);
 }
 
@@ -295,16 +343,30 @@ export function useSiteSettings() {
 
   useEffect(() => {
     void fetchFromBackend();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === BRAND_SYNC_STORAGE_KEY) {
+        isFetched = false;
+        void fetchFromBackend(true);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const saveSettings = useCallback(async (patch: Partial<SiteSettings>) => {
     const next = { ...cache, ...patch };
     cache = next;
+    syncBrandVars(next);
     notify();
 
     try {
       const payload = { settings: mapSettingsToRequest(next) };
       await apiClient.put(API_ENDPOINTS.ADMIN.SETTINGS, payload);
+      try {
+        window.localStorage.setItem(BRAND_SYNC_STORAGE_KEY, String(Date.now()));
+      } catch {
+        // ignore storage errors
+      }
     } catch (err) {
       console.warn('Backend settings update error:', err);
     }

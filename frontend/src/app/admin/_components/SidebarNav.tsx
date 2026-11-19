@@ -58,7 +58,7 @@ export default function SidebarNav({ navGroups, collapsed, hasPermission }: Side
                     collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2'
                   } ${
                     isActive
-                      ? 'bg-[#C62828] text-white font-semibold shadow-xs'
+                      ? 'bg-brand-primary text-white font-semibold shadow-xs'
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
                   }`}
                   title={collapsed ? item.label : undefined}
@@ -69,7 +69,7 @@ export default function SidebarNav({ navGroups, collapsed, hasPermission }: Side
                       <span className="truncate">{item.label}</span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {item.badge && (
-                          <span className="bg-[#C62828]/20 text-[#EF4444] border border-[#C62828]/40 text-[9px] px-1.5 py-0.5 rounded font-bold">
+                          <span className="bg-brand-primary/20 text-brand-primary-light border border-brand-primary/40 text-[9px] px-1.5 py-0.5 rounded font-bold">
                             {item.badge}
                           </span>
                         )}
@@ -77,7 +77,7 @@ export default function SidebarNav({ navGroups, collapsed, hasPermission }: Side
                           <span
                             className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
                               isActive
-                                ? 'bg-[#991B1B] text-white'
+                                ? 'bg-brand-primary-active text-white'
                                 : 'bg-zinc-800 text-zinc-400'
                             }`}
                           >

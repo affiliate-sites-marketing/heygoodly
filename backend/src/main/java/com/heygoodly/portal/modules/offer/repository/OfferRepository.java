@@ -39,6 +39,13 @@ public interface OfferRepository extends JpaRepository<OfferEntity, Long>, JpaSp
     @Query("SELECT COUNT(o) FROM OfferEntity o WHERE o.isActive = true AND o.isDeleted = false AND (o.code IS NULL OR o.code = '')")
     long countDeals();
 
+    @Query("SELECT COUNT(o), " +
+           "COALESCE(SUM(CASE WHEN o.code IS NOT NULL AND o.code <> '' THEN 1L ELSE 0L END), 0L), " +
+           "COALESCE(SUM(CASE WHEN o.code IS NULL OR o.code = '' THEN 1L ELSE 0L END), 0L), " +
+           "COALESCE(SUM(CASE WHEN o.isVerified = true THEN 1L ELSE 0L END), 0L) " +
+           "FROM OfferEntity o WHERE o.isActive = true AND o.isDeleted = false")
+    List<Object[]> summarizeActiveOffers();
+
     Page<OfferEntity> findByIsActiveTrueAndIsDeletedFalse(Pageable pageable);
 
     Page<OfferEntity> findByStoreIdAndIsDeletedFalse(Long storeId, Pageable pageable);

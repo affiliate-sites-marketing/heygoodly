@@ -34,7 +34,7 @@ export default function DisplayPositionPicker({
           className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
             isAuto
               ? 'bg-slate-100 text-slate-500'
-              : 'bg-red-50 text-[#C62828] border border-red-200'
+              : 'bg-red-50 text-brand-primary border border-red-200'
           }`}
         >
           {isAuto ? 'Auto' : `Position #${value}`}
@@ -69,8 +69,8 @@ export default function DisplayPositionPicker({
               }}
               className={`min-w-[34px] px-2 py-1.5 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
                 active
-                  ? 'bg-[#C62828] text-white border-[#C62828] shadow-2xs'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-[#C62828]/50 hover:text-[#C62828]'
+                  ? 'bg-brand-primary text-white border-brand-primary shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-brand-primary/50 hover:text-brand-primary'
               }`}
             >
               #{pos}

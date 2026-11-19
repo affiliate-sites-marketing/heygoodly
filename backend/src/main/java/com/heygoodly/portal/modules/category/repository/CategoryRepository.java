@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface CategoryRepository extends JpaRepository<CategoryEntity, Long>, JpaSpecificationExecutor<CategoryEntity> {
     Optional<CategoryEntity> findBySlug(String slug);
     Optional<CategoryEntity> findBySlugAndIsDeletedFalse(String slug);
+    Optional<CategoryEntity> findFirstByNameIgnoreCaseAndIsDeletedFalse(String name);
     List<CategoryEntity> findBySlugInAndIsDeletedFalse(java.util.Collection<String> slugs);
     boolean existsBySlugAndIsDeletedFalse(String slug);
     boolean existsBySlugAndIdNotAndIsDeletedFalse(String slug, Long id);

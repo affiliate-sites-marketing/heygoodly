@@ -198,7 +198,7 @@ export default function TagFormModal({ isOpen, onClose, tag, onSuccess }: TagFor
                 className={`w-full text-xs bg-slate-50 dark:bg-zinc-800/80 border rounded-xl px-3.5 py-2 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 transition ${
                   errors.name
                     ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500'
-                    : 'border-slate-200 dark:border-zinc-700 focus:ring-rose-500/20 focus:border-rose-500'
+                    : 'border-slate-200 dark:border-zinc-700 focus:ring-brand-primary/20 focus:border-brand-primary'
                 }`}
               />
               {errors.name && (
@@ -219,7 +219,7 @@ export default function TagFormModal({ isOpen, onClose, tag, onSuccess }: TagFor
                 className={`w-full text-xs font-mono bg-slate-50 dark:bg-zinc-800/80 border rounded-xl px-3.5 py-2 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 transition ${
                   errors.slug
                     ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500'
-                    : 'border-slate-200 dark:border-zinc-700 focus:ring-rose-500/20 focus:border-rose-500'
+                    : 'border-slate-200 dark:border-zinc-700 focus:ring-brand-primary/20 focus:border-brand-primary'
                 }`}
               />
               {errors.slug && (
@@ -276,7 +276,7 @@ export default function TagFormModal({ isOpen, onClose, tag, onSuccess }: TagFor
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Short description for SEO and taxonomy classification..."
-              className="w-full text-xs bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition resize-none"
+              className="w-full text-xs bg-slate-50 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition resize-none"
             />
           </div>
 
@@ -287,7 +287,7 @@ export default function TagFormModal({ isOpen, onClose, tag, onSuccess }: TagFor
                 type="checkbox"
                 checked={isFeatured}
                 onChange={(e) => setIsFeatured(e.target.checked)}
-                className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+                className="w-4 h-4 rounded text-brand-primary accent-brand-primary focus:ring-brand-primary dark:border-zinc-700 bg-white dark:bg-zinc-900"
               />
               <div>
                 <span className="block text-xs font-semibold text-slate-700 dark:text-zinc-200">
@@ -304,7 +304,7 @@ export default function TagFormModal({ isOpen, onClose, tag, onSuccess }: TagFor
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+                className="w-4 h-4 rounded text-brand-primary accent-brand-primary focus:ring-brand-primary dark:border-zinc-700 bg-white dark:bg-zinc-900"
               />
               <div>
                 <span className="block text-xs font-semibold text-slate-700 dark:text-zinc-200">
@@ -330,7 +330,7 @@ export default function TagFormModal({ isOpen, onClose, tag, onSuccess }: TagFor
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 shadow-md shadow-rose-600/20 transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-xs font-semibold text-white bg-brand-primary hover:bg-brand-primary-hover shadow-xs transition disabled:opacity-50 cursor-pointer"
             >
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {isEdit ? t('Save Changes') : t('Create Tag')}

@@ -217,7 +217,7 @@ export default function ImageUpload({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 shrink-0">
-          <ImageIcon size={14} className="text-[#C62828]" />
+          <ImageIcon size={14} className="text-brand-primary" />
           <span>{label}</span>
         </label>
 
@@ -232,7 +232,7 @@ export default function ImageUpload({
                 : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
             }`}
           >
-            <UploadCloud size={13} className={mode === 'upload' ? 'text-[#C62828]' : 'text-slate-400'} />
+            <UploadCloud size={13} className={mode === 'upload' ? 'text-brand-primary' : 'text-slate-400'} />
             <span>Upload File</span>
           </button>
           <button
@@ -244,7 +244,7 @@ export default function ImageUpload({
                 : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
             }`}
           >
-            <LinkIcon size={13} className={mode === 'url' ? 'text-[#C62828]' : 'text-slate-400'} />
+            <LinkIcon size={13} className={mode === 'url' ? 'text-brand-primary' : 'text-slate-400'} />
             <span>Image Link</span>
           </button>
           <button
@@ -308,7 +308,7 @@ export default function ImageUpload({
             <button
               type="button"
               onClick={() => setMediaModalOpen(true)}
-              className="h-8 px-3 inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer"
+              className="h-8 px-3 inline-flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer"
             >
               <Layers size={13} />
               <span>Library</span>
@@ -353,7 +353,7 @@ export default function ImageUpload({
               onClick={() => fileInputRef.current?.click()}
               className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 ${
                 dragActive
-                  ? 'border-[#C62828] bg-rose-50/50 scale-[0.99]'
+                  ? 'border-brand-primary bg-rose-50/50 scale-[0.99]'
                   : 'border-slate-200 bg-slate-50/60 hover:bg-slate-50 hover:border-slate-300'
               }`}
             >
@@ -367,11 +367,11 @@ export default function ImageUpload({
 
               {isUploading ? (
                 <div className="space-y-2 py-4">
-                  <Loader2 size={24} className="animate-spin text-[#C62828] mx-auto" />
+                  <Loader2 size={24} className="animate-spin text-brand-primary mx-auto" />
                   <p className="text-xs font-bold text-slate-700">Uploading &amp; cataloging with tags...</p>
                   <div className="w-48 bg-slate-200 h-1.5 rounded-full overflow-hidden mx-auto">
                     <div
-                      className="bg-[#C62828] h-full transition-all duration-300"
+                      className="bg-brand-primary h-full transition-all duration-300"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -379,7 +379,7 @@ export default function ImageUpload({
               ) : (
                 <>
                   <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-slate-600 shadow-2xs">
-                    <UploadCloud size={22} className="text-[#C62828]" />
+                    <UploadCloud size={22} className="text-brand-primary" />
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800">
@@ -400,14 +400,14 @@ export default function ImageUpload({
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     placeholder="https://images.unsplash.com/... or image direct link"
-                    className="w-full text-xs bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828]"
+                    className="w-full text-xs bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleApplyUrl}
                   disabled={!urlInput.trim()}
-                  className="h-9 px-4 bg-[#C62828] hover:bg-[#B71C1C] disabled:bg-slate-300 text-white text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 inline-flex items-center justify-center shadow-xs"
+                  className="h-9 px-4 bg-brand-primary hover:bg-brand-primary-hover disabled:bg-slate-300 text-white text-xs font-bold rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 inline-flex items-center justify-center shadow-xs"
                 >
                   Set URL
                 </button>
@@ -432,7 +432,7 @@ export default function ImageUpload({
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-[#C62828]">
+                <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-brand-primary">
                   <Tag size={16} />
                 </div>
                 <div>
@@ -496,7 +496,7 @@ export default function ImageUpload({
                 type="button"
                 onClick={handleConfirmUpload}
                 disabled={stagedTags.length === 0 || isUploading}
-                className="px-5 py-2.5 bg-[#C62828] hover:bg-[#B71C1C] disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary-hover disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
               >
                 {isUploading ? (
                   <>

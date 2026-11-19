@@ -101,7 +101,7 @@ export default function StoreAffiliatePage() {
   if (isLoading) {
     return (
       <div className="bg-[#f4f5f7] min-h-screen py-20 flex flex-col items-center justify-center gap-3 text-slate-500">
-        <Loader2 size={28} className="animate-spin text-[#c62828]" />
+        <Loader2 size={28} className="animate-spin text-brand-primary" />
         <p className="text-xs font-semibold">Loading merchant profile and active offers...</p>
       </div>
     );
@@ -121,7 +121,7 @@ export default function StoreAffiliatePage() {
           <div className="pt-2">
             <Link
               href={ROUTES.PUBLIC.STORES}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#c62828] hover:bg-[#b71c1c] text-white text-xs font-bold rounded-xl transition"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl transition"
             >
               <ArrowLeft size={14} />
               <span>Browse All Partner Stores</span>
@@ -221,9 +221,9 @@ export default function StoreAffiliatePage() {
 
         {/* Breadcrumb */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-500">
-          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-[#c62828] transition">Home</Link>
+          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-brand-primary transition">Home</Link>
           <ChevronRight size={12} className="shrink-0" />
-          <Link href={ROUTES.PUBLIC.STORES} className="hover:text-[#c62828] transition">Stores</Link>
+          <Link href={ROUTES.PUBLIC.STORES} className="hover:text-brand-primary transition">Stores</Link>
           <ChevronRight size={12} className="shrink-0" />
           <span className="text-slate-800 font-semibold truncate max-w-[180px] sm:max-w-xs">{storeName} Coupons</span>
         </nav>
@@ -289,7 +289,7 @@ export default function StoreAffiliatePage() {
                   <button
                     type="button"
                     onClick={() => setAlertModalOpen(true)}
-                    className="w-full py-2 lg:py-2.5 px-2.5 lg:px-4 rounded-lg border border-[#c62828] text-[#c62828] hover:bg-[#fde8e8] font-bold text-[11px] sm:text-xs transition flex items-center justify-center gap-1.5 lg:gap-2 cursor-pointer shadow-2xs truncate"
+                    className="w-full py-2 lg:py-2.5 px-2.5 lg:px-4 rounded-lg border border-brand-primary text-brand-primary hover:bg-brand-primary-soft font-bold text-[11px] sm:text-xs transition flex items-center justify-center gap-1.5 lg:gap-2 cursor-pointer shadow-2xs truncate"
                   >
                     <Bell size={13} className="shrink-0" />
                     <span className="truncate">Get Coupon Alert</span>
@@ -325,7 +325,7 @@ export default function StoreAffiliatePage() {
                   {storeBestOffer && (
                     <div className="flex justify-between items-center">
                       <span>Best Offer:</span>
-                      <span className="font-black text-[#c62828]">{storeBestOffer}</span>
+                      <span className="font-black text-brand-primary">{storeBestOffer}</span>
                     </div>
                   )}
                 </div>
@@ -333,7 +333,7 @@ export default function StoreAffiliatePage() {
                   <button
                     type="button"
                     onClick={() => setSelectedCoupon(coupons[0])}
-                    className="w-full mt-2 py-2 px-3 rounded-lg bg-red-50 hover:bg-[#c62828] text-[#c62828] hover:text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer border border-red-200/80"
+                    className="w-full mt-2 py-2 px-3 rounded-lg bg-brand-primary-soft hover:bg-brand-primary text-brand-primary hover:text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer border border-brand-primary-border"
                   >
                     <Tag size={13} />
                     <span>View All {coupons.length} Codes &amp; Deals</span>
@@ -369,7 +369,7 @@ export default function StoreAffiliatePage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-3.5 sm:px-4 py-2 rounded-lg font-bold text-xs transition cursor-pointer whitespace-nowrap shrink-0 ${activeTab === tab.id
-                    ? 'bg-[#c62828] text-white shadow-xs'
+                    ? 'bg-brand-primary text-white shadow-xs'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                 >
@@ -418,7 +418,7 @@ export default function StoreAffiliatePage() {
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug line-clamp-2">
                           {!coupon.title.toLowerCase().startsWith(coupon.discount.toLowerCase()) && (
-                            <span className="text-[#c62828] mr-1.5">{coupon.discount}</span>
+                            <span className="text-brand-primary mr-1.5">{coupon.discount}</span>
                           )}
                           <span>{coupon.title}</span>
                         </h3>
@@ -444,7 +444,7 @@ export default function StoreAffiliatePage() {
                           )}
                           {coupon.discount && (
                             <span className="text-[10px] font-semibold text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                              <BadgePercent size={11} className="text-[#c62828] shrink-0" />
+                              <BadgePercent size={11} className="text-brand-primary shrink-0" />
                               <span>{coupon.discount}</span>
                             </span>
                           )}
@@ -663,7 +663,7 @@ export default function StoreAffiliatePage() {
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-xl border border-slate-200"
           >
-            <div className="w-12 h-12 rounded-xl bg-red-50 text-[#c62828] flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-brand-primary-soft text-brand-primary flex items-center justify-center mx-auto">
               <Bell size={24} />
             </div>
             <h3 className="font-black text-base text-slate-900">
@@ -694,11 +694,11 @@ export default function StoreAffiliatePage() {
                   value={alertEmail}
                   onChange={(e) => setAlertEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#c62828]"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 />
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-[#c62828] text-white font-bold text-xs rounded-lg shadow-xs hover:bg-[#b71c1c] transition cursor-pointer"
+                  className="w-full py-2.5 bg-brand-primary text-white font-bold text-xs rounded-lg shadow-xs hover:bg-brand-primary-hover transition cursor-pointer"
                 >
                   Subscribe Free
                 </button>

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ROUTES } from '@/constants/routes';
+import { SITE_DOMAIN } from '@/constants/site';
 import { STORAGE_KEYS } from '@/constants/ui-constants';
 import {
   ShieldCheck,
@@ -43,7 +44,7 @@ export default function LoginPage() {
   const [lang, setLang] = useState<'en' | 'vi'>('vi');
 
   // Step 1: Pre-filled credentials (auto fill by default)
-  const [email, setEmail] = useState('admin@heygoodly.com');
+  const [email, setEmail] = useState(`admin@${SITE_DOMAIN}`);
   const [password, setPassword] = useState('Admin@123456');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -342,8 +343,8 @@ export default function LoginPage() {
         'error',
         lang === 'vi' ? 'Định dạng email không hợp lệ' : 'Invalid Email Format',
         lang === 'vi'
-          ? 'Email phải có định dạng chuẩn (Ví dụ: admin@heygoodly.com).'
-          : 'Email must follow standard format (e.g. admin@heygoodly.com).'
+          ? `Email phải có định dạng chuẩn (Ví dụ: admin@${SITE_DOMAIN}).`
+          : `Email must follow standard format (e.g. admin@${SITE_DOMAIN}).`
       );
       return;
     }
@@ -663,7 +664,7 @@ export default function LoginPage() {
                     setEmail(e.target.value);
                     if (hasEmailError) setHasEmailError(false);
                   }}
-                  placeholder="admin@heygoodly.com"
+                  placeholder={`admin@${SITE_DOMAIN}`}
                   className={`w-full pl-10 pr-4 py-2.5 bg-[#080B14]/80 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none transition-all duration-200 ${
                     hasEmailError
                       ? 'border border-rose-500/80 ring-2 ring-rose-500/20'

@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { Article, ArticleSidebarConfig } from '@/types/deals';
+import { TtlCache } from '@/lib/utils/ttlCache';
 
 export interface PostFilterParams {
   page?: number;
@@ -117,12 +118,18 @@ export function mapBackendPostToArticle(p: any): Article {
 }
 
 class PostService {
+  private readonly publicCache = new TtlCache();
+  private static readonly CACHE_TTL_MS = 30_000;
+
   /**
    * Fetch articles with filtering and pagination directly from PostgreSQL database.
    */
   async getPosts(params: PostFilterParams = {}): Promise<PaginatedPostsResult> {
     const page = params.page || 1;
     const size = params.size || 6;
+    const cacheKey = `posts:${JSON.stringify({ ...params, page, size })}`;
+    const cached = this.publicCache.get<PaginatedPostsResult>(cacheKey);
+    if (cached) return cached;
 
     try {
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.POSTS, {
@@ -154,13 +161,15 @@ class PostService {
       if (content && Array.isArray(content)) {
         const total = Number(pageData.totalElements ?? pageData.totalItems ?? content.length);
         const totalPages = Math.max(1, Number(pageData.totalPages ?? Math.ceil(total / size)));
-        return {
+        const result: PaginatedPostsResult = {
           items: content.map(mapBackendPostToArticle),
           total,
           page,
           size,
           totalPages,
         };
+        this.publicCache.set(cacheKey, result, PostService.CACHE_TTL_MS);
+        return result;
       }
     } catch (err) {
       console.warn('Failed to fetch public posts from backend API:', err);
@@ -179,13 +188,21 @@ class PostService {
    * Fetch featured hero article from database
    */
   async getFeaturedArticle(): Promise<Article | null> {
+    const cacheKey = 'posts:featured';
+    const cached = this.publicCache.get<Article | null>(cacheKey);
+    if (cached !== undefined) return cached;
+
     try {
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.POSTS_FEATURED, { timeout: 8000 });
       if (Array.isArray(res.data?.data) && res.data.data.length > 0) {
-        return mapBackendPostToArticle(res.data.data[0]);
+        const mapped = mapBackendPostToArticle(res.data.data[0]);
+        this.publicCache.set(cacheKey, mapped, PostService.CACHE_TTL_MS);
+        return mapped;
       }
       const pageRes = await this.getPosts({ size: 1 });
-      return pageRes.items[0] || null;
+      const first = pageRes.items[0] || null;
+      this.publicCache.set(cacheKey, first, PostService.CACHE_TTL_MS);
+      return first;
     } catch {
       return null;
     }
@@ -195,10 +212,16 @@ class PostService {
    * Fetch Editor's Picks list from database
    */
   async getEditorPicks(): Promise<Article[]> {
+    const cacheKey = 'posts:picks';
+    const cached = this.publicCache.get<Article[]>(cacheKey);
+    if (cached) return cached;
+
     try {
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.POSTS_EDITOR_PICKS, { timeout: 8000 });
       if (Array.isArray(res.data?.data)) {
-        return res.data.data.map(mapBackendPostToArticle);
+        const mapped = res.data.data.map(mapBackendPostToArticle);
+        this.publicCache.set(cacheKey, mapped, PostService.CACHE_TTL_MS);
+        return mapped;
       }
     } catch {
       // Return empty array cleanly on error

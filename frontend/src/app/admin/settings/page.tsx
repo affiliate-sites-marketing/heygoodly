@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { SITE_2FA_ISSUER, SITE_DOMAIN, SITE_NAME, SITE_SLUG } from '@/constants/site';
 import {
   Settings,
   Globe,
@@ -17,6 +18,8 @@ import {
   CheckCircle2,
   Loader2,
   Sparkles,
+  Palette,
+  Check,
 } from 'lucide-react';
 import {
   validateCustomHeadHtml,
@@ -34,6 +37,17 @@ import { useAdminI18n } from '@/context/AdminI18nContext';
 import UnauthorizedAccess from '@/components/admin/UnauthorizedAccess';
 import { settingService, type SystemSettingsMap } from '@/services/settingService';
 import { invalidateSiteSettingsCache } from '@/lib/admin/useSiteSettings';
+import {
+  BRAND_THEME_PRESETS,
+  DEFAULT_BRAND_HOVER,
+  DEFAULT_BRAND_PRESET,
+  DEFAULT_BRAND_PRIMARY,
+  applyBrandThemeToDocument,
+  deriveHoverHex,
+  isValidHexColor,
+  normalizeHexColor,
+  resolveBrandPalette,
+} from '@/lib/brandTheme';
 import { ROUTES } from '@/constants/routes';
 import Link from 'next/link';
 
@@ -150,6 +164,64 @@ export default function AdminSettingsPage() {
     updateField(key, nextVal);
   };
 
+  const activeBrandPalette = resolveBrandPalette(
+    settings.brand_theme_preset,
+    settings.brand_primary_color,
+    settings.brand_hover_color
+  );
+
+  const selectBrandPreset = (presetId: string, primary: string, hover: string) => {
+    setSettings((prev) => ({
+      ...prev,
+      brand_theme_preset: presetId,
+      brand_primary_color: primary,
+      brand_hover_color: hover,
+    }));
+    applyBrandThemeToDocument(resolveBrandPalette(presetId, primary, hover));
+  };
+
+  const updateCustomPrimaryColor = (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (isValidHexColor(trimmed)) {
+      const normalized = normalizeHexColor(trimmed, DEFAULT_BRAND_PRIMARY);
+      const nextHover = deriveHoverHex(normalized);
+      setSettings((prev) => ({
+        ...prev,
+        brand_theme_preset: 'custom',
+        brand_primary_color: normalized,
+        brand_hover_color: nextHover,
+      }));
+      applyBrandThemeToDocument(resolveBrandPalette('custom', normalized, nextHover));
+    } else {
+      setSettings((prev) => ({
+        ...prev,
+        brand_theme_preset: 'custom',
+        brand_primary_color: rawValue,
+      }));
+    }
+  };
+
+  const updateCustomHoverColor = (rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (isValidHexColor(trimmed)) {
+      const normalized = normalizeHexColor(trimmed, DEFAULT_BRAND_HOVER);
+      setSettings((prev) => ({
+        ...prev,
+        brand_theme_preset: 'custom',
+        brand_hover_color: normalized,
+      }));
+      applyBrandThemeToDocument(
+        resolveBrandPalette('custom', activeBrandPalette.primary, normalized)
+      );
+    } else {
+      setSettings((prev) => ({
+        ...prev,
+        brand_theme_preset: 'custom',
+        brand_hover_color: rawValue,
+      }));
+    }
+  };
+
   // 2. Persist updated configuration to PostgreSQL
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -180,6 +252,13 @@ export default function AdminSettingsPage() {
   // 3. Discard unsaved changes
   const handleDiscard = () => {
     setSettings(savedSnapshot);
+    applyBrandThemeToDocument(
+      resolveBrandPalette(
+        savedSnapshot.brand_theme_preset,
+        savedSnapshot.brand_primary_color,
+        savedSnapshot.brand_hover_color
+      )
+    );
     toast.info(t('Reverted changes to saved database state'));
   };
 
@@ -201,6 +280,13 @@ export default function AdminSettingsPage() {
       if (!isMountedRef.current) return;
       setSettings(resetData);
       setSavedSnapshot(resetData);
+      applyBrandThemeToDocument(
+        resolveBrandPalette(
+          resetData.brand_theme_preset || DEFAULT_BRAND_PRESET,
+          resetData.brand_primary_color || DEFAULT_BRAND_PRIMARY,
+          resetData.brand_hover_color || DEFAULT_BRAND_HOVER
+        )
+      );
       toast.success(t('All system settings reset to factory defaults!'));
     } catch (err: any) {
       console.error('Reset defaults failed:', err);
@@ -251,7 +337,7 @@ export default function AdminSettingsPage() {
             size="sm"
             onClick={() => handleSave()}
             disabled={loading || saving || resetting}
-            className="bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold shadow-xs transition cursor-pointer disabled:opacity-50"
+            className="bg-brand-primary hover:bg-brand-primary-hover text-white font-bold shadow-xs transition cursor-pointer disabled:opacity-50"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             <span>{saving ? t('Saving...') : t('Save Changes')}</span>
@@ -282,7 +368,7 @@ export default function AdminSettingsPage() {
               type="button"
               onClick={() => handleSave()}
               disabled={saving}
-              className="px-3.5 py-1.5 text-xs font-bold bg-[#C62828] hover:bg-[#B71C1C] text-white rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+              className="px-3.5 py-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
               <span>{t('Save Changes')}</span>
@@ -303,7 +389,7 @@ export default function AdminSettingsPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`h-9 px-4 inline-flex items-center gap-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
                 isActive
-                  ? 'bg-[#C62828] text-white shadow-xs'
+                  ? 'bg-brand-primary text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -316,7 +402,7 @@ export default function AdminSettingsPage() {
 
       {loading ? (
         <Card className="p-12 flex flex-col items-center justify-center gap-3 text-slate-500 rounded-2xl">
-          <Loader2 className="animate-spin text-[#C62828]" size={28} />
+          <Loader2 className="animate-spin text-brand-primary" size={28} />
           <span className="text-xs font-semibold text-slate-500">
             {t('Loading system configuration from PostgreSQL...')}
           </span>
@@ -330,7 +416,7 @@ export default function AdminSettingsPage() {
             <Card className="p-6 sm:p-7 space-y-6 rounded-2xl">
               <div className="border-b border-slate-100 pb-4">
                 <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <Globe className="text-[#C62828]" size={20} />
+                  <Globe className="text-brand-primary" size={20} />
                   {t('Site Identity & Branding')}
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 mt-0.5">
@@ -344,7 +430,7 @@ export default function AdminSettingsPage() {
                   <Input
                     value={settings.site_name ?? ''}
                     onChange={(e) => updateField('site_name', e.target.value)}
-                    placeholder="HeyGoodly"
+                    placeholder={SITE_NAME}
                     className="font-medium"
                   />
                 </div>
@@ -365,7 +451,7 @@ export default function AdminSettingsPage() {
                     type="email"
                     value={settings.contact_email ?? ''}
                     onChange={(e) => updateField('contact_email', e.target.value)}
-                    placeholder="contact@heygoodly.com"
+                    placeholder={`contact@${SITE_DOMAIN}`}
                     className="font-medium"
                   />
                 </div>
@@ -395,7 +481,7 @@ export default function AdminSettingsPage() {
                   <Input
                     value={settings.footer_copyright ?? ''}
                     onChange={(e) => updateField('footer_copyright', e.target.value)}
-                    placeholder="© 2026 HeyGoodly Media Inc. All rights reserved."
+                    placeholder={`© 2026 ${SITE_NAME} Media Inc. All rights reserved.`}
                     className="font-medium"
                   />
                 </div>
@@ -416,7 +502,7 @@ export default function AdminSettingsPage() {
                       <Input
                         value={settings.social_facebook ?? ''}
                         onChange={(e) => updateField('social_facebook', e.target.value)}
-                        placeholder="https://facebook.com/heygoodly"
+                        placeholder={`https://facebook.com/${SITE_SLUG}`}
                         className="font-medium"
                       />
                     </div>
@@ -425,7 +511,7 @@ export default function AdminSettingsPage() {
                       <Input
                         value={settings.social_twitter ?? ''}
                         onChange={(e) => updateField('social_twitter', e.target.value)}
-                        placeholder="https://x.com/heygoodly"
+                        placeholder={`https://x.com/${SITE_SLUG}`}
                         className="font-medium"
                       />
                     </div>
@@ -434,7 +520,7 @@ export default function AdminSettingsPage() {
                       <Input
                         value={settings.social_youtube ?? ''}
                         onChange={(e) => updateField('social_youtube', e.target.value)}
-                        placeholder="https://youtube.com/@heygoodly"
+                        placeholder={`https://youtube.com/@${SITE_SLUG}`}
                         className="font-medium"
                       />
                     </div>
@@ -443,7 +529,7 @@ export default function AdminSettingsPage() {
                       <Input
                         value={settings.social_tiktok ?? ''}
                         onChange={(e) => updateField('social_tiktok', e.target.value)}
-                        placeholder="https://tiktok.com/@heygoodly"
+                        placeholder={`https://tiktok.com/@${SITE_SLUG}`}
                         className="font-medium"
                       />
                     </div>
@@ -469,6 +555,151 @@ export default function AdminSettingsPage() {
                     description={t('Upload or select a 32x32 favicon icon from Media Library.')}
                   />
                 </div>
+
+                {/* Global Brand Color Theme (Client & Admin) */}
+                <div className="sm:col-span-2 pt-4 border-t border-slate-100 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                        <Palette className="text-brand-primary" size={16} />
+                        {t('Brand Color Theme (Client & Admin)')}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {t('Choose a curated color palette or enter any custom hex color. Changes apply across both the public Client Portal and Admin ProCMS.')}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        selectBrandPreset(
+                          DEFAULT_BRAND_PRESET,
+                          DEFAULT_BRAND_PRIMARY,
+                          DEFAULT_BRAND_HOVER
+                        )
+                      }
+                      className="text-[11px] font-bold text-brand-primary hover:underline cursor-pointer self-start sm:self-auto"
+                    >
+                      {t('Restore Default Crimson')}
+                    </button>
+                  </div>
+
+                  {/* Preset Swatches */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {BRAND_THEME_PRESETS.map((preset) => {
+                      const isSelected =
+                        activeBrandPalette.presetId === preset.id &&
+                        activeBrandPalette.primary === preset.primary;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() =>
+                            selectBrandPreset(preset.id, preset.primary, preset.hover)
+                          }
+                          className={`group flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer ${
+                            isSelected
+                              ? 'border-brand-primary bg-brand-primary-soft ring-2 ring-brand-primary/20'
+                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span
+                            className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-white shadow-xs border border-black/10"
+                            style={{ backgroundColor: preset.primary }}
+                          >
+                            {isSelected && <Check size={15} strokeWidth={3} />}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-slate-900 truncate">
+                              {t(preset.name)}
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate">
+                              {preset.primary}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Hex & Live Preview */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">
+                          {t('Primary Brand Color')}
+                        </label>
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="color"
+                            aria-label="Primary Brand Color Picker"
+                            value={activeBrandPalette.primary}
+                            onChange={(e) => updateCustomPrimaryColor(e.target.value)}
+                            className="w-10 h-10 rounded-xl border border-slate-200 bg-white p-1 cursor-pointer shrink-0"
+                          />
+                          <Input
+                            value={settings.brand_primary_color ?? activeBrandPalette.primary}
+                            onChange={(e) => updateCustomPrimaryColor(e.target.value)}
+                            placeholder="#C62828"
+                            className="font-mono text-xs uppercase"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">
+                          {t('Hover / Darker Accent Color')}
+                        </label>
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="color"
+                            aria-label="Hover Brand Color Picker"
+                            value={activeBrandPalette.hover}
+                            onChange={(e) => updateCustomHoverColor(e.target.value)}
+                            className="w-10 h-10 rounded-xl border border-slate-200 bg-white p-1 cursor-pointer shrink-0"
+                          />
+                          <Input
+                            value={settings.brand_hover_color ?? activeBrandPalette.hover}
+                            onChange={(e) => updateCustomHoverColor(e.target.value)}
+                            placeholder="#B71C1C"
+                            className="font-mono text-xs uppercase"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live Preview Card */}
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                          {t('Live Theme Preview')}
+                        </span>
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-primary-soft text-brand-primary border border-brand-primary-border">
+                          {activeBrandPalette.presetId === 'custom'
+                            ? t('Custom')
+                            : t(
+                                BRAND_THEME_PRESETS.find(
+                                  (p) => p.id === activeBrandPalette.presetId
+                                )?.name || activeBrandPalette.presetId
+                              )}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span className="px-3.5 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold shadow-xs transition">
+                          {t('Primary CTA Button')}
+                        </span>
+                        <span className="px-3 py-2 rounded-xl bg-brand-primary-soft text-brand-primary border border-brand-primary-border text-xs font-bold">
+                          {t('Soft Pill Badge')}
+                        </span>
+                        <span className="text-xs font-bold text-brand-primary underline">
+                          {t('Editorial Link')}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        {t('Click "Save Changes" above to publish this palette for all visitors and admin users.')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </Card>
           )}
@@ -480,7 +711,7 @@ export default function AdminSettingsPage() {
             <Card className="p-6 sm:p-7 space-y-6 rounded-2xl">
               <div className="border-b border-slate-100 pb-4">
                 <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <ShieldCheck className="text-[#C62828]" size={20} />
+                  <ShieldCheck className="text-brand-primary" size={20} />
                   {t('Search Engine Ownership Meta Tags')}
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 mt-0.5">
@@ -511,7 +742,7 @@ export default function AdminSettingsPage() {
                     type="checkbox"
                     checked={settings.no_index === 'true'}
                     onChange={() => toggleField('no_index', settings.no_index ?? 'false')}
-                    className="w-4 h-4 accent-[#C62828]"
+                    className="w-4 h-4 accent-brand-primary"
                   />
                   <span>{t('Block search engines (noindex)')}</span>
                 </label>
@@ -523,7 +754,7 @@ export default function AdminSettingsPage() {
                   <Input
                     value={settings.canonical_url ?? ''}
                     onChange={(e) => updateField('canonical_url', e.target.value)}
-                    placeholder="https://heygoodly.com"
+                    placeholder={`https://${SITE_DOMAIN}`}
                     className="font-mono text-xs"
                   />
                 </div>
@@ -533,7 +764,7 @@ export default function AdminSettingsPage() {
                   <Input
                     value={settings.meta_title ?? ''}
                     onChange={(e) => updateField('meta_title', e.target.value)}
-                    placeholder="HeyGoodly - Latest Deals, Verified Coupons & Shopping Reviews 2026"
+                    placeholder={`${SITE_NAME} - Latest Deals, Verified Coupons & Shopping Reviews 2026`}
                     className="font-medium"
                   />
                 </div>
@@ -545,7 +776,7 @@ export default function AdminSettingsPage() {
                     value={settings.meta_description ?? ''}
                     onChange={(e) => updateField('meta_description', e.target.value)}
                     placeholder="Discover verified promo codes, discounts, exclusive deals, and honest shopping reviews to save more every day."
-                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] font-medium placeholder:text-zinc-400"
+                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-medium placeholder:text-zinc-400"
                   />
                 </div>
 
@@ -605,7 +836,7 @@ export default function AdminSettingsPage() {
                     className={`w-full rounded-xl border bg-white p-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 font-mono placeholder:text-zinc-400 ${
                       !customHeadValidation.valid
                         ? 'border-rose-500 focus:ring-rose-500/20 focus:border-rose-500'
-                        : 'border-zinc-200 focus:ring-[#C62828]/20 focus:border-[#C62828]'
+                        : 'border-zinc-200 focus:ring-brand-primary/20 focus:border-brand-primary'
                     }`}
                   />
                   {!customHeadValidation.valid ? (
@@ -644,7 +875,7 @@ export default function AdminSettingsPage() {
             <Card className="p-6 sm:p-7 space-y-6 rounded-2xl">
               <div className="border-b border-slate-100 pb-4">
                 <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <BarChart3 className="text-[#C62828]" size={20} />
+                  <BarChart3 className="text-brand-primary" size={20} />
                   {t('Telemetry & Event Tracking')}
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 mt-0.5">
@@ -720,7 +951,7 @@ export default function AdminSettingsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
                   <div>
                     <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-                      <DollarSign className="text-[#C62828]" size={20} />
+                      <DollarSign className="text-brand-primary" size={20} />
                       {t('Desktop Header Banner 728x90')}
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-500 mt-0.5">
@@ -734,7 +965,7 @@ export default function AdminSettingsPage() {
                         type="checkbox"
                         checked={settings.header_ads_active !== 'false'}
                         onChange={() => toggleField('header_ads_active', settings.header_ads_active ?? 'true')}
-                        className="w-4 h-4 accent-[#C62828]"
+                        className="w-4 h-4 accent-brand-primary"
                       />
                       <span>{t('Active Banner')}</span>
                     </label>
@@ -759,7 +990,7 @@ export default function AdminSettingsPage() {
                           <div className="absolute inset-0 bg-linear-to-r from-slate-950/90 via-slate-950/65 to-transparent" />
                         </>
                       ) : (
-                        <div className="absolute inset-0 bg-linear-to-r from-red-950/90 via-slate-950/90 to-slate-900" />
+                        <div className="absolute inset-0 bg-linear-to-r from-brand-primary-active/90 via-slate-950/90 to-slate-900" />
                       )}
 
                       <div className="relative z-10 space-y-0.5 max-w-md">
@@ -780,7 +1011,7 @@ export default function AdminSettingsPage() {
                       </div>
 
                       <div className="relative z-10 shrink-0 pl-4">
-                        <span className="h-7 px-3.5 inline-flex items-center justify-center text-[11px] font-bold text-white bg-[#C62828] rounded-lg shadow-sm">
+                        <span className="h-7 px-3.5 inline-flex items-center justify-center text-[11px] font-bold text-white bg-brand-primary rounded-lg shadow-sm">
                           {settings.header_ads_button_text || 'Discover'}
                         </span>
                       </div>
@@ -839,7 +1070,7 @@ export default function AdminSettingsPage() {
                     <Input
                       value={settings.header_ads_banner_url ?? ''}
                       onChange={(e) => updateField('header_ads_banner_url', e.target.value)}
-                      placeholder="https://www.anker.com/?cj_ref=heygoodly"
+                      placeholder={`https://www.anker.com/?cj_ref=${SITE_SLUG}`}
                       className="font-mono text-xs"
                     />
                   </div>
@@ -875,8 +1106,8 @@ export default function AdminSettingsPage() {
                     rows={2}
                     value={settings.affiliate_disclosure ?? ''}
                     onChange={(e) => updateField('affiliate_disclosure', e.target.value)}
-                    placeholder="HeyGoodly is reader-supported. When you buy through links on our site, we may earn an affiliate commission at no extra cost to you."
-                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] font-medium placeholder:text-zinc-400"
+                    placeholder={`${SITE_NAME} is reader-supported. When you buy through links on our site, we may earn an affiliate commission at no extra cost to you.`}
+                    className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-medium placeholder:text-zinc-400"
                   />
                   <span className="text-[11px] text-slate-500">
                     {t('Displayed prominently across public reviews, buying guides, and coupon modals.')}
@@ -894,12 +1125,12 @@ export default function AdminSettingsPage() {
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
                   <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-                    <Mail className="text-[#C62828]" size={20} />
+                    <Mail className="text-brand-primary" size={20} />
                     {t('Homepage Newsletter Block')}
                   </CardTitle>
                   <CardDescription className="text-xs text-slate-500 mt-0.5">
                     {t('Content of the "Dispatch" signup section at the bottom of the homepage. Signups are listed in')}{' '}
-                    <Link href={ROUTES.ADMIN.SUBSCRIBERS} className="text-[#C62828] font-bold hover:underline">
+                    <Link href={ROUTES.ADMIN.SUBSCRIBERS} className="text-brand-primary font-bold hover:underline">
                       {t('Newsletter Subscribers')}
                     </Link>
                     .
@@ -910,7 +1141,7 @@ export default function AdminSettingsPage() {
                     type="checkbox"
                     checked={settings.newsletter_enabled !== 'false'}
                     onChange={() => toggleField('newsletter_enabled', settings.newsletter_enabled ?? 'true')}
-                    className="w-4 h-4 accent-[#C62828]"
+                    className="w-4 h-4 accent-brand-primary"
                   />
                   <span>{t('Show on homepage')}</span>
                 </label>
@@ -922,7 +1153,7 @@ export default function AdminSettingsPage() {
                   <Input
                     value={settings.newsletter_eyebrow ?? ''}
                     onChange={(e) => updateField('newsletter_eyebrow', e.target.value)}
-                    placeholder="The HeyGoodly Dispatch"
+                    placeholder={`The ${SITE_NAME} Dispatch`}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -942,7 +1173,7 @@ export default function AdminSettingsPage() {
                   value={settings.newsletter_description ?? ''}
                   onChange={(e) => updateField('newsletter_description', e.target.value)}
                   placeholder="Zero sponsored ranking manipulation. Join 45,000+ smart readers who rely on our independent testing laboratory."
-                  className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#C62828]/20 focus:border-[#C62828] font-medium placeholder:text-zinc-400"
+                  className="w-full rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-medium placeholder:text-zinc-400"
                 />
               </div>
 
@@ -984,8 +1215,8 @@ export default function AdminSettingsPage() {
                     settings.newsletter_enabled !== 'false' ? '' : 'opacity-40'
                   }`}
                 >
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#C62828] block">
-                    {settings.newsletter_eyebrow || 'The HeyGoodly Dispatch'}
+                  <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary block">
+                    {settings.newsletter_eyebrow || `The ${SITE_NAME} Dispatch`}
                   </span>
                   <h3 className="text-lg font-bold text-slate-900">
                     {settings.newsletter_title || 'Independent Reviews'}
@@ -997,7 +1228,7 @@ export default function AdminSettingsPage() {
                     <div className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-left text-slate-500">
                       {settings.newsletter_placeholder || 'Enter your email...'}
                     </div>
-                    <span className="bg-[#C62828] text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs">
+                    <span className="bg-brand-primary text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs">
                       {settings.newsletter_button_text || 'Subscribe'}
                     </span>
                   </div>
@@ -1013,7 +1244,7 @@ export default function AdminSettingsPage() {
             <Card className="p-6 sm:p-7 space-y-6 rounded-2xl">
               <div className="border-b border-slate-100 pb-4">
                 <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <Lock className="text-[#C62828]" size={20} />
+                  <Lock className="text-brand-primary" size={20} />
                   {t('Security & Access Policies')}
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 mt-0.5">
@@ -1055,7 +1286,7 @@ export default function AdminSettingsPage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">{t('2FA Authenticator Issuer Name')}</label>
                   <Input
-                    value={settings.two_factor_issuer ?? 'HeyGoodlyProCMS'}
+                    value={settings.two_factor_issuer ?? SITE_2FA_ISSUER}
                     onChange={(e) => updateField('two_factor_issuer', e.target.value)}
                     className="font-mono"
                   />
@@ -1101,7 +1332,7 @@ export default function AdminSettingsPage() {
                         type="checkbox"
                         checked={settings.two_factor_dev_bypass_enabled === 'true'}
                         onChange={() => toggleField('two_factor_dev_bypass_enabled', settings.two_factor_dev_bypass_enabled ?? 'false')}
-                        className="w-4 h-4 accent-[#C62828]"
+                        className="w-4 h-4 accent-brand-primary"
                       />
                       <span>{t('Enable Dev 2FA Bypass')}</span>
                     </label>

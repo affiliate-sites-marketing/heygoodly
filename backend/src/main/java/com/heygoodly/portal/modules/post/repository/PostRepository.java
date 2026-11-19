@@ -40,9 +40,21 @@ public interface PostRepository extends JpaRepository<PostEntity, Long>, JpaSpec
     @Query("SELECT COALESCE(SUM(p.viewCount), 0) FROM PostEntity p WHERE p.isDeleted = false")
     long sumTotalViews();
 
+    @Query("SELECT COUNT(p), " +
+           "COALESCE(SUM(CASE WHEN p.isActive = true AND p.publishedAt <= CURRENT_TIMESTAMP THEN 1L ELSE 0L END), 0L), " +
+           "COALESCE(SUM(CASE WHEN p.isActive = true AND p.publishedAt > CURRENT_TIMESTAMP THEN 1L ELSE 0L END), 0L), " +
+           "COALESCE(SUM(CASE WHEN p.isActive = false THEN 1L ELSE 0L END), 0L), " +
+           "COALESCE(SUM(p.viewCount), 0L) " +
+           "FROM PostEntity p WHERE p.isDeleted = false")
+    List<Object[]> summarizePosts();
+
     @Modifying
     @Query("UPDATE PostEntity p SET p.viewCount = p.viewCount + 1 WHERE p.id = :id")
     void incrementViewCount(@Param("id") Long id);
+
+    @Modifying
+    @Query("UPDATE PostEntity p SET p.viewCount = p.viewCount + :delta WHERE p.id = :id")
+    void addViewCount(@Param("id") Long id, @Param("delta") long delta);
 
     @Query("SELECT p FROM PostEntity p WHERE p.isActive = true AND p.isDeleted = false AND p.publishedAt <= CURRENT_TIMESTAMP AND p.isFeatured = true AND (p.categoryId IS NULL OR EXISTS (SELECT c.id FROM com.heygoodly.portal.modules.category.entity.CategoryEntity c WHERE c.id = p.categoryId AND c.isActive = true AND c.isDeleted = false)) ORDER BY p.publishedAt DESC")
     List<PostEntity> findFeaturedPosts(Pageable pageable);

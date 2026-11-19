@@ -2,6 +2,7 @@ package com.heygoodly.portal.security;
 
 import com.heygoodly.portal.common.constant.SecurityConstants;
 import com.heygoodly.portal.common.exception.ErrorCode;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,8 +35,8 @@ public class JwtFilter extends OncePerRequestFilter {
         String jwt = extractJwtFromRequest(request);
 
         if (StringUtils.hasText(jwt)) {
-            JwtProvider.JwtStatus status = jwtProvider.validateTokenDetailed(jwt);
-            switch (status) {
+            JwtProvider.JwtValidationResult parsed = jwtProvider.validateAndParse(jwt);
+            switch (parsed.status()) {
                 case VALID -> {
                     // Check Redis token revocation blacklist
                     if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
@@ -45,9 +46,11 @@ public class JwtFilter extends OncePerRequestFilter {
                     }
 
                     try {
-                        String email = jwtProvider.getEmailFromToken(jwt);
-                        Long userId = jwtProvider.getUserIdFromToken(jwt);
-                        java.util.Date issuedAt = jwtProvider.getIssuedAtFromToken(jwt);
+                        Claims claims = parsed.claims();
+                        String email = claims.getSubject();
+                        Object uidVal = claims.get(SecurityConstants.CLAIM_USER_ID);
+                        Long userId = (uidVal instanceof Number num) ? num.longValue() : null;
+                        java.util.Date issuedAt = claims.getIssuedAt();
 
                         if (userId != null && issuedAt != null && tokenBlacklistService.isUserTokenRevoked(userId, issuedAt.getTime())) {
                             log.warn("User tokens revoked prior to timestamp for userId [{}]", userId);
@@ -79,7 +82,7 @@ public class JwtFilter extends OncePerRequestFilter {
                     request.setAttribute(SecurityConstants.AUTH_ERROR_ATTRIBUTE, ErrorCode.TOKEN_EXPIRED);
                 }
                 case INVALID_SIGNATURE, MALFORMED, UNSUPPORTED -> {
-                    log.warn("JWT token invalid or tampered [{}] for request [{}]", status, request.getRequestURI());
+                    log.warn("JWT token invalid or tampered [{}] for request [{}]", parsed.status(), request.getRequestURI());
                     request.setAttribute(SecurityConstants.AUTH_ERROR_ATTRIBUTE, ErrorCode.TOKEN_INVALID);
                 }
                 case EMPTY -> {
