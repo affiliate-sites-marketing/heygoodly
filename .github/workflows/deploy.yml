@@ -121,7 +121,13 @@ jobs:
             fi
 
             echo "==> Starting HeyGoodly stack..."
-            docker compose -f ${{ vars.COMPOSE_FILE || 'docker-compose.site.yml' }} up -d --build --remove-orphans
+            grep -q "^precedence ::ffff:0:0/96  100" /etc/gai.conf 2>/dev/null || echo "precedence ::ffff:0:0/96  100" >> /etc/gai.conf || true
+            COMPOSE_TARGET="${{ vars.COMPOSE_FILE || 'docker-compose.site.yml' }}"
+            docker compose -f "$COMPOSE_TARGET" up -d --build --remove-orphans || {
+              echo "WARN: First docker compose build attempt hit transient registry timeout, retrying in 3s..."
+              sleep 3
+              docker compose -f "$COMPOSE_TARGET" up -d --build --remove-orphans
+            }
 
             docker image prune -f
             echo "==> HeyGoodly deployment finished successfully!"
