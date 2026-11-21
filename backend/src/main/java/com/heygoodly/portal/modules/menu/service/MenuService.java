@@ -15,4 +15,5 @@ public interface MenuService {
     MenuResponse createMenu(MenuRequest request);
     MenuResponse updateMenu(Long id, MenuRequest request);
     void deleteMenu(Long id);
+    void reorderMenus(List<Long> orderedIds);
 }

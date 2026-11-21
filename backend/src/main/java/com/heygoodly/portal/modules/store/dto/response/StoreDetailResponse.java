@@ -21,6 +21,7 @@ public record StoreDetailResponse(
         BigDecimal ratingScore,
         Integer ratingCount,
         String afWebsite,
+        String displayDomain,
         String afStatus,
         Long afVisitCount,
         String afPortalUrl,

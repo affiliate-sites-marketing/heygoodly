@@ -16,6 +16,7 @@ public record StoreSummaryResponse(
         BigDecimal ratingScore,
         Integer ratingCount,
         String afWebsite,
+        String displayDomain,
         Long afVisitCount,
         String afCommission,
         String afStatus,

@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Layers, Plus, Search } from 'lucide-react';
+import { Layers, Plus, Search, LayoutGrid } from 'lucide-react';
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
-import { adminSelectClass, adminSearchInputClass } from '@/components/admin/adminStyles';
-import { reorderListItems } from '@/components/admin/PositionReorderCell';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import { adminSearchInputClass } from '@/components/admin/adminStyles';
 import { ROUTES } from '@/constants/routes';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
@@ -18,13 +18,13 @@ import { useToast } from '@/context/ToastContext';
 import UnauthorizedAccess from '@/components/admin/UnauthorizedAccess';
 import { type CategoryData } from './_lib/data';
 import CategoryArticlesModal from './_components/CategoryArticlesModal';
+import CategoryOrderMatrixModal from './_components/CategoryOrderMatrixModal';
 import CategoryTableRow from './_components/CategoryTableRow';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
-type SortBy = 'order-asc' | 'name-asc' | 'articles-desc';
+type SortBy = 'newest' | 'order-asc' | 'name-asc' | 'articles-desc';
 
 const TABLE_COLUMNS = [
-  { label: 'Order', className: 'w-16 text-center' },
   { label: 'Category Name', className: 'min-w-[200px]' },
   { label: 'Public URL', className: 'min-w-[170px]' },
   { label: 'Articles', className: 'min-w-[150px]' },
@@ -37,10 +37,10 @@ export default function AdminCategoriesPage() {
   const { toast, confirm: confirmModal } = useToast();
 
   const [selectedCategoryForArticles, setSelectedCategoryForArticles] = useState<CategoryData | null>(null);
-  const [reordering, setReordering] = useState(false);
+  const [orderMatrixOpen, setOrderMatrixOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [sortBy, setSortBy] = useState<SortBy>('order-asc');
+  const [sortBy, setSortBy] = useState<SortBy>('newest');
 
   const {
     items: paginatedCategories,
@@ -59,8 +59,8 @@ export default function AdminCategoriesPage() {
     defaultPageSize: 10,
     initialParams: {
       search: '',
-      sortBy: 'sortOrder',
-      direction: 'asc',
+      sortBy: 'createdAt',
+      direction: 'desc',
     },
     mapItem: (c: any): CategoryData => ({
       id: Number(c.id),
@@ -93,7 +93,10 @@ export default function AdminCategoriesPage() {
 
   const handleSortChange = (val: SortBy) => {
     setSortBy(val);
-    if (val === 'name-asc') {
+    if (val === 'newest') {
+      setParam('sortBy', 'createdAt');
+      setParam('direction', 'desc');
+    } else if (val === 'name-asc') {
       setParam('sortBy', 'name');
       setParam('direction', 'asc');
     } else {
@@ -102,39 +105,16 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const isFiltered = search !== '' || statusFilter !== 'ALL' || sortBy !== 'order-asc';
+  const isFiltered = search !== '' || statusFilter !== 'ALL' || sortBy !== 'newest';
 
   const handleResetFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
-    setSortBy('order-asc');
+    setSortBy('newest');
     setParam('search', undefined);
     setParam('isActive', undefined);
-    setParam('sortBy', 'sortOrder');
-    setParam('direction', 'asc');
-  };
-
-  const canReorder = sortBy === 'order-asc' && search === '' && statusFilter === 'ALL';
-
-  const handleMove = async (index: number, delta: -1 | 1) => {
-    if (reordering) return;
-    setReordering(true);
-    try {
-      const updated = await reorderListItems(
-        paginatedCategories,
-        index,
-        delta,
-        API_ENDPOINTS.ADMIN.CATEGORIES_REORDER
-      );
-      if (updated) {
-        setItems(updated.map((item, idx) => ({ ...item, sortOrder: idx + 1 })));
-        toast.success('Updated category display order!');
-      }
-    } catch {
-      toast.error('Failed to update category order');
-    } finally {
-      setReordering(false);
-    }
+    setParam('sortBy', 'createdAt');
+    setParam('direction', 'desc');
   };
 
   const handleDelete = async (id: number) => {
@@ -175,12 +155,24 @@ export default function AdminCategoriesPage() {
         badge={`${totalItems} Categories Total`}
         description="Configure editorial taxonomy matching client navigation bars: Tech, Business, Entertainment, US Politics, Reviews, and Lifestyle."
       >
-        <Link
-          href={ROUTES.ADMIN.CATEGORY_CREATE}
-          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
-        >
-          <Plus size={15} /> Add Category
-        </Link>
+        <div className="flex items-center gap-2">
+          {hasPermission('category.update') && (
+            <button
+              type="button"
+              onClick={() => setOrderMatrixOpen(true)}
+              className="h-9 px-3.5 inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-brand-primary/40 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <LayoutGrid size={15} className="text-brand-primary" />
+              <span>Arrange Order</span>
+            </button>
+          )}
+          <Link
+            href={ROUTES.ADMIN.CATEGORY_CREATE}
+            className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <Plus size={15} /> Add Category
+          </Link>
+        </div>
       </AdminPageHeader>
 
       {/* Advanced Filter Bar */}
@@ -205,28 +197,29 @@ export default function AdminCategoriesPage() {
 
           {/* Status Filter */}
           <div>
-            <select
+            <AdminSearchableSelect
               value={statusFilter}
-              onChange={(e) => handleStatusChange(e.target.value as StatusFilter)}
-              className={adminSelectClass}
-            >
-              <option value="ALL">All Categories</option>
-              <option value="ACTIVE">Active in Nav</option>
-              <option value="INACTIVE">Inactive / Hidden</option>
-            </select>
+              onChange={(val) => handleStatusChange(val as StatusFilter)}
+              options={[
+                { value: 'ALL', label: 'All Categories' },
+                { value: 'ACTIVE', label: 'Active in Nav' },
+                { value: 'INACTIVE', label: 'Inactive / Hidden' },
+              ]}
+            />
           </div>
 
           {/* Sort By */}
           <div>
-            <select
+            <AdminSearchableSelect
               value={sortBy}
-              onChange={(e) => handleSortChange(e.target.value as SortBy)}
-              className={adminSelectClass}
-            >
-              <option value="order-asc">Sort: Navigation Order</option>
-              <option value="name-asc">Sort: Name (A to Z)</option>
-              <option value="articles-desc">Sort: Most Published Articles</option>
-            </select>
+              onChange={(val) => handleSortChange(val as SortBy)}
+              options={[
+                { value: 'newest', label: 'Sort: Newly Created' },
+                { value: 'order-asc', label: 'Sort: Navigation Order' },
+                { value: 'name-asc', label: 'Sort: Name (A to Z)' },
+                { value: 'articles-desc', label: 'Sort: Most Published Articles' },
+              ]}
+            />
           </div>
         </div>
       </AdminFilterBar>
@@ -248,15 +241,10 @@ export default function AdminCategoriesPage() {
           />
         }
       >
-        {paginatedCategories.map((cat, idx) => (
+        {paginatedCategories.map((cat) => (
           <CategoryTableRow
             key={cat.id}
             category={cat}
-            index={idx}
-            total={paginatedCategories.length}
-            canReorder={canReorder}
-            reordering={reordering}
-            onMove={(delta) => handleMove(idx, delta)}
             onOpenArticlesModal={setSelectedCategoryForArticles}
             onDelete={handleDelete}
           />
@@ -268,6 +256,13 @@ export default function AdminCategoriesPage() {
         isOpen={selectedCategoryForArticles !== null}
         onClose={() => setSelectedCategoryForArticles(null)}
         category={selectedCategoryForArticles}
+      />
+
+      {/* Category Matrix Drag & Drop Order Modal */}
+      <CategoryOrderMatrixModal
+        isOpen={orderMatrixOpen}
+        onClose={() => setOrderMatrixOpen(false)}
+        onSaved={refreshCategories}
       />
     </div>
   );

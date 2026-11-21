@@ -88,6 +88,9 @@ public class StoreEntity extends BaseEntity {
     @Column(name = "af_website", length = 500)
     private String afWebsite;
 
+    @Column(name = "display_domain", length = 255)
+    private String displayDomain;
+
     @Builder.Default
     @Column(name = "af_status", length = 50)
     private String afStatus = "unregistered";

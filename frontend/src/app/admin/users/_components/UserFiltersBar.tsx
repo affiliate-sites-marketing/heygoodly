@@ -1,4 +1,5 @@
 import { Search, Filter, ArrowUpDown, RotateCcw } from 'lucide-react';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 
 type TwoFactorFilter = 'all' | 'enabled' | 'disabled';
 type StatusFilter = 'all' | 'active' | 'inactive';
@@ -125,44 +126,40 @@ export default function UserFiltersBar({
         {/* Role filter */}
         <div className="flex items-center gap-1.5">
           <Filter size={14} className="text-slate-400 shrink-0" />
-          <select
+          <AdminSearchableSelect
             value={roleFilter}
-            onChange={(e) => onRoleFilterChange(e.target.value)}
-            className={selectClass}
-          >
-            <option value="all">All Roles</option>
-            {uniqueRoles.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
+            onChange={onRoleFilterChange}
+            options={[
+              { value: 'all', label: 'All Roles' },
+              ...uniqueRoles.map((role) => ({ value: role, label: role })),
+            ]}
+          />
         </div>
 
         {/* 2FA filter */}
-        <select
+        <AdminSearchableSelect
           value={twoFactorFilter}
-          onChange={(e) => onTwoFactorFilterChange(e.target.value as TwoFactorFilter)}
-          className={selectClass}
-        >
-          <option value="all">2FA: All Security Tiers</option>
-          <option value="enabled">2FA: Active Only</option>
-          <option value="disabled">2FA: Not Configured</option>
-        </select>
+          onChange={(val) => onTwoFactorFilterChange(val as TwoFactorFilter)}
+          options={[
+            { value: 'all', label: '2FA: All Security Tiers' },
+            { value: 'enabled', label: '2FA: Active Only' },
+            { value: 'disabled', label: '2FA: Not Configured' },
+          ]}
+        />
 
         {/* Sort by */}
         <div className="flex items-center gap-1.5">
           <ArrowUpDown size={14} className="text-slate-400 shrink-0" />
-          <select
+          <AdminSearchableSelect
             value={sortBy}
-            onChange={(e) => onSortByChange(e.target.value as SortBy)}
-            className={selectClass}
-          >
-            <option value="name-asc">Full Name (A → Z)</option>
-            <option value="name-desc">Full Name (Z → A)</option>
-            <option value="created-desc">Created Date (Newest)</option>
-            <option value="role-asc">Role Tier</option>
-          </select>
+            onChange={(val) => onSortByChange(val as SortBy)}
+            options={[
+              { value: 'created-desc', label: 'Created Date (Newest)' },
+              { value: 'name-asc', label: 'Full Name (A → Z)' },
+              { value: 'name-desc', label: 'Full Name (Z → A)' },
+              { value: 'role-asc', label: 'Role Tier' },
+            ]}
+          />
         </div>
       </div>
     </div>

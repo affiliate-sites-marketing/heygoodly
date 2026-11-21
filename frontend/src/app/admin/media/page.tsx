@@ -21,6 +21,7 @@ import { ROUTES } from '@/constants/routes';
 import { Card } from '@/components/ui/Card';
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { useServerPagination } from '@/lib/admin/useServerPagination';
 import { useToast } from '@/context/ToastContext';
 import { mediaService } from '@/services/mediaService';
@@ -312,17 +313,18 @@ export default function AdminMediaPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-zinc-600">{t('Target Folder:')}</span>
-              <select
+              <span className="text-xs font-bold text-zinc-600 shrink-0">{t('Target Folder:')}</span>
+              <AdminSearchableSelect
                 value={uploadFolder}
-                onChange={(e) => setUploadFolder(e.target.value as any)}
-                className="text-xs bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 font-semibold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary cursor-pointer"
-              >
-                <option value="articles">{t('Articles')}</option>
-                <option value="stores">{t('Stores')}</option>
-                <option value="banners">{t('Promotional Banners')}</option>
-                <option value="icons">{t('Logos & Icons')}</option>
-              </select>
+                onChange={(val) => setUploadFolder(val as any)}
+                className="min-w-[165px]"
+                options={[
+                  { value: 'articles', label: 'Articles' },
+                  { value: 'stores', label: 'Stores' },
+                  { value: 'banners', label: 'Promotional Banners' },
+                  { value: 'icons', label: 'Logos & Icons' },
+                ]}
+              />
             </div>
           </div>
 
@@ -415,26 +417,28 @@ export default function AdminMediaPage() {
             {/* Tag Filter Dropdown & Centralized Hub Link */}
             {Object.keys(tagCounts).length > 0 && (
               <div className="flex items-center gap-1.5">
-                <select
+                <AdminSearchableSelect
                   value={selectedTag || 'all'}
-                  onChange={(e) => {
-                    setSelectedTag(e.target.value === 'all' ? null : e.target.value);
+                  onChange={(val) => {
+                    setSelectedTag(val === 'all' ? null : val);
                     setCurrentPage(1);
                   }}
-                  className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary cursor-pointer"
-                >
-                  <option value="all">
-                    {locale === 'vi' ? 'Tất cả thẻ' : 'All Tags'} ({Object.keys(tagCounts).length})
-                  </option>
-                  {Object.entries(tagCounts).map(([tag, count]) => (
-                    <option key={tag} value={tag}>
-                      #{tag} ({count})
-                    </option>
-                  ))}
-                </select>
+                  className="min-w-[145px]"
+                  searchPlaceholder="Search tag..."
+                  options={[
+                    {
+                      value: 'all',
+                      label: `${locale === 'vi' ? 'Tất cả thẻ' : 'All Tags'} (${Object.keys(tagCounts).length})`,
+                    },
+                    ...Object.entries(tagCounts).map(([tag, count]) => ({
+                      value: tag,
+                      label: `#${tag} (${count})`,
+                    })),
+                  ]}
+                />
                 <Link
                   href={ROUTES.ADMIN.TAGS}
-                  className="p-2 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 hover:border-rose-200 rounded-xl transition shadow-2xs"
+                  className="p-2 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 border border-zinc-200 hover:border-rose-200 rounded-xl transition shadow-2xs shrink-0"
                   title={t('Manage all tags centrally')}
                 >
                   <Hash size={14} />
@@ -443,34 +447,36 @@ export default function AdminMediaPage() {
             )}
 
             {/* Format Filter */}
-            <select
+            <AdminSearchableSelect
               value={formatFilter}
-              onChange={(e) => {
-                setFormatFilter(e.target.value);
+              onChange={(val) => {
+                setFormatFilter(val);
                 setCurrentPage(1);
               }}
-              className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary cursor-pointer"
-            >
-              <option value="all">{t('All Formats')}</option>
-              <option value="webp">WebP</option>
-              <option value="png">PNG</option>
-              <option value="jpg">JPG / JPEG</option>
-            </select>
+              className="min-w-[140px]"
+              options={[
+                { value: 'all', label: 'All Formats' },
+                { value: 'webp', label: 'WebP' },
+                { value: 'png', label: 'PNG' },
+                { value: 'jpg', label: 'JPG / JPEG' },
+              ]}
+            />
 
             {/* Sort Dropdown */}
-            <select
+            <AdminSearchableSelect
               value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value as any);
+              onChange={(val) => {
+                setSortBy(val as any);
                 setCurrentPage(1);
               }}
-              className="text-xs bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary cursor-pointer"
-            >
-              <option value="newest">{t('Newest Uploaded')}</option>
-              <option value="oldest">{t('Oldest First')}</option>
-              <option value="size-desc">{t('Largest Size')}</option>
-              <option value="name-asc">{t('File Name (A → Z)')}</option>
-            </select>
+              className="min-w-[165px]"
+              options={[
+                { value: 'newest', label: 'Newest Uploaded' },
+                { value: 'oldest', label: 'Oldest First' },
+                { value: 'size-desc', label: 'Largest Size' },
+                { value: 'name-asc', label: 'File Name (A → Z)' },
+              ]}
+            />
 
             {/* View Mode Toggle */}
             <div className="flex items-center border border-zinc-200 rounded-xl p-0.5 bg-zinc-50 shrink-0">

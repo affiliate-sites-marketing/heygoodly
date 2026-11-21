@@ -18,6 +18,7 @@ import { Card, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { ROUTES } from '@/constants/routes';
 import {
   PERMISSION_CATALOG,
@@ -343,18 +344,15 @@ export default function AdminRolesPage() {
 
             <div className="flex items-center gap-2">
               <Filter size={14} className="text-zinc-400 shrink-0" />
-              <select
+              <AdminSearchableSelect
                 value={moduleFilter}
-                onChange={(e) => setModuleFilter(e.target.value)}
-                className="w-full text-xs bg-white border border-zinc-200 rounded-lg px-2.5 py-1.5 text-zinc-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-              >
-                <option value="all">All Functional Modules ({PERMISSION_CATALOG.length})</option>
-                {PERMISSION_CATALOG.map((g) => (
-                  <option key={g.module} value={g.module}>
-                    {g.module}
-                  </option>
-                ))}
-              </select>
+                onChange={setModuleFilter}
+                searchPlaceholder="Search module..."
+                options={[
+                  { value: 'all', label: `All Functional Modules (${PERMISSION_CATALOG.length})` },
+                  ...PERMISSION_CATALOG.map((g) => ({ value: g.module, label: g.module })),
+                ]}
+              />
             </div>
           </div>
 

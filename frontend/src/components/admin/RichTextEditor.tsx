@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { SITE_DOMAIN, SITE_NAME, SITE_SLUG } from '@/constants/site';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import {
   Bold,
   Italic,
@@ -6477,28 +6478,29 @@ export default function RichTextEditor({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Button Style</label>
-                  <select
+                  <AdminSearchableSelect
                     value={buttonForm.style}
-                    onChange={(e) => setButtonForm({ ...buttonForm, style: e.target.value as any })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
-                  >
-                    <option value="crimson">Crimson Red (HeyGoodly)</option>
-                    <option value="emerald">Emerald Green</option>
-                    <option value="dark">Dark Slate</option>
-                    <option value="outline">Transparent Outline</option>
-                  </select>
+                    onChange={(val) => setButtonForm({ ...buttonForm, style: val as any })}
+                    options={[
+                      { value: 'crimson', label: 'Crimson Red (HeyGoodly)' },
+                      { value: 'emerald', label: 'Emerald Green' },
+                      { value: 'dark', label: 'Dark Slate' },
+                      { value: 'outline', label: 'Transparent Outline' },
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Alignment</label>
-                  <select
+                  <AdminSearchableSelect
                     value={buttonForm.alignment}
-                    onChange={(e) => setButtonForm({ ...buttonForm, alignment: e.target.value as any })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-primary"
-                  >
-                    <option value="center">Center</option>
-                    <option value="left">Left</option>
-                  </select>
+                    searchable={false}
+                    onChange={(val) => setButtonForm({ ...buttonForm, alignment: val as any })}
+                    options={[
+                      { value: 'center', label: 'Center' },
+                      { value: 'left', label: 'Left' },
+                    ]}
+                  />
                 </div>
               </div>
             </div>

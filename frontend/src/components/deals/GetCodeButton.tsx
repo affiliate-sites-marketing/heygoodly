@@ -5,6 +5,7 @@ import { Scissors, Sparkles, ExternalLink } from 'lucide-react';
 interface GetCodeButtonProps {
   code?: string;
   isCode?: boolean;
+  highlight?: boolean;
   onOpenModal?: () => void;
   onClick?: () => void;
   className?: string;
@@ -15,6 +16,7 @@ interface GetCodeButtonProps {
 export default function GetCodeButton({
   code,
   isCode = true,
+  highlight = false,
   onOpenModal,
   onClick,
   className = '',
@@ -27,35 +29,39 @@ export default function GetCodeButton({
     if (onOpenModal) onOpenModal();
   };
 
-  // If it's not a coupon code (Direct Deal / Activate Deal)
-  if (!isCode || !code) {
-    return (
-      <button
-        type="button"
-        onClick={handleClick}
-        className={`group font-black tracking-wide text-white rounded-xl shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 hover:shadow-sm active:scale-95 ${
-          size === 'sm' ? 'py-2 px-3 text-xs' : size === 'lg' ? 'py-3 px-5 text-sm' : 'py-2.5 px-4 text-xs'
-        } ${fullWidth ? 'w-full' : 'w-full sm:w-auto'} ${className}`}
-      >
-        <Sparkles size={14} className="text-emerald-200" />
-        <span>Activate Deal</span>
-        <ExternalLink size={13} className="text-white/80 group-hover:translate-x-0.5 transition-transform" />
-      </button>
-    );
-  }
+  const isDeal = !isCode || !code;
+  const colorClasses = highlight
+    ? 'bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/25 ring-1 ring-emerald-400/40 hover:shadow-lg'
+    : 'bg-brand-primary hover:bg-brand-primary-hover shadow-xs hover:shadow-sm';
 
-  // Get Code button: Compact, 1 single color (#c62828), same size as Activate Deal, opens popup
+  const sizeClasses =
+    size === 'sm'
+      ? 'py-2 px-3 text-xs'
+      : size === 'lg'
+        ? 'py-2.5 px-5 text-[13px] sm:min-w-[144px]'
+        : 'py-2.5 px-4 text-xs sm:min-w-[136px]';
+
   return (
     <button
       type="button"
       onClick={handleClick}
-      className={`group font-black tracking-wide text-white rounded-xl shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover hover:shadow-sm active:scale-95 ${
-        size === 'sm' ? 'py-2 px-3 text-xs' : size === 'lg' ? 'py-3 px-5 text-sm' : 'py-2.5 px-4 text-xs'
-      } ${fullWidth ? 'w-full' : 'w-full sm:w-auto'} ${className}`}
+      className={`group font-black tracking-wide text-white rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${colorClasses} ${sizeClasses} ${
+        fullWidth ? 'w-full' : 'w-full sm:w-auto'
+      } ${className}`}
     >
-      <Scissors size={14} className="text-white/90 group-hover:rotate-12 transition-transform duration-200" />
-      <span>Get Code</span>
-      <ExternalLink size={13} className="text-white/80 group-hover:translate-x-0.5 transition-transform" />
+      {isDeal ? (
+        <Sparkles size={size === 'lg' ? 16 : 14} className={highlight ? 'text-emerald-100' : 'text-white/90'} />
+      ) : (
+        <Scissors
+          size={size === 'lg' ? 16 : 14}
+          className="text-white/90 group-hover:rotate-12 transition-transform duration-200"
+        />
+      )}
+      <span>{isDeal ? 'Activate Deal' : 'Get Code'}</span>
+      <ExternalLink
+        size={size === 'lg' ? 14 : 13}
+        className="text-white/80 group-hover:translate-x-0.5 transition-transform"
+      />
     </button>
   );
 }

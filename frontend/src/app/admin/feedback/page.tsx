@@ -10,6 +10,7 @@ import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { adminSelectClass, adminSearchInputClass } from '@/components/admin/adminStyles';
 import { type FeedbackItem } from './_lib/data';
 import FeedbackTableRow from './_components/FeedbackTableRow';
@@ -172,15 +173,16 @@ export default function AdminFeedbackPage() {
 
           <div className="flex items-center gap-1.5">
             <ArrowUpDown size={14} className="text-slate-400 shrink-0" />
-            <select
+            <AdminSearchableSelect
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className={adminSelectClass}
-            >
-              <option value="date-desc">Newest First</option>
-              <option value="date-asc">Oldest First</option>
-              <option value="name-asc">Sender (A → Z)</option>
-            </select>
+              onChange={(val) => setSortBy(val as SortBy)}
+              className="min-w-[160px]"
+              options={[
+                { value: 'date-desc', label: 'Newest First' },
+                { value: 'date-asc', label: 'Oldest First' },
+                { value: 'name-asc', label: 'Sender (A → Z)' },
+              ]}
+            />
           </div>
         </div>
       </AdminFilterBar>

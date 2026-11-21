@@ -212,4 +212,13 @@ public class PageServiceImpl implements PageService {
         auditLogService.recordAction("DELETE", "pages", String.valueOf(id), deletedTitle, null);
         log.info("Successfully deleted CMS page id={}", id);
     }
+
+    @Override
+    @Transactional
+    public void reorderPages(List<Long> orderedIds) {
+        com.heygoodly.portal.common.util.SortOrderUtils.reorderEntities(
+                orderedIds, pageRepository, PageEntity::getId, PageEntity::setSortOrder);
+        redisCacheService.evictByPrefix(RedisCacheService.PAGES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+    }
 }

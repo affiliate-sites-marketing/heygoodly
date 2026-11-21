@@ -14,11 +14,6 @@ interface MenuTableRowProps {
 export default function MenuTableRow({ item, onDelete }: MenuTableRowProps) {
   return (
     <tr className="hover:bg-slate-50/60 transition-colors">
-      <td className="py-3.5 px-4 font-mono font-bold text-slate-500">
-        <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-          #{item.sortOrder}
-        </span>
-      </td>
       <td className="py-3.5 px-4 font-bold text-slate-900 text-sm">
         {item.title}
       </td>

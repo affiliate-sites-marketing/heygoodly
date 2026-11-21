@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { SITE_NAME, SITE_SLUG } from '@/constants/site';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import {
   User,
   ShieldCheck,
@@ -126,17 +127,15 @@ function PaginationBar({
         {onPageSizeChange && (
           <div className="flex items-center gap-1.5 ml-3">
             <span className="text-[11px] text-slate-400">Rows per page:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="h-7 text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              {pageSizeOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
+            <AdminSearchableSelect
+              value={String(pageSize)}
+              placement="top"
+              searchable={false}
+              className="w-auto min-w-[70px]"
+              triggerClassName="py-1 px-2 text-xs"
+              onChange={(val) => onPageSizeChange(Number(val))}
+              options={pageSizeOptions.map((opt) => ({ value: String(opt), label: String(opt) }))}
+            />
           </div>
         )}
       </div>
@@ -1478,16 +1477,17 @@ export default function AdminProfilePage() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700">Preferred Timezone</label>
-                  <select
+                  <AdminSearchableSelect
                     value={profile.timezone}
-                    onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  >
-                    <option value="UTC+07:00 (Bangkok, Hanoi, Jakarta)">UTC+07:00 (Bangkok, Hanoi, Jakarta)</option>
-                    <option value="UTC+00:00 (London, GMT)">UTC+00:00 (London, GMT)</option>
-                    <option value="UTC-05:00 (New York, Eastern Time)">UTC-05:00 (New York, Eastern Time)</option>
-                    <option value="UTC-08:00 (San Francisco, Pacific Time)">UTC-08:00 (San Francisco, Pacific Time)</option>
-                  </select>
+                    onChange={(val) => setProfile({ ...profile, timezone: val })}
+                    searchPlaceholder="Search timezone..."
+                    options={[
+                      { value: 'UTC+07:00 (Bangkok, Hanoi, Jakarta)', label: 'UTC+07:00 (Bangkok, Hanoi, Jakarta)' },
+                      { value: 'UTC+00:00 (London, GMT)', label: 'UTC+00:00 (London, GMT)' },
+                      { value: 'UTC-05:00 (New York, Eastern Time)', label: 'UTC-05:00 (New York, Eastern Time)' },
+                      { value: 'UTC-08:00 (San Francisco, Pacific Time)', label: 'UTC-08:00 (San Francisco, Pacific Time)' },
+                    ]}
+                  />
                 </div>
 
                 {/* Editorial Bio */}
@@ -1949,23 +1949,23 @@ export default function AdminProfilePage() {
                 {/* Event Type Filter Dropdown */}
                 <div className="flex items-center gap-2 shrink-0">
                   <Filter size={14} className="text-slate-400 hidden sm:block" />
-                  <select
+                  <AdminSearchableSelect
                     value={auditTypeFilter}
-                    onChange={(e) => {
-                      const selected = e.target.value;
+                    className="min-w-[180px]"
+                    onChange={(selected) => {
                       setAuditTypeFilter(selected);
                       setAuditPage(1);
                       loadAuditLogs(selected, auditSearchQuery);
                     }}
-                    className="h-8 text-xs bg-white border border-slate-200 rounded-xl px-3 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value="ALL">All Event Types</option>
-                    <option value="LOGIN">Sign-Ins &amp; Authentication</option>
-                    <option value="2FA">2FA &amp; Recovery Codes</option>
-                    <option value="PASSWORD">Password Modifications</option>
-                    <option value="PROFILE">Profile &amp; Details Updates</option>
-                    <option value="RBAC">Roles &amp; Permissions</option>
-                  </select>
+                    options={[
+                      { value: 'ALL', label: 'All Event Types' },
+                      { value: 'LOGIN', label: 'Sign-Ins & Authentication' },
+                      { value: '2FA', label: '2FA & Recovery Codes' },
+                      { value: 'PASSWORD', label: 'Password Modifications' },
+                      { value: 'PROFILE', label: 'Profile & Details Updates' },
+                      { value: 'RBAC', label: 'Roles & Permissions' },
+                    ]}
+                  />
                 </div>
               </div>
 

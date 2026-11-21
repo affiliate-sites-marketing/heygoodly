@@ -6,6 +6,7 @@ import com.heygoodly.portal.common.constant.MessageConstants;
 import com.heygoodly.portal.common.constant.PermissionConstants;
 import com.heygoodly.portal.common.dto.ApiResponse;
 import com.heygoodly.portal.common.dto.PageResponse;
+import com.heygoodly.portal.common.dto.ReorderRequest;
 import com.heygoodly.portal.common.util.PaginationUtils;
 import com.heygoodly.portal.modules.page.dto.request.PageAdminQueryCriteria;
 import com.heygoodly.portal.modules.page.dto.request.PageRequest;
@@ -21,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -72,5 +74,12 @@ public class PageAdminController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable("id") Long id) {
         pageService.deletePage(id);
         return ResponseEntity.ok(ApiResponse.success(null, MessageConstants.DELETED_SUCCESS));
+    }
+
+    @PatchMapping("/reorder")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.PAGE_UPDATE + "') or hasAuthority('" + RoleCode.ROLE_SUPER_ADMIN + "')")
+    public ResponseEntity<ApiResponse<Void>> reorder(@Valid @RequestBody ReorderRequest request) {
+        pageService.reorderPages(request.orderedIds());
+        return ResponseEntity.ok(ApiResponse.success(null, MessageConstants.UPDATED_SUCCESS));
     }
 }

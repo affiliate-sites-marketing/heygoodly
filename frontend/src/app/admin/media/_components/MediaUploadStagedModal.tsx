@@ -2,6 +2,7 @@
 
 import { Tag, X, Loader2, Check } from 'lucide-react';
 import MediaTagInput from '@/components/admin/MediaTagInput';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { useAdminI18n } from '@/context/AdminI18nContext';
 
 interface MediaUploadStagedModalProps {
@@ -72,19 +73,21 @@ export default function MediaUploadStagedModal({
               {Math.round(stagedFile.size / 1024)} KB • {stagedFile.name.split('.').pop()?.toUpperCase()}
             </p>
             <div className="flex items-center gap-1.5 pt-0.5">
-              <span className="text-[10px] font-bold text-slate-500">{t('Folder:')}</span>
-              <select
+              <span className="text-[10px] font-bold text-slate-500 shrink-0">{t('Folder:')}</span>
+              <AdminSearchableSelect
                 value={uploadFolder}
-                onChange={(e) =>
-                  onFolderChange(e.target.value as 'stores' | 'articles' | 'banners' | 'icons')
+                onChange={(val) =>
+                  onFolderChange(val as 'stores' | 'articles' | 'banners' | 'icons')
                 }
-                className="text-[11px] font-bold bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-slate-700 focus:outline-none cursor-pointer"
-              >
-                <option value="articles">{t('Articles (articles)')}</option>
-                <option value="stores">{t('Stores (stores)')}</option>
-                <option value="banners">{t('Banners (banners)')}</option>
-                <option value="icons">{t('Icons / Logos (icons)')}</option>
-              </select>
+                className="max-w-[200px]"
+                triggerClassName="py-1 px-2 text-[11px]"
+                options={[
+                  { value: 'articles', label: 'Articles (articles)' },
+                  { value: 'stores', label: 'Stores (stores)' },
+                  { value: 'banners', label: 'Banners (banners)' },
+                  { value: 'icons', label: 'Icons / Logos (icons)' },
+                ]}
+              />
             </div>
           </div>
         </div>

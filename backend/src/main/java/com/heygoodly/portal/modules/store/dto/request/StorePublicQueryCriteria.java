@@ -13,9 +13,13 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
 public class StorePublicQueryCriteria extends BasePaginationCriteria {
+    public StorePublicQueryCriteria() {
+        setSortBy("sortOrder");
+        setDirection("asc");
+    }
+
     private String search;
     private String letter;
     private String category;

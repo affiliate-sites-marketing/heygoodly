@@ -9,6 +9,7 @@ interface PositionReorderCellProps {
   total: number;
   canReorder?: boolean;
   disabled?: boolean;
+  disabledReason?: string;
   onMove: (delta: -1 | 1) => void;
 }
 
@@ -22,6 +23,7 @@ export default function PositionReorderCell({
   total,
   canReorder = true,
   disabled = false,
+  disabledReason = 'Sort by Display Order to reorder',
   onMove,
 }: PositionReorderCellProps) {
   const isPinned = typeof sortOrder === 'number' && sortOrder > 0 && sortOrder < 9999;
@@ -34,7 +36,7 @@ export default function PositionReorderCell({
             ? 'bg-red-50 text-brand-primary border border-red-200'
             : 'bg-slate-100 text-slate-500 border border-slate-200'
         }`}
-        title={isPinned ? `Pinned at position #${sortOrder}` : 'Auto (default order 9999)'}
+        title={isPinned ? `Pinned at position #${sortOrder} in store` : 'Auto (default order 9999)'}
       >
         {isPinned ? `#${sortOrder}` : 'Auto'}
       </span>
@@ -44,7 +46,7 @@ export default function PositionReorderCell({
           type="button"
           onClick={() => onMove(-1)}
           disabled={disabled || !canReorder || index <= 0}
-          title={canReorder ? 'Move up' : 'Sort by Display Order to reorder'}
+          title={canReorder ? 'Move up' : disabledReason}
           className="p-1 text-slate-500 hover:text-brand-primary hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
         >
           <ArrowUp size={12} />
@@ -53,7 +55,7 @@ export default function PositionReorderCell({
           type="button"
           onClick={() => onMove(1)}
           disabled={disabled || !canReorder || index >= total - 1}
-          title={canReorder ? 'Move down' : 'Sort by Display Order to reorder'}
+          title={canReorder ? 'Move down' : disabledReason}
           className="p-1 text-slate-500 hover:text-brand-primary hover:bg-slate-50 border-l border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
         >
           <ArrowDown size={12} />

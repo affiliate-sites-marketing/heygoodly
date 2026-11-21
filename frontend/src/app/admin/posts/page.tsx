@@ -19,14 +19,16 @@ import {
   ExternalLink,
   Award,
   Eye,
+  LayoutGrid,
 } from 'lucide-react';
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
 import AdminActionButton from '@/components/admin/AdminActionButton';
-import PositionReorderCell, { reorderListItems } from '@/components/admin/PositionReorderCell';
-import { adminSelectClass, adminSearchInputClass } from '@/components/admin/adminStyles';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import PostOrderMatrixModal from './_components/PostOrderMatrixModal';
+import { adminSearchInputClass } from '@/components/admin/adminStyles';
 import { ROUTES } from '@/constants/routes';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
@@ -49,7 +51,6 @@ interface PostStats {
 }
 
 const TABLE_COLUMNS = [
-  { label: 'Position' },
   { label: 'Article Headline' },
   { label: 'Category' },
   { label: 'Author' },
@@ -86,8 +87,8 @@ function AdminPostsContent() {
   const [categoryFilter, setCategoryFilter] = useState(catParam || 'ALL');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>('ALL');
-  const [sortBy, setSortBy] = useState<SortBy>('order-asc');
-  const [reordering, setReordering] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>('newest');
+  const [orderMatrixOpen, setOrderMatrixOpen] = useState(false);
 
   // Categories list loaded on-demand per Rule 2
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -158,8 +159,8 @@ function AdminPostsContent() {
       status: undefined,
       active: undefined,
       featured: undefined,
-      sortBy: 'sortOrder',
-      direction: 'asc',
+      sortBy: 'createdAt',
+      direction: 'desc',
     },
     mapItem: (p: any): AdminArticle => {
       const now = Date.now();
@@ -258,54 +259,31 @@ function AdminPostsContent() {
       setParam('sortBy', 'title');
       setParam('direction', 'asc');
     } else {
-      setParam('sortBy', 'id');
+      setParam('sortBy', 'createdAt');
       setParam('direction', 'desc');
     }
   };
 
-  const canReorder =
-    sortBy === 'order-asc' &&
-    search === '' &&
-    categoryFilter === 'ALL' &&
-    statusFilter === 'ALL' &&
-    featuredFilter === 'ALL';
+  const activeNumericCategoryId =
+    categoryFilter !== 'ALL' && !Number.isNaN(Number(categoryFilter))
+      ? Number(categoryFilter)
+      : undefined;
 
-  const handleMove = async (index: number, delta: -1 | 1) => {
-    if (reordering) return;
-    setReordering(true);
-    try {
-      const updated = await reorderListItems(
-        pagedItems,
-        index,
-        delta,
-        API_ENDPOINTS.ADMIN.POSTS_REORDER
-      );
-      if (updated) {
-        setItems(updated.map((item, idx) => ({ ...item, sortOrder: idx + 1 })));
-        toast.success('Updated article display order!');
-      }
-    } catch {
-      toast.error('Failed to update article order');
-    } finally {
-      setReordering(false);
-    }
-  };
-
-  const isFiltered = search !== '' || categoryFilter !== 'ALL' || statusFilter !== 'ALL' || featuredFilter !== 'ALL' || sortBy !== 'order-asc';
+  const isFiltered = search !== '' || categoryFilter !== 'ALL' || statusFilter !== 'ALL' || featuredFilter !== 'ALL' || sortBy !== 'newest';
 
   const handleResetFilters = () => {
     setSearch('');
     setCategoryFilter('ALL');
     setStatusFilter('ALL');
     setFeaturedFilter('ALL');
-    setSortBy('order-asc');
+    setSortBy('newest');
     setParam('search', undefined);
     setParam('categoryId', undefined);
     setParam('status', undefined);
     setParam('active', undefined);
     setParam('featured', undefined);
-    setParam('sortBy', 'sortOrder');
-    setParam('direction', 'asc');
+    setParam('sortBy', 'createdAt');
+    setParam('direction', 'desc');
   };
 
   const handleClone = async (art: AdminArticle) => {
@@ -364,6 +342,16 @@ function AdminPostsContent() {
         badge={`${stats.total || totalItems} Articles Total`}
         description="Author and publish independent product tests, buying guides, and breaking editorial dispatches."
       >
+        {hasPermission('post.update') && (
+          <button
+            type="button"
+            onClick={() => setOrderMatrixOpen(true)}
+            className="h-9 px-3.5 inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-brand-primary/40 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <LayoutGrid size={15} className="text-brand-primary" />
+            <span>Arrange Order</span>
+          </button>
+        )}
         <Link
           href="/posts"
           target="_blank"
@@ -420,34 +408,39 @@ function AdminPostsContent() {
             />
           </div>
 
-          <select
+          <AdminSearchableSelect
             value={categoryFilter}
-            onFocus={loadCategoriesOnDemand}
-            onClick={loadCategoriesOnDemand}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            className={adminSelectClass}
-          >
-            <option value="ALL">All Editorial Categories</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={String(cat.id)}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+            onOpen={loadCategoriesOnDemand}
+            onChange={handleCategoryChange}
+            placeholder="All Editorial Categories"
+            searchPlaceholder="Search category..."
+            options={[
+              { value: 'ALL', label: 'All Editorial Categories' },
+              ...categories.map((cat) => ({ value: String(cat.id), label: cat.name })),
+            ]}
+          />
 
-          <select value={statusFilter} onChange={(e) => handleStatusChange(e.target.value as StatusFilter)} className={adminSelectClass}>
-            <option value="ALL">All Publishing Statuses</option>
-            <option value="PUBLISHED">Published Only</option>
-            <option value="SCHEDULED">Scheduled Only</option>
-            <option value="DRAFT">Drafts Only</option>
-          </select>
+          <AdminSearchableSelect
+            value={statusFilter}
+            onChange={(val) => handleStatusChange(val as StatusFilter)}
+            options={[
+              { value: 'ALL', label: 'All Publishing Statuses' },
+              { value: 'PUBLISHED', label: 'Published Only' },
+              { value: 'SCHEDULED', label: 'Scheduled Only' },
+              { value: 'DRAFT', label: 'Drafts Only' },
+            ]}
+          />
 
-          <select value={sortBy} onChange={(e) => handleSortChange(e.target.value as SortBy)} className={adminSelectClass}>
-            <option value="order-asc">Sort: Display Position (#1, #2...)</option>
-            <option value="newest">Sort: Newly Created</option>
-            <option value="views-desc">Sort: Highest Reader Views</option>
-            <option value="title-asc">Sort: Title (A to Z)</option>
-          </select>
+          <AdminSearchableSelect
+            value={sortBy}
+            onChange={(val) => handleSortChange(val as SortBy)}
+            options={[
+              { value: 'newest', label: 'Sort: Newly Created' },
+              { value: 'order-asc', label: 'Sort: Display Position (#1, #2...)' },
+              { value: 'views-desc', label: 'Sort: Highest Reader Views' },
+              { value: 'title-asc', label: 'Sort: Title (A to Z)' },
+            ]}
+          />
         </div>
 
         {/* Featured filter pill */}
@@ -475,18 +468,8 @@ function AdminPostsContent() {
         rowCount={pagedItems.length}
         emptyMessage="No articles match your current search and filter criteria."
       >
-        {pagedItems.map((art, idx) => (
+        {pagedItems.map((art) => (
           <tr key={art.id} className="hover:bg-slate-50/60 transition-colors group">
-            <td className="py-3.5 px-4 whitespace-nowrap">
-              <PositionReorderCell
-                sortOrder={art.sortOrder}
-                index={idx}
-                total={pagedItems.length}
-                canReorder={canReorder}
-                disabled={reordering}
-                onMove={(delta) => handleMove(idx, delta)}
-              />
-            </td>
             {/* Headline + thumbnail */}
             <td className="py-3.5 px-4 max-w-md">
               <div className="flex items-center gap-3">
@@ -608,6 +591,14 @@ function AdminPostsContent() {
         onPageSizeChange={setPageSize}
         pageSizeOptions={[4, 8, 16, 32]}
         itemName="articles"
+      />
+
+      {/* Article Matrix Drag & Drop Order Modal (by Category) */}
+      <PostOrderMatrixModal
+        isOpen={orderMatrixOpen}
+        onClose={() => setOrderMatrixOpen(false)}
+        initialCategoryId={activeNumericCategoryId}
+        onSaved={refreshPosts}
       />
     </div>
   );

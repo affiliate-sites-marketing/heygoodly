@@ -59,9 +59,11 @@ export function mapBackendStoreToStore(s: any): Store {
   const storeName = String(s.name || '').trim();
   const maxOfferNum = Number(s.maxOffer ?? 0);
   const maxOfferVal = maxOfferNum > 0 ? `Up to ${maxOfferNum}% OFF` : 'Verified Offers';
-  const domain = s.afWebsite
-    ? String(s.afWebsite).replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '')
-    : (s.domain ? String(s.domain) : '');
+  const domain = s.displayDomain
+    ? String(s.displayDomain).trim()
+    : s.afWebsite
+      ? String(s.afWebsite).replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '')
+      : (s.domain ? String(s.domain) : '');
 
   const rawDescription = String(s.aboutStore || s.description || '');
   const rawShort = s.socialDescription || s.metaDescription || s.shortDescription || '';
@@ -175,6 +177,8 @@ class StoreService {
         params: {
           page: 0,
           size: params?.size ?? 50,
+          sortBy: 'sortOrder',
+          direction: 'asc',
           search: params?.search || undefined,
           category:
             params?.category && params.category.toLowerCase() !== 'all'

@@ -21,7 +21,8 @@ import { useToast } from '@/context/ToastContext';
 import { useAdminI18n } from '@/context/AdminI18nContext';
 import { type StaticPageData } from '../_lib/data';
 import RichTextEditor from '@/components/admin/RichTextEditor';
-import { Eye, Edit2, Monitor, Tablet, Smartphone, AlertCircle } from 'lucide-react';
+import AdminDevicePreviewFrame from '@/components/admin/AdminDevicePreviewFrame';
+import { Eye, Edit2, AlertCircle, FileText, ShieldAlert } from 'lucide-react';
 
 interface PageFormState {
   title: string;
@@ -242,10 +243,9 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
             description="Only Page Title (*) and Document Content (*) are required. URL Slug and SEO Meta Title are generated automatically from the Page Title."
           />
           <FormErrorBanner errors={errors} fieldLabels={PAGE_FIELD_LABELS} />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          
-          {/* Main Column (Left - 2 Cols) */}
-          <div className="lg:col-span-2 space-y-6">
+        {/* ROW 1: PAGE DETAILS (2 COLS) + PUBLISHING STATUS (1 COL) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+          <div className="lg:col-span-2">
             <FormSection title="Page Content & Details">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -308,7 +308,29 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
                 </div>
               </div>
             </FormSection>
+          </div>
 
+          <div className="lg:col-span-1">
+            <FormSection title="Publishing Status">
+              <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 block">Published & Active</span>
+                  <span className="text-[11px] text-slate-400">Accessible on live site</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                />
+              </label>
+            </FormSection>
+          </div>
+        </div>
+
+        {/* ROW 2: SEO SETTINGS (2 COLS) + GOOGLE SEARCH PREVIEW (1 COL) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2">
             <FormSection title="Search Engine Optimization (SEO)">
               <div className="space-y-1">
                 <label className={labelClass}>Meta Title</label>
@@ -334,36 +356,7 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
             </FormSection>
           </div>
 
-          {/* Sidebar Column (Right - 1 Col) */}
-          <div className="lg:col-span-1 space-y-6">
-            <FormSection title="Publishing Status">
-              <div className="space-y-4">
-                <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 block">Published & Active</span>
-                    <span className="text-[11px] text-slate-400">Accessible on live site</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={form.isActive}
-                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                  />
-                </label>
-
-                <div className="space-y-1">
-                  <label className={labelClass}>Display Sort Order</label>
-                  <input
-                    type="number"
-                    value={form.sortOrder}
-                    onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 1 })}
-                    className={inputClass}
-                  />
-                  <span className="text-[11px] text-slate-400">Position in footer / legal list</span>
-                </div>
-              </div>
-            </FormSection>
-
+          <div className="lg:col-span-1">
             {/* Google SERP Preview Card */}
             <FormSection title="Google Search Preview">
               <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-1.5 shadow-2xs">
@@ -375,7 +368,7 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
                 <h4 className="text-sm font-semibold text-[#1a0dab] hover:underline cursor-pointer truncate">
                   {form.metaTitle || form.title || 'Page Title'}
                 </h4>
-                <p className="text-xs text-[#4d5156] line-clamp-2 leading-relaxed">
+                <p className="text-xs text-[#4d5156] line-clamp-3 leading-relaxed">
                   {form.metaDescription || 'Read our official legal disclosure, terms of service, and editorial guidelines on HeyGoodly...'}
                 </p>
               </div>
@@ -413,107 +406,52 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
         </div>
       </form>
       ) : (
-        /* LIVE CLIENT STATIC PAGE PREVIEW VIEW */
-        <div className="space-y-6 animate-fadeIn">
-          {/* Preview Toolbar with Device Selector */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-white shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                <Eye size={16} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Client Static Page Preview</h3>
-                <p className="text-[11px] text-slate-400">Page URL: https://{SITE_DOMAIN}/{form.slug || 'about-us'}</p>
-              </div>
-            </div>
+        /* LIVE CLIENT STATIC PAGE PREVIEW (1:1 with StaticPageConfiguredView) */
+        <AdminDevicePreviewFrame
+          title="Client Static Page Preview"
+          urlPath={`/${form.slug || 'about-us'}`}
+        >
+          {(device) => {
+            const isMobile = device === 'mobile';
+            const isTablet = device === 'tablet';
+            const cardRadius = isMobile ? 'rounded-2xl' : 'rounded-3xl';
+            const cardPadding = isMobile ? 'p-5' : isTablet ? 'p-7' : 'p-10';
 
-            <div className="flex items-center gap-1 bg-slate-800/90 p-1 rounded-xl border border-slate-700 text-xs">
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('desktop')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'desktop' ? 'bg-[#2b579a] text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Monitor size={13} />
-                <span>Desktop (1000px)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('tablet')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'tablet' ? 'bg-[#2b579a] text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Tablet size={13} />
-                <span>Tablet (768px)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('mobile')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'mobile' ? 'bg-[#2b579a] text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Smartphone size={13} />
-                <span>Mobile (375px)</span>
-              </button>
-            </div>
-          </div>
+            return (
+              <div className={`bg-slate-50 min-h-full ${isMobile ? 'py-5 px-3.5' : isTablet ? 'py-7 px-5' : 'py-10 px-6'}`}>
+                <div className={`max-w-4xl mx-auto ${isMobile ? 'space-y-4' : 'space-y-6'}`}>
+                  {!form.isActive && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-center gap-2.5 text-xs text-amber-800 font-semibold">
+                      <ShieldAlert size={15} className="shrink-0 text-amber-600" />
+                      <span>This page is currently set to Draft / Unpublished and will show &ldquo;Page Currently Unavailable&rdquo; on the public site.</span>
+                    </div>
+                  )}
 
-          {/* Canvas Wrapper */}
-          <div className="flex justify-center items-start overflow-x-auto py-2">
-            <div
-              className={`transition-all duration-300 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden ${
-                previewDevice === 'desktop'
-                  ? 'w-full max-w-[1000px]'
-                  : previewDevice === 'tablet'
-                  ? 'w-[768px]'
-                  : 'w-[375px] border-4 border-slate-800'
-              }`}
-            >
-              {/* Browser mockup header */}
-              <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                </div>
-                <div className="flex-1 bg-white border border-slate-200 rounded px-2.5 py-0.5 text-[11px] text-slate-500 font-mono truncate">
-                  https://{SITE_DOMAIN}/{form.slug || 'about-us'}
-                </div>
-              </div>
-
-              {/* Page Content */}
-              <div className="p-6 sm:p-12 space-y-6">
-                <div className="space-y-2 border-b border-slate-100 pb-6">
-                  <div className="text-xs text-slate-400 flex items-center gap-1">
-                    <span>Home</span>
-                    <span>/</span>
-                    <span className="text-slate-600 font-semibold">{form.title || 'Page Title'}</span>
+                  {/* Header Card (1:1 with StaticPageConfiguredView) */}
+                  <div className={`bg-white border border-slate-200 ${cardRadius} ${cardPadding} shadow-sm space-y-3`}>
+                    <div className="inline-flex items-center gap-2 text-xs font-bold text-brand-primary bg-brand-primary-soft px-3 py-1 rounded-full uppercase tracking-widest border border-brand-primary-border">
+                      <FileText size={14} /> Official Policy &amp; Information
+                    </div>
+                    <h1 className={`${isMobile ? 'text-2xl' : isTablet ? 'text-3xl' : 'text-4xl'} font-extrabold text-slate-900 tracking-tight font-editorial`}>
+                      {form.title || 'Page Title'}
+                    </h1>
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-500`}>
+                      Last updated: Today
+                    </p>
                   </div>
-                  <h1 className="text-2xl sm:text-4xl font-black text-slate-950 tracking-tight">
-                    {form.title || 'Page Title'}
-                  </h1>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 pt-1">
-                    <span>Last updated: Today</span>
-                    <span>•</span>
-                    <span className={form.isActive ? 'text-emerald-600 font-bold' : 'text-slate-400'}>
-                      {form.isActive ? '✓ Published' : 'Draft'}
-                    </span>
-                  </div>
-                </div>
 
-                <div
-                  className="prose prose-slate max-w-none text-slate-800 leading-relaxed font-sans prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-6 prose-h2:mb-3 prose-p:my-3 prose-p:leading-relaxed prose-a:text-[#2b579a] prose-a:underline"
-                  dangerouslySetInnerHTML={{
-                    __html: form.content || '<p class="text-slate-400 italic">Page content is being updated...</p>',
-                  }}
-                />
+                  {/* Content Card (1:1 with StaticPageConfiguredView) */}
+                  <div
+                    className={`bg-white border border-slate-200 ${cardRadius} ${cardPadding} shadow-sm space-y-4 ${isMobile ? 'text-sm' : 'text-base'} text-slate-700 leading-relaxed prose prose-slate max-w-none`}
+                    dangerouslySetInnerHTML={{
+                      __html: form.content || '<p class="text-slate-400 italic">Page content is being updated...</p>',
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
+            );
+          }}
+        </AdminDevicePreviewFrame>
       )}
     </AdminFormPage>
   );

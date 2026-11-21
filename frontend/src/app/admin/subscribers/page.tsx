@@ -13,6 +13,7 @@ import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
 import AdminActionButton from '@/components/admin/AdminActionButton';
 import UnauthorizedAccess from '@/components/admin/UnauthorizedAccess';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { adminSelectClass, adminSearchInputClass } from '@/components/admin/adminStyles';
 import {
   SUBSCRIBER_SOURCE_LABELS,
@@ -179,25 +180,27 @@ export default function AdminSubscribersPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <select
+            <AdminSearchableSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className={adminSelectClass}
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="unsubscribed">Unsubscribed</option>
-            </select>
+              onChange={(val) => setStatusFilter(val as StatusFilter)}
+              className="min-w-[140px]"
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'active', label: 'Active' },
+                { value: 'unsubscribed', label: 'Unsubscribed' },
+              ]}
+            />
             <ArrowUpDown size={14} className="text-slate-400 shrink-0" />
-            <select
+            <AdminSearchableSelect
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className={adminSelectClass}
-            >
-              <option value="date-desc">Newest First</option>
-              <option value="date-asc">Oldest First</option>
-              <option value="email-asc">Email (A → Z)</option>
-            </select>
+              onChange={(val) => setSortBy(val as SortBy)}
+              className="min-w-[150px]"
+              options={[
+                { value: 'date-desc', label: 'Newest First' },
+                { value: 'date-asc', label: 'Oldest First' },
+                { value: 'email-asc', label: 'Email (A → Z)' },
+              ]}
+            />
           </div>
         </div>
       </AdminFilterBar>

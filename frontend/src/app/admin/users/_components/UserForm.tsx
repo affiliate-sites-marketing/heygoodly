@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import {
   KeyRound,
   RotateCcw,
@@ -671,17 +672,12 @@ function UserFormInner({
 
                 <div className="space-y-1 sm:col-span-2">
                   <label className={labelClass}>Regional Timezone</label>
-                  <select
+                  <AdminSearchableSelect
                     value={form.timezone}
-                    onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                    className={inputClass}
-                  >
-                    {TIMEZONE_OPTIONS.map((tz) => (
-                      <option key={tz} value={tz}>
-                        {tz}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setForm({ ...form, timezone: val })}
+                    searchPlaceholder="Search timezone..."
+                    options={TIMEZONE_OPTIONS.map((tz) => ({ value: tz, label: tz }))}
+                  />
                 </div>
 
                 <div className="sm:col-span-2 pt-1">
@@ -937,353 +933,6 @@ function UserFormInner({
               </div>
             </FormSection>
 
-            {/* 4. Login History & Session Trace (Database-Driven) */}
-            {existing && (
-              <FormSection
-                title="Login History & Session Trace"
-                description="Chronological audit trail of sign-in timestamps, IP addresses, browser devices, and authentication methods recorded directly in PostgreSQL."
-              >
-                <div className="space-y-4">
-                  {/* Top Summary Metrics & Live Trace Trigger */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                    <div className="flex flex-wrap items-center gap-4 text-xs">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Last Sign-In Time
-                        </span>
-                        <span className="font-mono font-bold text-slate-900">{lastLoginAt}</span>
-                      </div>
-                      <div className="h-7 w-px bg-slate-200 hidden sm:block" />
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Last IP & Location
-                        </span>
-                        <span className="font-mono text-slate-700">{lastLoginIp}</span>
-                      </div>
-                      <div className="h-7 w-px bg-slate-200 hidden sm:block" />
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Total Recorded Logins
-                        </span>
-                        <span className="font-bold text-indigo-600">{loginCount} sessions</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingLogin(!isAddingLogin)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold transition cursor-pointer shrink-0"
-                      >
-                        <PlusCircle size={13} />
-                        <span>{isAddingLogin ? 'Close Form' : 'Add Login Record'}</span>
-                      </button>
-                      {loginHistory.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={handleClearAllLogins}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition cursor-pointer shrink-0"
-                        >
-                          <Trash2 size={13} />
-                          <span>Clear All</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Add Login Form Inline */}
-                  {isAddingLogin && (
-                    <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                          <PlusCircle size={14} className="text-indigo-600" />
-                          Record New Login Entry
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsAddingLogin(false)}
-                          className="text-[11px] text-slate-400 hover:text-slate-600"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-600 block mb-1">IP Address</label>
-                          <input
-                            type="text"
-                            value={newLoginIp}
-                            onChange={(e) => setNewLoginIp(e.target.value)}
-                            placeholder="127.0.0.1"
-                            className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-600 block mb-1">Location</label>
-                          <input
-                            type="text"
-                            value={newLoginLocation}
-                            onChange={(e) => setNewLoginLocation(e.target.value)}
-                            placeholder="Ho Chi Minh City, VN"
-                            className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-600 block mb-1">Device / OS</label>
-                          <input
-                            type="text"
-                            value={newLoginDevice}
-                            onChange={(e) => setNewLoginDevice(e.target.value)}
-                            placeholder="Chrome 130 • macOS"
-                            className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-600 block mb-1">Auth Method</label>
-                          <select
-                            value={newLoginAuthMethod}
-                            onChange={(e) => setNewLoginAuthMethod(e.target.value)}
-                            className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5"
-                          >
-                            <option value="Password">Password</option>
-                            <option value="2FA (TOTP)">2FA (TOTP)</option>
-                            <option value="API Key">API Key</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-600 block mb-1">Status</label>
-                          <select
-                            value={newLoginStatus}
-                            onChange={(e) => setNewLoginStatus(e.target.value)}
-                            className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5"
-                          >
-                            <option value="Success">Success</option>
-                            <option value="Failed">Failed</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex justify-end pt-1">
-                        <button
-                          type="button"
-                          onClick={handleCreateLoginRecord}
-                          className="px-4 py-1.5 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold shadow-xs transition cursor-pointer"
-                        >
-                          Save Record
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Chronological Login Timeline Table */}
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                          <tr>
-                            <th className="py-2.5 px-3.5">Login Timestamp</th>
-                            <th className="py-2.5 px-3.5">Device & Browser</th>
-                            <th className="py-2.5 px-3.5">IP & Location</th>
-                            <th className="py-2.5 px-3.5">Auth Method</th>
-                            <th className="py-2.5 px-3.5">Status</th>
-                            <th className="py-2.5 px-3.5 text-right w-24">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {loginLoading ? (
-                            <tr>
-                              <td colSpan={6} className="py-8 text-center text-slate-400">
-                                <div className="flex items-center justify-center gap-2">
-                                  <Loader2 size={16} className="animate-spin text-indigo-600" />
-                                  <span>Loading records from database...</span>
-                                </div>
-                              </td>
-                            </tr>
-                          ) : pagedLoginHistory.length === 0 ? (
-                            <tr>
-                              <td colSpan={6} className="py-6 text-center text-slate-400">
-                                No login sessions recorded for this user yet.
-                              </td>
-                            </tr>
-                          ) : (
-                            pagedLoginHistory.map((item, idx) => {
-                              const isLatest = (safeTracePage - 1) * tracePageSize + idx === 0;
-                              const isEditing = editingLoginId === item.id;
-
-                              if (isEditing) {
-                                return (
-                                  <tr key={item.id} className="bg-indigo-50/60">
-                                    <td className="py-2.5 px-3.5 font-mono text-slate-600">
-                                      {item.timestamp}
-                                    </td>
-                                    <td className="py-2.5 px-3.5">
-                                      <input
-                                        type="text"
-                                        value={editLoginDevice}
-                                        onChange={(e) => setEditLoginDevice(e.target.value)}
-                                        className="w-full text-xs bg-white border border-slate-300 rounded px-2 py-1"
-                                      />
-                                    </td>
-                                    <td className="py-2.5 px-3.5 space-y-1">
-                                      <input
-                                        type="text"
-                                        value={editLoginIp}
-                                        onChange={(e) => setEditLoginIp(e.target.value)}
-                                        className="w-full text-xs font-mono bg-white border border-slate-300 rounded px-2 py-1"
-                                        placeholder="IP"
-                                      />
-                                      <input
-                                        type="text"
-                                        value={editLoginLocation}
-                                        onChange={(e) => setEditLoginLocation(e.target.value)}
-                                        className="w-full text-[11px] bg-white border border-slate-300 rounded px-2 py-1"
-                                        placeholder="Location"
-                                      />
-                                    </td>
-                                    <td className="py-2.5 px-3.5">
-                                      <select
-                                        value={editLoginAuthMethod}
-                                        onChange={(e) => setEditLoginAuthMethod(e.target.value)}
-                                        className="text-xs bg-white border border-slate-300 rounded px-2 py-1"
-                                      >
-                                        <option value="Password">Password</option>
-                                        <option value="2FA (TOTP)">2FA (TOTP)</option>
-                                        <option value="API Key">API Key</option>
-                                      </select>
-                                    </td>
-                                    <td className="py-2.5 px-3.5">
-                                      <select
-                                        value={editLoginStatus}
-                                        onChange={(e) => setEditLoginStatus(e.target.value)}
-                                        className="text-xs bg-white border border-slate-300 rounded px-2 py-1"
-                                      >
-                                        <option value="Success">Success</option>
-                                        <option value="Failed">Failed</option>
-                                      </select>
-                                    </td>
-                                    <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
-                                      <div className="flex items-center justify-end gap-1">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleSaveEditLogin(item.id)}
-                                          className="p-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-                                          title="Save changes"
-                                        >
-                                          <Check size={13} />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => setEditingLoginId(null)}
-                                          className="p-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer"
-                                          title="Cancel"
-                                        >
-                                          <X size={13} />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              }
-
-                              return (
-                                <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                                  <td className="py-3 px-3.5 whitespace-nowrap">
-                                    <div className="flex items-center gap-2">
-                                      <History
-                                        size={13}
-                                        className={isLatest ? 'text-emerald-600' : 'text-slate-400'}
-                                      />
-                                      <span className="font-mono font-semibold text-slate-800">
-                                        {item.timestamp}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-3.5">
-                                    <span className="inline-flex items-center gap-1.5 text-slate-700">
-                                      <Monitor size={12} className="text-slate-400 shrink-0" />
-                                      <span>{item.device}</span>
-                                    </span>
-                                  </td>
-                                  <td className="py-3 px-3.5">
-                                    <div className="font-mono text-[11px] text-slate-800">
-                                      {item.ipAddress}
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 inline-flex items-center gap-1">
-                                      <MapPin size={10} />
-                                      <span>{item.location}</span>
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-3.5 whitespace-nowrap">
-                                    <span
-                                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
-                                        item.authMethod === '2FA (TOTP)'
-                                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                          : 'bg-slate-100 text-slate-600'
-                                      }`}
-                                    >
-                                      {item.authMethod}
-                                    </span>
-                                  </td>
-                                  <td className="py-3 px-3.5 whitespace-nowrap">
-                                    <span
-                                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                        item.status === 'Success'
-                                          ? 'bg-emerald-50 text-emerald-700'
-                                          : 'bg-rose-50 text-rose-700'
-                                      }`}
-                                    >
-                                      {item.status}
-                                    </span>
-                                    {item.duration && (
-                                      <span className="block text-[10px] text-slate-400 mt-0.5 font-mono">
-                                        {item.duration}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="py-3 px-3.5 text-right whitespace-nowrap">
-                                    <div className="flex items-center justify-end gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleStartEditLogin(item)}
-                                        className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-indigo-600 transition cursor-pointer"
-                                        title="Edit login record"
-                                      >
-                                        <Edit2 size={12} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteLoginRecord(item.id)}
-                                        className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 hover:border-rose-300 transition cursor-pointer"
-                                        title="Delete login record"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <Pagination
-                      currentPage={safeTracePage}
-                      totalPages={totalTracePages}
-                      totalItems={loginHistory.length}
-                      pageSize={tracePageSize}
-                      onPageChange={setTracePage}
-                      onPageSizeChange={(newSize) => {
-                        setTracePageSize(newSize);
-                        setTracePage(1);
-                      }}
-                      pageSizeOptions={[3, 5, 10, 20]}
-                      itemName="sessions"
-                    />
-                  </div>
-                </div>
-              </FormSection>
-            )}
           </div>
 
           {/* Sidebar Column (Right - 1 Col) */}
@@ -1403,10 +1052,10 @@ function UserFormInner({
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className={labelClass}>Assigned Role</label>
-                  <select
+                  <AdminSearchableSelect
                     value={form.role}
-                    onChange={(e) => {
-                      const selectedName = e.target.value;
+                    searchPlaceholder="Search role..."
+                    onChange={(selectedName) => {
                       const matched = roles.find((r) => r.name === selectedName);
                       setForm({
                         ...form,
@@ -1414,21 +1063,15 @@ function UserFormInner({
                         roleId: matched ? matched.id : form.roleId,
                       });
                     }}
-                    className={inputClass}
-                  >
-                    {roles.length > 0 ? (
-                      roles.map((r) => (
-                        <option key={r.id} value={r.name}>
-                          {r.name}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="Administrator">Administrator (Full Access)</option>
-                        <option value="Staff">Staff (Editorial CMS)</option>
-                      </>
-                    )}
-                  </select>
+                    options={
+                      roles.length > 0
+                        ? roles.map((r) => ({ value: r.name, label: r.name }))
+                        : [
+                            { value: 'Administrator', label: 'Administrator (Full Access)' },
+                            { value: 'Staff', label: 'Staff (Editorial CMS)' },
+                          ]
+                    }
+                  />
                 </div>
 
                 <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition">
@@ -1489,6 +1132,361 @@ function UserFormInner({
             </FormSection>
           </div>
         </div>
+
+        {/* Full-Width 100% Section: Login History & Session Trace */}
+        {/* 4. Login History & Session Trace (Database-Driven) */}
+        {existing && (
+          <FormSection
+            title="Login History & Session Trace"
+            description="Chronological audit trail of sign-in timestamps, IP addresses, browser devices, and authentication methods recorded directly in PostgreSQL."
+          >
+            <div className="space-y-4">
+              {/* Top Summary Metrics & Live Trace Trigger */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Last Sign-In Time
+                    </span>
+                    <span className="font-mono font-bold text-slate-900">{lastLoginAt}</span>
+                  </div>
+                  <div className="h-7 w-px bg-slate-200 hidden sm:block" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Last IP & Location
+                    </span>
+                    <span className="font-mono text-slate-700">{lastLoginIp}</span>
+                  </div>
+                  <div className="h-7 w-px bg-slate-200 hidden sm:block" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Total Recorded Logins
+                    </span>
+                    <span className="font-bold text-indigo-600">{loginCount} sessions</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingLogin(!isAddingLogin)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold transition cursor-pointer shrink-0"
+                  >
+                    <PlusCircle size={13} />
+                    <span>{isAddingLogin ? 'Close Form' : 'Add Login Record'}</span>
+                  </button>
+                  {loginHistory.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAllLogins}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition cursor-pointer shrink-0"
+                    >
+                      <Trash2 size={13} />
+                      <span>Clear All</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Add Login Form Inline */}
+              {isAddingLogin && (
+                <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                      <PlusCircle size={14} className="text-indigo-600" />
+                      Record New Login Entry
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingLogin(false)}
+                      className="text-[11px] text-slate-400 hover:text-slate-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 block mb-1">IP Address</label>
+                      <input
+                        type="text"
+                        value={newLoginIp}
+                        onChange={(e) => setNewLoginIp(e.target.value)}
+                        placeholder="127.0.0.1"
+                        className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 block mb-1">Location</label>
+                      <input
+                        type="text"
+                        value={newLoginLocation}
+                        onChange={(e) => setNewLoginLocation(e.target.value)}
+                        placeholder="Ho Chi Minh City, VN"
+                        className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 block mb-1">Device / OS</label>
+                      <input
+                        type="text"
+                        value={newLoginDevice}
+                        onChange={(e) => setNewLoginDevice(e.target.value)}
+                        placeholder="Chrome 130 • macOS"
+                        className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 block mb-1">Auth Method</label>
+                      <AdminSearchableSelect
+                        value={newLoginAuthMethod}
+                        onChange={setNewLoginAuthMethod}
+                        triggerClassName="py-1.5 px-2.5 text-xs"
+                        options={[
+                          { value: 'Password', label: 'Password' },
+                          { value: '2FA (TOTP)', label: '2FA (TOTP)' },
+                          { value: 'API Key', label: 'API Key' },
+                        ]}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 block mb-1">Status</label>
+                      <AdminSearchableSelect
+                        value={newLoginStatus}
+                        onChange={setNewLoginStatus}
+                        triggerClassName="py-1.5 px-2.5 text-xs"
+                        options={[
+                          { value: 'Success', label: 'Success' },
+                          { value: 'Failed', label: 'Failed' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={handleCreateLoginRecord}
+                      className="px-4 py-1.5 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                    >
+                      Save Record
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Chronological Login Timeline Table */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                      <tr>
+                        <th className="py-2.5 px-3.5">Login Timestamp</th>
+                        <th className="py-2.5 px-3.5">Device & Browser</th>
+                        <th className="py-2.5 px-3.5">IP & Location</th>
+                        <th className="py-2.5 px-3.5">Auth Method</th>
+                        <th className="py-2.5 px-3.5">Status</th>
+                        <th className="py-2.5 px-3.5 text-right w-24">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {loginLoading ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-slate-400">
+                            <div className="flex items-center justify-center gap-2">
+                              <Loader2 size={16} className="animate-spin text-indigo-600" />
+                              <span>Loading records from database...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : pagedLoginHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-6 text-center text-slate-400">
+                            No login sessions recorded for this user yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        pagedLoginHistory.map((item, idx) => {
+                          const isLatest = (safeTracePage - 1) * tracePageSize + idx === 0;
+                          const isEditing = editingLoginId === item.id;
+
+                          if (isEditing) {
+                            return (
+                              <tr key={item.id} className="bg-indigo-50/60">
+                                <td className="py-2.5 px-3.5 font-mono text-slate-600">
+                                  {item.timestamp}
+                                </td>
+                                <td className="py-2.5 px-3.5">
+                                  <input
+                                    type="text"
+                                    value={editLoginDevice}
+                                    onChange={(e) => setEditLoginDevice(e.target.value)}
+                                    className="w-full text-xs bg-white border border-slate-300 rounded px-2 py-1"
+                                  />
+                                </td>
+                                <td className="py-2.5 px-3.5 space-y-1">
+                                  <input
+                                    type="text"
+                                    value={editLoginIp}
+                                    onChange={(e) => setEditLoginIp(e.target.value)}
+                                    className="w-full text-xs font-mono bg-white border border-slate-300 rounded px-2 py-1"
+                                    placeholder="IP"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={editLoginLocation}
+                                    onChange={(e) => setEditLoginLocation(e.target.value)}
+                                    className="w-full text-[11px] bg-white border border-slate-300 rounded px-2 py-1"
+                                    placeholder="Location"
+                                  />
+                                </td>
+                                <td className="py-2.5 px-3.5">
+                                  <AdminSearchableSelect
+                                    value={editLoginAuthMethod}
+                                    onChange={setEditLoginAuthMethod}
+                                    className="min-w-[120px]"
+                                    triggerClassName="py-1 px-2 text-xs"
+                                    options={[
+                                      { value: 'Password', label: 'Password' },
+                                      { value: '2FA (TOTP)', label: '2FA (TOTP)' },
+                                      { value: 'API Key', label: 'API Key' },
+                                    ]}
+                                  />
+                                </td>
+                                <td className="py-2.5 px-3.5">
+                                  <AdminSearchableSelect
+                                    value={editLoginStatus}
+                                    onChange={setEditLoginStatus}
+                                    className="min-w-[100px]"
+                                    triggerClassName="py-1 px-2 text-xs"
+                                    options={[
+                                      { value: 'Success', label: 'Success' },
+                                      { value: 'Failed', label: 'Failed' },
+                                    ]}
+                                  />
+                                </td>
+                                <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveEditLogin(item.id)}
+                                      className="p-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                                      title="Save changes"
+                                    >
+                                      <Check size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingLoginId(null)}
+                                      className="p-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer"
+                                      title="Cancel"
+                                    >
+                                      <X size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return (
+                            <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-3 px-3.5 whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <History
+                                    size={13}
+                                    className={isLatest ? 'text-emerald-600' : 'text-slate-400'}
+                                  />
+                                  <span className="font-mono font-semibold text-slate-800">
+                                    {item.timestamp}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3.5">
+                                <span className="inline-flex items-center gap-1.5 text-slate-700">
+                                  <Monitor size={12} className="text-slate-400 shrink-0" />
+                                  <span>{item.device}</span>
+                                </span>
+                              </td>
+                              <td className="py-3 px-3.5">
+                                <div className="font-mono text-[11px] text-slate-800">
+                                  {item.ipAddress}
+                                </div>
+                                <div className="text-[10px] text-slate-400 inline-flex items-center gap-1">
+                                  <MapPin size={10} />
+                                  <span>{item.location}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3.5 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    item.authMethod === '2FA (TOTP)'
+                                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                      : 'bg-slate-100 text-slate-600'
+                                  }`}
+                                >
+                                  {item.authMethod}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3.5 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    item.status === 'Success'
+                                      ? 'bg-emerald-50 text-emerald-700'
+                                      : 'bg-rose-50 text-rose-700'
+                                  }`}
+                                >
+                                  {item.status}
+                                </span>
+                                {item.duration && (
+                                  <span className="block text-[10px] text-slate-400 mt-0.5 font-mono">
+                                    {item.duration}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditLogin(item)}
+                                    className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-indigo-600 transition cursor-pointer"
+                                    title="Edit login record"
+                                  >
+                                    <Edit2 size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteLoginRecord(item.id)}
+                                    className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 hover:border-rose-300 transition cursor-pointer"
+                                    title="Delete login record"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <Pagination
+                  currentPage={safeTracePage}
+                  totalPages={totalTracePages}
+                  totalItems={loginHistory.length}
+                  pageSize={tracePageSize}
+                  onPageChange={setTracePage}
+                  onPageSizeChange={(newSize) => {
+                    setTracePageSize(newSize);
+                    setTracePage(1);
+                  }}
+                  pageSizeOptions={[3, 5, 10, 20]}
+                  itemName="sessions"
+                />
+              </div>
+            </div>
+          </FormSection>
+        )}
       </form>
     </AdminFormPage>
   );

@@ -15,11 +15,6 @@ interface StaticPageTableRowProps {
 export default function StaticPageTableRow({ page: p, onDelete }: StaticPageTableRowProps) {
   return (
     <tr className="hover:bg-slate-50/60 transition-colors">
-      <td className="py-3.5 px-4 font-mono font-bold text-slate-500">
-        <span className="bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-          #{p.sortOrder}
-        </span>
-      </td>
       <td className="py-3.5 px-4">
         <span className="font-bold text-slate-900 text-sm block">
           {p.title}

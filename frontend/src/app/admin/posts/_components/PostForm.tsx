@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SITE_NAME } from '@/constants/site';
 import Image from 'next/image';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import AdminDevicePreviewFrame from '@/components/admin/AdminDevicePreviewFrame';
 import {
   Edit2,
   Eye,
@@ -31,7 +33,6 @@ import {
 import { tagService, type TagItem } from '@/services/tagService';
 import ImageUpload from '@/components/admin/ImageUpload';
 import RichTextEditor from '@/components/admin/RichTextEditor';
-import DisplayPositionPicker from '@/components/admin/DisplayPositionPicker';
 import AdminFormPage, {
   FormErrorBanner,
   FormLoading,
@@ -1087,13 +1088,6 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   </div>
                 )}
 
-                <DisplayPositionPicker
-                  label="Article Display Position"
-                  value={form.sortOrder}
-                  onChange={(nextVal) => setForm({ ...form, sortOrder: nextVal })}
-                  hint="Pick a pinned position in article listings (#1 = top) or Auto."
-                />
-
                 {/* Homepage Placement Toggles */}
                 <div className="space-y-2.5 pt-2 border-t border-slate-100">
                   <label className="flex items-start gap-2 cursor-pointer">
@@ -1174,14 +1168,22 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                 <label className={labelClass}>
                   {t('Editorial Category')} <span className="text-rose-600 font-black">*</span>
                 </label>
-                <select
+                <AdminSearchableSelect
                   data-field="categoryId"
-                  required
-                  value={form.categoryId ?? ''}
-                  onFocus={loadCategoriesOnDemand}
-                  onClick={loadCategoriesOnDemand}
-                  onChange={(e) => {
-                    const val = e.target.value ? Number(e.target.value) : undefined;
+                  value={form.categoryId ? String(form.categoryId) : ''}
+                  onOpen={loadCategoriesOnDemand}
+                  error={Boolean(errors.categoryId)}
+                  placeholder="Select Editorial Category..."
+                  searchPlaceholder="Search category..."
+                  options={[
+                    { value: '', label: 'Select Editorial Category...' },
+                    ...categories.map((cat) => ({
+                      value: String(cat.id),
+                      label: cat.slug === 'other' ? `${cat.name} (Khác)` : cat.name,
+                    })),
+                  ]}
+                  onChange={(raw) => {
+                    const val = raw ? Number(raw) : undefined;
                     const found = categories.find((c) => c.id === val);
                     const nextCategoryName = found ? found.name : '';
                     setForm((prev) => ({
@@ -1193,15 +1195,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     setAutoCategoryTag(nextCategoryName);
                     if (errors.categoryId) setErrors((prev) => ({ ...prev, categoryId: '' }));
                   }}
-                  className={`${inputClass} ${errors.categoryId ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
-                >
-                  <option value="">Select Editorial Category...</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.slug === 'other' ? `${cat.name} (Khác)` : cat.name}
-                    </option>
-                  ))}
-                </select>
+                />
                 {errors.categoryId ? (
                   <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
                     <AlertCircle size={11} /> {errors.categoryId}
@@ -1428,12 +1422,20 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className={labelClass}>Target Partner Store</label>
-                      <select
+                      <AdminSearchableSelect
                         value={form.storeSlug}
-                        onFocus={loadStoresOnDemand}
-                        onClick={loadStoresOnDemand}
-                        onChange={(e) => {
-                          const chosenSlug = e.target.value;
+                        onOpen={loadStoresOnDemand}
+                        placeholder="✨ Auto-detect from title / slug"
+                        searchPlaceholder="Search partner store..."
+                        options={[
+                          { value: '', label: '✨ Auto-detect from title / slug' },
+                          ...stores.map((s) => ({
+                            value: s.slug,
+                            label: s.name,
+                            sublabel: `${s.maxDiscount} • ${s.activeCoupons} codes`,
+                          })),
+                        ]}
+                        onChange={(chosenSlug) => {
                           const matched = stores.find((s) => s.slug === chosenSlug);
                           setForm((prev) => ({
                             ...prev,
@@ -1441,15 +1443,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             storeName: matched ? matched.name : prev.storeName,
                           }));
                         }}
-                        className={inputClass}
-                      >
-                        <option value="">✨ Auto-detect from title / slug</option>
-                        {stores.map((s) => (
-                          <option key={s.id} value={s.slug}>
-                            {s.name} ({s.maxDiscount} • {s.activeCoupons} codes)
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
 
                     <div className="space-y-1">
@@ -1676,177 +1670,193 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
           </div>
         </form>
       ) : (
-        /* LIVE PREVIEW TAB */
-        <div className="bg-[#F8F8F6] border border-slate-200 rounded-2xl p-4 sm:p-8 space-y-6">
-          <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3.5 flex items-center justify-between text-xs text-amber-900">
-            <div className="flex items-center gap-2">
-              <Eye size={16} className="text-amber-700 shrink-0" />
-              <span>
-                <strong>Live Reader Mode:</strong> Simulating reader experience on the public portal (including Right Sidebar).
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setActiveTab('edit')}
-              className="bg-amber-200/80 hover:bg-amber-300 font-bold px-3 py-1 rounded-lg transition cursor-pointer"
-            >
-              Back to Edit
-            </button>
-          </div>
+        /* LIVE PREVIEW TAB (Desktop, iPad & Mobile — 1:1 with /post/[slug]) */
+        <AdminDevicePreviewFrame
+          title="Client Editorial Article Preview"
+          urlPath={`/post/${form.slug || 'article-slug'}`}
+        >
+          {(device) => {
+            const isMobile = device === 'mobile';
+            const isTablet = device === 'tablet';
+            const isDesktop = device === 'desktop';
 
-          <div className="max-w-6xl mx-auto space-y-8">
-            <nav className="flex items-center gap-2 text-xs text-slate-500">
-              <span>Home</span>
-              <ChevronRight size={12} />
-              <span>{form.category}</span>
-              <ChevronRight size={12} />
-              <span className="text-slate-900 font-semibold truncate max-w-sm">
-                {form.title || 'Untitled Article'}
-              </span>
-            </nav>
-
-            <div className="bg-white border border-[#E7E7E5] rounded-2xl p-6 sm:p-10 shadow-2xs space-y-5">
-              <div className="flex flex-wrap items-center gap-2.5 text-xs">
-                <span className="bg-brand-primary text-white font-extrabold text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-2xs">
-                  {form.category}
-                </span>
-                <span className="text-slate-400">•</span>
-                <span className="text-slate-500 flex items-center gap-1 font-semibold">
-                  <Clock size={13} /> {form.readTime}
-                </span>
-                <span className="text-slate-400">•</span>
-                <span className="text-slate-500 flex items-center gap-1">
-                  <Calendar size={13} /> Today
-                </span>
-              </div>
-
-              <h1 className="font-editorial text-2xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tight leading-tight">
-                {form.title || 'Your Article Headline Will Appear Here'}
-              </h1>
-
-              <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-3xl">
-                {form.excerpt || 'Write an executive summary of this review or investigative dispatch...'}
-              </p>
-
-              <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 border border-slate-300 relative shrink-0 flex items-center justify-center font-bold text-slate-600">
-                    {form.authorName.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="font-extrabold text-slate-900 text-sm">{form.authorName}</div>
-                    <div className="text-xs text-slate-500">{form.authorRole} • {SITE_NAME} Staff</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-lg">
-                  <ShieldCheck size={14} className="text-emerald-600" />
-                  <span>Editorial Testing &amp; Lab Benchmarks</span>
-                </div>
-              </div>
-            </div>
-
-            {form.imageUrl && (
-              <div className="relative aspect-[21/9] rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-slate-900">
-                <Image
-                  src={form.imageUrl}
-                  alt={form.title}
-                  fill
-                  className="object-cover"
-                  unoptimized={form.imageUrl.startsWith('data:') || form.imageUrl.startsWith('/uploads/')}
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              <div className="lg:col-span-8 space-y-6">
-                <div className="bg-slate-900 text-white rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="space-y-1 text-center sm:text-left">
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#EAB308]">
-                      Independent Evaluation
+            return (
+              <div className={`bg-[#F8F8F6] ${isMobile ? 'p-3.5 space-y-4' : isTablet ? 'p-5 space-y-5' : 'p-8 space-y-6'}`}>
+                <div className="max-w-6xl mx-auto space-y-5">
+                  <nav className="flex items-center gap-1.5 text-xs text-slate-500 min-w-0">
+                    <span className="shrink-0">Home</span>
+                    <ChevronRight size={12} className="shrink-0" />
+                    <span className="shrink-0">{form.category}</span>
+                    <ChevronRight size={12} className="shrink-0" />
+                    <span className="text-slate-900 font-semibold truncate">
+                      {form.title || 'Untitled Article'}
                     </span>
-                    <h4 className="text-base font-bold text-white">{SITE_NAME} Lab Score & Verdict</h4>
-                    <p className="text-xs text-slate-400">
-                      Based on durability benchmarks, pricing accuracy, and hands-on testing.
+                  </nav>
+
+                  <div className={`bg-white border border-[#E7E7E5] rounded-2xl ${isMobile ? 'p-4 space-y-3.5' : isTablet ? 'p-6 space-y-4' : 'p-10 space-y-5'} shadow-2xs`}>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="bg-brand-primary text-white font-extrabold text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-2xs">
+                        {form.category}
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-slate-500 flex items-center gap-1 font-semibold">
+                        <Clock size={13} /> {form.readTime}
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <Calendar size={13} /> Today
+                      </span>
+                    </div>
+
+                    <h1 className={`font-editorial ${isMobile ? 'text-xl' : isTablet ? 'text-3xl' : 'text-4xl'} font-black text-slate-950 tracking-tight leading-tight`}>
+                      {form.title || 'Your Article Headline Will Appear Here'}
+                    </h1>
+
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-600 leading-relaxed max-w-3xl`}>
+                      {form.excerpt || 'Write an executive summary of this review or investigative dispatch...'}
                     </p>
+
+                    <div className={`pt-4 border-t border-slate-100 flex ${isMobile ? 'flex-col items-start gap-3' : 'flex-row items-center justify-between gap-4'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 border border-slate-300 relative shrink-0 flex items-center justify-center font-bold text-slate-600">
+                          {form.authorName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-extrabold text-slate-900 text-sm">{form.authorName}</div>
+                          <div className="text-xs text-slate-500">{form.authorRole} • {SITE_NAME} Staff</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+                        <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                        <span>Editorial Testing &amp; Lab Benchmarks</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl">
-                    <Star size={20} className="fill-amber-400 text-amber-400" />
-                    <span className="text-2xl font-black text-white">{form.rating}</span>
-                    <span className="text-xs text-slate-400">/ 5.0</span>
-                  </div>
-                </div>
+                  {form.imageUrl && (
+                    <div className={`relative ${isMobile ? 'aspect-[16/9]' : 'aspect-[21/9]'} rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-slate-900`}>
+                      <Image
+                        src={form.imageUrl}
+                        alt={form.title}
+                        fill
+                        className="object-cover"
+                        unoptimized={form.imageUrl.startsWith('data:') || form.imageUrl.startsWith('/uploads/')}
+                      />
+                    </div>
+                  )}
 
-                <div className="bg-white border border-[#E7E7E5] rounded-2xl p-6 sm:p-10 shadow-2xs space-y-6">
-                  <div className="w-full">
-                    <div
-                      className="prose prose-slate max-w-none text-slate-800 leading-relaxed font-sans prose-headings:font-bold prose-h2:text-2xl prose-h2:font-editorial prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-xl prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3 prose-p:leading-relaxed prose-a:text-brand-primary prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-brand-primary prose-blockquote:italic prose-blockquote:pl-4 prose-blockquote:my-4 prose-img:rounded-xl prose-ul:list-disc prose-ol:list-decimal"
-                      dangerouslySetInnerHTML={{ __html: form.content }}
-                    />
+                  <div className={isDesktop ? 'grid grid-cols-12 gap-8 items-start' : 'grid grid-cols-1 gap-5 items-start'}>
+                    <div className={isDesktop ? 'col-span-8 space-y-6' : 'space-y-4'}>
+                      <div className={`bg-slate-900 text-white rounded-2xl ${isMobile ? 'p-4 flex-col text-center' : 'p-6 flex-row text-left'} flex items-center justify-between gap-4`}>
+                        <div className="space-y-1">
+                          <span className="text-[10px] uppercase font-bold tracking-widest text-[#EAB308]">
+                            Independent Evaluation
+                          </span>
+                          <h4 className="text-base font-bold text-white">{SITE_NAME} Lab Score &amp; Verdict</h4>
+                          <p className="text-xs text-slate-400">
+                            Based on durability benchmarks, pricing accuracy, and hands-on testing.
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl shrink-0">
+                          <Star size={20} className="fill-amber-400 text-amber-400" />
+                          <span className="text-2xl font-black text-white">{form.rating}</span>
+                          <span className="text-xs text-slate-400">/ 5.0</span>
+                        </div>
+                      </div>
+
+                      <div className={`bg-white border border-[#E7E7E5] rounded-2xl ${isMobile ? 'p-4' : isTablet ? 'p-6' : 'p-10'} shadow-2xs space-y-6`}>
+                        <div className="w-full">
+                          <div
+                            className={`prose prose-slate max-w-none text-slate-800 leading-relaxed font-sans ${isMobile ? 'text-sm' : 'text-base'} prose-headings:font-bold prose-h2:text-2xl prose-h2:font-editorial prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-xl prose-h3:mt-5 prose-h3:mb-2 prose-p:my-3 prose-p:leading-relaxed prose-a:text-brand-primary prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-brand-primary prose-blockquote:italic prose-blockquote:pl-4 prose-blockquote:my-4 prose-img:rounded-xl prose-ul:list-disc prose-ol:list-decimal`}
+                            dangerouslySetInnerHTML={{ __html: form.content }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Sidebar in Live Preview */}
+                    <aside className={isDesktop ? 'col-span-4 space-y-5' : 'space-y-4'}>
+                      {form.showBrandCard && (
+                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 text-center">
+                          <div className="w-16 h-16 rounded-2xl bg-slate-900 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-xs overflow-hidden border border-slate-200">
+                            {selectedStore?.logoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={selectedStore.logoUrl}
+                                alt={previewStoreName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span>{previewStoreName.substring(0, 2).toUpperCase()}</span>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
+                              <Sparkles size={11} /> Brand Deals • Up to {previewStoreDiscount}
+                            </span>
+                            <h4 className="font-black text-lg text-slate-900">{previewStoreName}</h4>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                              {form.brandDescription.trim() ||
+                                selectedStore?.shortDescription ||
+                                `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
+                            </p>
+                          </div>
+                          <div className="w-full py-3 bg-brand-primary text-white font-black text-xs rounded-xl shadow-xs">
+                            {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
+                          </div>
+                        </div>
+                      )}
+
+                      {form.showStoreCoupons && (
+                        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-2.5">
+                          <div className="flex items-center justify-between text-xs font-black text-slate-900">
+                            <span className="flex items-center gap-1.5">
+                              <Tag size={13} className="text-brand-primary" />
+                              Active {previewStoreName} Codes
+                            </span>
+                          </div>
+                          <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+                            <span className="font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
+                              {previewStoreDiscount}
+                            </span>
+                            <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2.5 py-0.5 rounded">
+                              SAVE20
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {form.showGuaranteeCard && (
+                        <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
+                          <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                            <ShieldCheck size={16} />
+                            <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
+                          </div>
+                          <p className="text-xs text-slate-300 leading-relaxed">{form.guaranteeText}</p>
+                          <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
+                            {form.tags
+                              .split(',')
+                              .filter((t) => t.trim())
+                              .map((tag, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-[11px] font-medium bg-slate-800 text-slate-200 px-2.5 py-1 rounded-lg"
+                                >
+                                  #{tag.trim()}
+                                </span>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </aside>
                   </div>
                 </div>
               </div>
-
-              {/* Right Sidebar in Live Preview */}
-              <aside className="lg:col-span-4 space-y-5">
-                {form.showBrandCard && (
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-900 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-xs overflow-hidden border border-slate-200">
-                      {selectedStore?.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={selectedStore.logoUrl}
-                          alt={previewStoreName}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span>{previewStoreName.substring(0, 2).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
-                        <Sparkles size={11} /> Brand Deals • Up to {previewStoreDiscount}
-                      </span>
-                      <h4 className="font-black text-lg text-slate-900">{previewStoreName}</h4>
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        {form.brandDescription.trim() ||
-                          selectedStore?.shortDescription ||
-                          `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
-                      </p>
-                    </div>
-                    <div className="w-full py-3 bg-brand-primary text-white font-black text-xs rounded-xl shadow-xs">
-                      {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
-                    </div>
-                  </div>
-                )}
-
-                {form.showGuaranteeCard && (
-                  <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
-                    <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                      <ShieldCheck size={16} />
-                      <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">{form.guaranteeText}</p>
-                    <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
-                      {form.tags
-                        .split(',')
-                        .filter((t) => t.trim())
-                        .map((tag, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[11px] font-medium bg-slate-800 text-slate-200 px-2.5 py-1 rounded-lg"
-                          >
-                            #{tag.trim()}
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </aside>
-            </div>
-          </div>
-        </div>
+            );
+          }}
+        </AdminDevicePreviewFrame>
       )}
     </AdminFormPage>
   );

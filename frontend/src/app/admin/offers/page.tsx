@@ -14,6 +14,7 @@ import {
   Eye,
   SlidersHorizontal,
   RotateCcw,
+  LayoutGrid,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +24,8 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminActionButton from '@/components/admin/AdminActionButton';
-import PositionReorderCell, { reorderListItems } from '@/components/admin/PositionReorderCell';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import OfferOrderMatrixModal from './_components/OfferOrderMatrixModal';
 import { adminSelectClass } from '@/components/admin/adminStyles';
 import { ROUTES } from '@/constants/routes';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
@@ -89,8 +91,8 @@ function AdminOffersPageContent() {
   const [storeFilter, setStoreFilter] = useState(initialStore);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [sortBy, setSortBy] = useState<SortBy>('order-asc');
-  const [reordering, setReordering] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>(initialStore !== 'ALL' ? 'order-asc' : 'newest');
+  const [orderMatrixOpen, setOrderMatrixOpen] = useState(false);
   const [storeOptions, setStoreOptions] = useState<Array<{ id: number; name: string }>>(() => cachedStoreOptions || []);
 
   const loadStoreOptions = useCallback(async () => {
@@ -119,8 +121,8 @@ function AdminOffersPageContent() {
     initialParams: {
       search: '',
       storeId: initialNumericStoreId,
-      sortBy: 'sortOrder',
-      direction: 'asc',
+      sortBy: initialStore !== 'ALL' ? 'sortOrder' : 'id',
+      direction: initialStore !== 'ALL' ? 'asc' : 'desc',
     },
     mapItem: (o: any): OfferItem => {
       const storeLogo = o.storeLogo || '';
@@ -172,9 +174,15 @@ function AdminOffersPageContent() {
     setStoreFilter(val);
     if (val === 'ALL') {
       setParam('storeId', undefined);
+      setSortBy('newest');
+      setParam('sortBy', 'id');
+      setParam('direction', 'desc');
     } else {
       const storeObj = storeOptions.find((s) => String(s.id) === val || s.name === val);
       setParam('storeId', storeObj ? storeObj.id : undefined);
+      setSortBy('order-asc');
+      setParam('sortBy', 'sortOrder');
+      setParam('direction', 'asc');
     }
     setCurrentPage(1);
   };
@@ -206,43 +214,28 @@ function AdminOffersPageContent() {
     setCurrentPage(1);
   };
 
-  const canReorder = sortBy === 'order-asc' && search === '' && typeFilter === 'ALL' && statusFilter === 'ALL';
+  const isSingleStore = storeFilter !== 'ALL';
+  const activeNumericStoreId = (() => {
+    if (storeFilter === 'ALL') return undefined;
+    if (!Number.isNaN(Number(storeFilter))) return Number(storeFilter);
+    const found = storeOptions.find((s) => s.name.toLowerCase() === storeFilter.toLowerCase());
+    return found?.id;
+  })();
 
-  const handleMove = async (index: number, delta: -1 | 1) => {
-    if (reordering) return;
-    setReordering(true);
-    try {
-      const updated = await reorderListItems(
-        paginatedOffers,
-        index,
-        delta,
-        API_ENDPOINTS.ADMIN.OFFERS_REORDER
-      );
-      if (updated) {
-        setItems(updated.map((item, idx) => ({ ...item, sortOrder: idx + 1 })));
-        toast.success('Updated offer display order!');
-      }
-    } catch {
-      toast.error('Failed to update offer order');
-    } finally {
-      setReordering(false);
-    }
-  };
-
-  const isFiltered = search !== '' || storeFilter !== 'ALL' || typeFilter !== 'ALL' || statusFilter !== 'ALL' || sortBy !== 'order-asc';
+  const isFiltered = search !== '' || storeFilter !== 'ALL' || typeFilter !== 'ALL' || statusFilter !== 'ALL' || sortBy !== 'newest';
 
   const handleResetFilters = () => {
     setSearch('');
     setStoreFilter('ALL');
     setTypeFilter('ALL');
     setStatusFilter('ALL');
-    setSortBy('order-asc');
+    setSortBy('newest');
     setParam('search', undefined);
     setParam('storeId', undefined);
     setParam('type', undefined);
     setParam('verified', undefined);
-    setParam('sortBy', 'sortOrder');
-    setParam('direction', 'asc');
+    setParam('sortBy', 'id');
+    setParam('direction', 'desc');
     setCurrentPage(1);
   };
 
@@ -328,11 +321,23 @@ function AdminOffersPageContent() {
             Manage discount vouchers, promo codes, and merchant affiliate offers.
           </p>
         </div>
-        {hasPermission('offer.create') && (
-          <Link href={ROUTES.ADMIN.OFFER_CREATE}>
-            <Button size="sm"><Plus size={14} /> Create Offer</Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {hasPermission('offer.update') && (
+            <button
+              type="button"
+              onClick={() => setOrderMatrixOpen(true)}
+              className="h-9 px-3.5 inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-brand-primary/40 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <LayoutGrid size={15} className="text-brand-primary" />
+              <span>Arrange Order</span>
+            </button>
+          )}
+          {hasPermission('offer.create') && (
+            <Link href={ROUTES.ADMIN.OFFER_CREATE}>
+              <Button size="sm"><Plus size={14} /> Create Offer</Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -342,28 +347,32 @@ function AdminOffersPageContent() {
             <Input icon={<Search size={15} />} value={search} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Search title, voucher code, store..." />
           </div>
 
-          <select
+          <AdminSearchableSelect
             value={storeFilter}
-            onFocus={loadStoreOptions}
-            onClick={loadStoreOptions}
-            onChange={(e) => handleStoreChange(e.target.value)}
-            className={adminSelectClass.replace('bg-slate-50 border-slate-200', 'bg-zinc-50 border-zinc-200')}
-          >
-            <option value="ALL">All Merchant Stores</option>
-            {storeOptions.map((st) => (
-              <option key={st.id} value={String(st.id)}>
-                {st.name}
-              </option>
-            ))}
-          </select>
+            onOpen={loadStoreOptions}
+            onChange={handleStoreChange}
+            placeholder="All Merchant Stores"
+            searchPlaceholder="Search store..."
+            options={[
+              { value: 'ALL', label: 'All Merchant Stores' },
+              ...storeOptions.map((st) => ({ value: String(st.id), label: st.name })),
+            ]}
+          />
 
-          <select value={sortBy} onChange={(e) => handleSortChange(e.target.value as SortBy)} className={adminSelectClass.replace('bg-slate-50 border-slate-200', 'bg-zinc-50 border-zinc-200')}>
-            <option value="order-asc">Sort: Display Position (#1, #2...)</option>
-            <option value="newest">Sort: Newly Created</option>
-            <option value="uses-desc">Sort: Most Used & Redeemed</option>
-            <option value="discount-desc">Sort: Highest Discount</option>
-            <option value="title-asc">Sort: Title (A to Z)</option>
-          </select>
+          <AdminSearchableSelect
+            value={sortBy}
+            onChange={(val) => handleSortChange(val as SortBy)}
+            searchPlaceholder="Search sort..."
+            options={[
+              { value: 'newest', label: 'Sort: Newly Created' },
+              ...(isSingleStore
+                ? [{ value: 'order-asc', label: 'Sort: Store Display Position (#1, #2...)' }]
+                : []),
+              { value: 'uses-desc', label: 'Sort: Most Used & Redeemed' },
+              { value: 'discount-desc', label: 'Sort: Highest Discount' },
+              { value: 'title-asc', label: 'Sort: Title (A to Z)' },
+            ]}
+          />
         </div>
 
         {/* Bottom filter row */}
@@ -396,7 +405,6 @@ function AdminOffersPageContent() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-28">Position</TableHead>
               <TableHead className="w-16">Image</TableHead>
               <TableHead>Store &amp; Offer</TableHead>
               <TableHead>Voucher Code</TableHead>
@@ -408,23 +416,13 @@ function AdminOffersPageContent() {
           <TableBody>
             {paginatedOffers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-zinc-400">
+                <TableCell colSpan={6} className="text-center py-12 text-zinc-400">
                   No promotional offers or coupons match your current filters.
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedOffers.map((offer, idx) => (
+              paginatedOffers.map((offer) => (
                 <TableRow key={offer.id}>
-                  <TableCell className="whitespace-nowrap">
-                    <PositionReorderCell
-                      sortOrder={offer.sortOrder}
-                      index={idx}
-                      total={paginatedOffers.length}
-                      canReorder={canReorder}
-                      disabled={reordering}
-                      onMove={(delta) => handleMove(idx, delta)}
-                    />
-                  </TableCell>
                   <TableCell className="w-16">
                     <div className="w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 bg-white shrink-0 relative flex items-center justify-center p-1 shadow-2xs">
                       {offer.imageUrl ? (
@@ -482,6 +480,14 @@ function AdminOffersPageContent() {
 
         <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={totalItems} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} pageSizeOptions={[5, 10, 20, 50]} itemName="offers" />
       </Card>
+
+      {/* Offer Matrix Drag & Drop Order Modal (by Store) */}
+      <OfferOrderMatrixModal
+        isOpen={orderMatrixOpen}
+        onClose={() => setOrderMatrixOpen(false)}
+        initialStoreId={activeNumericStoreId}
+        onSaved={refreshOffers}
+      />
     </div>
   );
 }

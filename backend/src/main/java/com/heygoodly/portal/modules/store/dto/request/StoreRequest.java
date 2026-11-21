@@ -64,6 +64,8 @@ public class StoreRequest {
     @Min(value = 0, message = "{validation.store.rating_count.min}")
     private Integer ratingCount;
     private String afWebsite;
+    @Size(max = 255)
+    private String displayDomain;
     private String afStatus;
     private String afPortalUrl;
     private String afAccount;

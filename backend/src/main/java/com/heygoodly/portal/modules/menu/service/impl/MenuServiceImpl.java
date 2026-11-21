@@ -174,4 +174,13 @@ public class MenuServiceImpl implements MenuService {
         auditLogService.recordAction("DELETE", "menus", String.valueOf(id), deletedTitle, null);
         log.info("Successfully deleted menu item id={}", id);
     }
+
+    @Override
+    @Transactional
+    public void reorderMenus(List<Long> orderedIds) {
+        com.heygoodly.portal.common.util.SortOrderUtils.reorderEntities(
+                orderedIds, menuRepository, MenuEntity::getId, MenuEntity::setSortOrder);
+        redisCacheService.evictByPrefix(RedisCacheService.MENUS_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+    }
 }

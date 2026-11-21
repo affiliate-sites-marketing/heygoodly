@@ -10,6 +10,7 @@ interface StoreCustomerReviewsSectionProps {
   reviewCount: number;
   ratingBreakdown?: StoreRatingBreakdown;
   reviews: StoreCustomerReview[];
+  previewDevice?: 'desktop' | 'tablet' | 'mobile';
 }
 
 function computeFallbackBreakdown(reviews: StoreCustomerReview[]): StoreRatingBreakdown {
@@ -63,6 +64,7 @@ export default function StoreCustomerReviewsSection({
   reviewCount,
   ratingBreakdown,
   reviews,
+  previewDevice,
 }: StoreCustomerReviewsSectionProps) {
   const activeReviews = reviews.filter((r) => r.isActive !== false && (r.reviewerName.trim() || r.comment.trim()));
   const [startIndex, setStartIndex] = useState(0);
@@ -102,17 +104,72 @@ export default function StoreCustomerReviewsSection({
     { stars: 1, pct: Math.min(100, Math.max(0, breakdown.oneStar)) },
   ];
 
-  const pageSize = 3;
+  const pageSize = previewDevice === 'mobile' ? 1 : previewDevice === 'tablet' ? 2 : 3;
   const maxStartIndex = Math.max(0, activeReviews.length - pageSize);
   const safeStart = Math.min(startIndex, maxStartIndex);
   const visibleReviews = activeReviews.slice(safeStart, safeStart + pageSize);
 
+  const sectionPadding =
+    previewDevice === 'mobile'
+      ? 'p-4'
+      : previewDevice === 'tablet'
+      ? 'p-5'
+      : previewDevice === 'desktop'
+      ? 'p-6'
+      : 'p-5 sm:p-6';
+
+  const headingSize =
+    previewDevice === 'mobile'
+      ? 'text-base'
+      : previewDevice === 'tablet' || previewDevice === 'desktop'
+      ? 'text-lg'
+      : 'text-base sm:text-lg';
+
+  const mainFlexClass =
+    previewDevice === 'desktop'
+      ? 'flex flex-row gap-6 items-stretch'
+      : previewDevice === 'tablet' || previewDevice === 'mobile'
+      ? 'flex flex-col gap-5 items-stretch'
+      : 'flex flex-col lg:flex-row gap-6 items-stretch';
+
+  const summaryColClass =
+    previewDevice === 'desktop'
+      ? 'w-[210px] shrink-0 flex flex-col justify-between space-y-3'
+      : previewDevice === 'tablet' || previewDevice === 'mobile'
+      ? 'w-full shrink-0 flex flex-col justify-between space-y-3'
+      : 'w-full lg:w-[210px] shrink-0 flex flex-col justify-between space-y-3';
+
+  const summaryAlignClass =
+    previewDevice === 'desktop'
+      ? 'text-left space-y-1.5'
+      : previewDevice === 'tablet' || previewDevice === 'mobile'
+      ? 'text-center space-y-1.5'
+      : 'text-center lg:text-left space-y-1.5';
+
+  const starsAlignClass =
+    previewDevice === 'desktop'
+      ? 'flex items-center justify-start'
+      : previewDevice === 'tablet' || previewDevice === 'mobile'
+      ? 'flex items-center justify-center'
+      : 'flex items-center justify-center lg:justify-start';
+
+  const cardsGridClass =
+    previewDevice === 'mobile'
+      ? 'w-full grid grid-cols-1 gap-3.5'
+      : previewDevice === 'tablet'
+      ? 'w-full grid grid-cols-2 gap-4'
+      : previewDevice === 'desktop'
+      ? 'w-full grid grid-cols-3 gap-4'
+      : 'w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+
+  const showCarouselArrows = previewDevice ? previewDevice !== 'mobile' : true;
+
   return (
     <>
-      <section className="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-2xs space-y-5">
+      <section className={`bg-white border border-slate-200 rounded-xl ${sectionPadding} shadow-2xs space-y-5`}>
         {/* Header Row */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+          <h2 className={`${headingSize} font-black text-slate-900 tracking-tight`}>
             What Shoppers Say About {storeName}
           </h2>
           <button
@@ -126,14 +183,14 @@ export default function StoreCustomerReviewsSection({
         </div>
 
         {/* Main Content: Left Summary + Right Review Cards */}
-        <div className="flex flex-col lg:flex-row gap-6 items-stretch">
+        <div className={mainFlexClass}>
           {/* Left Rating Summary & Breakdown */}
-          <div className="w-full lg:w-[210px] shrink-0 flex flex-col justify-between space-y-3">
-            <div className="text-center lg:text-left space-y-1.5">
-              <div className="text-4xl sm:text-[42px] font-black text-emerald-700 leading-none tracking-tight">
+          <div className={summaryColClass}>
+            <div className={summaryAlignClass}>
+              <div className="text-4xl font-black text-emerald-700 leading-none tracking-tight">
                 {displayRating.toFixed(1)}
               </div>
-              <div className="flex items-center justify-center lg:justify-start">
+              <div className={starsAlignClass}>
                 <ReviewStars rating={Math.round(displayRating)} size={16} />
               </div>
               <p className="text-[11px] font-medium text-slate-500">
@@ -164,7 +221,7 @@ export default function StoreCustomerReviewsSection({
 
           {/* Right Review Cards Carousel */}
           <div className="flex-1 min-w-0 relative flex items-center">
-            {safeStart > 0 && (
+            {showCarouselArrows && safeStart > 0 && (
               <button
                 type="button"
                 onClick={() => setStartIndex((prev) => Math.max(0, prev - 1))}
@@ -175,7 +232,7 @@ export default function StoreCustomerReviewsSection({
               </button>
             )}
 
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className={cardsGridClass}>
               {visibleReviews.map((review, idx) => (
                 <article
                   key={review.id ?? `${review.reviewerName}-${safeStart + idx}`}
@@ -222,7 +279,7 @@ export default function StoreCustomerReviewsSection({
               ))}
             </div>
 
-            {safeStart < maxStartIndex && (
+            {showCarouselArrows && safeStart < maxStartIndex && (
               <button
                 type="button"
                 onClick={() => setStartIndex((prev) => Math.min(maxStartIndex, prev + 1))}

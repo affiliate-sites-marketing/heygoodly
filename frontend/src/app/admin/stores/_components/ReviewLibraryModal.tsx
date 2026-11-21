@@ -23,6 +23,7 @@ import {
   extractBrandToken,
 } from '@/constants/storeTemplates';
 import { storeTemplateService } from '@/services/storeTemplateService';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { useAdminI18n } from '@/context/AdminI18nContext';
 import { useToast } from '@/context/ToastContext';
 import { inputClass } from '@/components/admin/AdminFormPage';
@@ -310,22 +311,22 @@ export default function ReviewLibraryModal({
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
-              <select
+              <AdminSearchableSelect
                 value={formState.category}
-                onChange={(e) =>
+                onChange={(val) =>
                   setFormState((prev) => ({
                     ...prev,
-                    category: e.target.value as ReviewTemplateCategory,
+                    category: val as ReviewTemplateCategory,
                   }))
                 }
-                className={`${inputClass} text-xs`}
-              >
-                <option value="savings">{t('Savings & Codes')}</option>
-                <option value="quality">{t('Quality & Value')}</option>
-                <option value="shipping">{t('Shipping & Service')}</option>
-                <option value="balanced">{t('Balanced 4★')}</option>
-                <option value="custom">{t('Custom')}</option>
-              </select>
+                options={[
+                  { value: 'savings', label: 'Savings & Codes' },
+                  { value: 'quality', label: 'Quality & Value' },
+                  { value: 'shipping', label: 'Shipping & Service' },
+                  { value: 'balanced', label: 'Balanced 4★' },
+                  { value: 'custom', label: 'Custom' },
+                ]}
+              />
               <input
                 type="text"
                 value={formState.title}
@@ -343,17 +344,18 @@ export default function ReviewLibraryModal({
                 placeholder="Reviewer Name * (e.g. Alex T.)"
                 className={`${inputClass} text-xs`}
               />
-              <select
-                value={formState.rating}
-                onChange={(e) =>
-                  setFormState((prev) => ({ ...prev, rating: Number(e.target.value) }))
+              <AdminSearchableSelect
+                value={String(formState.rating)}
+                searchable={false}
+                onChange={(val) =>
+                  setFormState((prev) => ({ ...prev, rating: Number(val) }))
                 }
-                className={`${inputClass} text-xs`}
-              >
-                <option value={5}>5 ★</option>
-                <option value={4}>4 ★</option>
-                <option value={3}>3 ★</option>
-              </select>
+                options={[
+                  { value: '5', label: '5 ★' },
+                  { value: '4', label: '4 ★' },
+                  { value: '3', label: '3 ★' },
+                ]}
+              />
               <input
                 type="text"
                 value={formState.reviewDateLabel}

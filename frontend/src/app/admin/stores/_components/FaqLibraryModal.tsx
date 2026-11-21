@@ -23,6 +23,7 @@ import { storeTemplateService } from '@/services/storeTemplateService';
 import { useAdminI18n } from '@/context/AdminI18nContext';
 import { useToast } from '@/context/ToastContext';
 import { inputClass } from '@/components/admin/AdminFormPage';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 
 interface FaqLibraryModalProps {
   isOpen: boolean;
@@ -291,22 +292,22 @@ export default function FaqLibraryModal({
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <select
+              <AdminSearchableSelect
                 value={formState.category}
-                onChange={(e) =>
+                onChange={(val) =>
                   setFormState((prev) => ({
                     ...prev,
-                    category: e.target.value as FaqTemplateCategory,
+                    category: val as FaqTemplateCategory,
                   }))
                 }
-                className={`${inputClass} text-xs`}
-              >
-                <option value="promo">{t('Promo & Checkout')}</option>
-                <option value="shipping">{t('Shipping')}</option>
-                <option value="returns">{t('Returns & Warranty')}</option>
-                <option value="discounts">{t('Discounts')}</option>
-                <option value="custom">{t('Custom')}</option>
-              </select>
+                options={[
+                  { value: 'promo', label: 'Promo & Checkout' },
+                  { value: 'shipping', label: 'Shipping' },
+                  { value: 'returns', label: 'Returns & Warranty' },
+                  { value: 'discounts', label: 'Discounts' },
+                  { value: 'custom', label: 'Custom' },
+                ]}
+              />
               <input
                 type="text"
                 value={formState.title}

@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ImageUpload from '@/components/admin/ImageUpload';
 import TagInput from '@/components/admin/TagInput';
-import DisplayPositionPicker from '@/components/admin/DisplayPositionPicker';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import AdminDevicePreviewFrame from '@/components/admin/AdminDevicePreviewFrame';
+import GetCodeButton from '@/components/deals/GetCodeButton';
 import AdminFormPage, {
   FormLoading,
   FormNotFound,
@@ -100,9 +102,11 @@ export default function StoreForm({ id }: { id?: string }) {
             id: String(data.id),
             name: data.name,
             slug: data.slug,
-            domain: data.afWebsite
-              ? data.afWebsite.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '')
-              : `${data.slug}.com`,
+            domain: (data as any).displayDomain
+              ? String((data as any).displayDomain)
+              : data.afWebsite
+                ? data.afWebsite.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '')
+                : `${data.slug}.com`,
             logoUrl: data.logo || '',
             bannerUrl: data.socialCardImage || '',
             categoryId: data.categoryId ? Number(data.categoryId) : undefined,
@@ -316,7 +320,13 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
   const { t } = useAdminI18n();
   const [form, setForm] = useState<StoreFormState>(initial);
   const [slugTouched, setSlugTouched] = useState<boolean>(Boolean(existing?.slug));
-  const [domainTouched, setDomainTouched] = useState<boolean>(Boolean(existing?.domain));
+  const [domainTouched, setDomainTouched] = useState<boolean>(
+    Boolean(
+      existing?.domain &&
+      existing?.affiliateUrl &&
+      extractCleanDomain(existing.domain).toLowerCase() !== extractCleanDomain(existing.affiliateUrl).toLowerCase()
+    )
+  );
   const [shortDescTouched, setShortDescTouched] = useState<boolean>(Boolean(existing?.shortDescription?.trim()));
   const [autoBrandTag, setAutoBrandTag] = useState<string>(existing?.name?.trim() || '');
   const [popularSearchesTouched, setPopularSearchesTouched] = useState<boolean>(
@@ -385,7 +395,13 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
         : initial
     );
     setSlugTouched(Boolean(existing?.slug));
-    setDomainTouched(Boolean(existing?.domain));
+    setDomainTouched(
+      Boolean(
+        existing?.domain &&
+        existing?.affiliateUrl &&
+        extractCleanDomain(existing.domain).toLowerCase() !== extractCleanDomain(existing.affiliateUrl).toLowerCase()
+      )
+    );
     setShortDescTouched(Boolean(existing?.shortDescription?.trim()));
     setAutoBrandTag(existing?.name?.trim() || '');
     setPopularSearchesTouched(hasCustomPopularSearches(existing));
@@ -584,6 +600,14 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
       extractSummaryFromReviewHtml(form.description) ||
       null;
 
+    const autoExtractedDomain = extractCleanDomain(resolvedAffiliateUrl);
+    const cleanedInputDomain = form.domain.trim() ? extractCleanDomain(form.domain) : '';
+    const resolvedDisplayDomain =
+      cleanedInputDomain &&
+      (domainTouched || cleanedInputDomain.toLowerCase() !== autoExtractedDomain.toLowerCase())
+        ? cleanedInputDomain
+        : null;
+
     const backendPayload = {
       name: trimmedName,
       slug: cleanSlug,
@@ -593,6 +617,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
       socialDescription: resolvedShortDescription,
       aboutStore: form.description || null,
       afWebsite: resolvedAffiliateUrl || null,
+      displayDomain: resolvedDisplayDomain,
       maxOffer: maxOfferNum,
       ratingScore: ratingVal || 4.8,
       ratingCount: form.reviewsCount ?? (existing?.reviewsCount ?? 0),
@@ -920,7 +945,9 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                   <div className="flex items-center justify-between">
                     <label className={labelClass}>{t('Official Domain (Optional)')}</label>
                     <span className="text-[10px] font-medium text-slate-500">
-                      {t('Auto-extracted')}
+                      {domainTouched && form.domain.trim() && extractCleanDomain(form.domain).toLowerCase() !== extractCleanDomain(form.affiliateUrl).toLowerCase()
+                        ? t('Custom domain')
+                        : t('Auto-extracted')}
                     </span>
                   </div>
                   <input
@@ -962,13 +989,18 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                       {t('Optional')}
                     </span>
                   </div>
-                  <select
+                  <AdminSearchableSelect
                     data-field="categoryId"
-                    value={form.categoryId ?? (categories.find(c => c.name.toLowerCase() === form.category.toLowerCase())?.id || '')}
-                    onFocus={loadCategoriesOnDemand}
-                    onClick={loadCategoriesOnDemand}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    value={String(form.categoryId ?? (categories.find(c => c.name.toLowerCase() === form.category.toLowerCase())?.id || ''))}
+                    onOpen={loadCategoriesOnDemand}
+                    error={Boolean(errors.categoryId)}
+                    placeholder="-- No Category (Optional) --"
+                    searchPlaceholder="Search category..."
+                    options={[
+                      { value: '', label: '-- No Category (Optional) --' },
+                      ...categories.map((c) => ({ value: String(c.id), label: c.name })),
+                    ]}
+                    onChange={(val) => {
                       const catId = val ? Number(val) : undefined;
                       const matched = categories.find((c) => c.id === catId);
                       setForm({
@@ -978,15 +1010,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                       });
                       if (errors.categoryId) setErrors((prev) => ({ ...prev, categoryId: '' }));
                     }}
-                    className={`${inputClass} ${errors.categoryId ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
-                  >
-                    <option value="">{t('-- No Category (Optional) --')}</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {errors.categoryId && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
                       <AlertCircle size={11} /> {errors.categoryId}
@@ -1057,45 +1081,6 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                 </p>
               </div>
             </FormSection>
-
-            <FormSection
-              title="Visual Assets"
-              description="Step 2 (Optional): Upload brand logo and cover banner. If omitted, an automatic brand monogram badge is used."
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1" data-field="logoUrl">
-                  <ImageUpload
-                    value={form.logoUrl}
-                    onChange={(url) => {
-                      setForm({ ...form, logoUrl: url });
-                      if (errors.logoUrl) setErrors((prev) => ({ ...prev, logoUrl: '' }));
-                    }}
-                    folder="store-logos"
-                    label="Store Brand Logo (Optional)"
-                    description="Square logo (PNG or JPG). Recommended 200x200."
-                    aspectRatio="square"
-                    defaultTags={form.name.trim() ? [form.name.trim()] : []}
-                  />
-                  {errors.logoUrl && (
-                    <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
-                      <AlertCircle size={11} /> {errors.logoUrl}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <ImageUpload
-                    value={form.bannerUrl}
-                    onChange={(url) => setForm({ ...form, bannerUrl: url })}
-                    folder="store-banners"
-                    label="Store Banner / Cover (Optional)"
-                    description="Wide banner for store coupon landing page."
-                    aspectRatio="video"
-                    defaultTags={form.name.trim() ? [form.name.trim()] : []}
-                  />
-                </div>
-              </div>
-            </FormSection>
           </div>
 
           {/* Sidebar Column (Right - 1 Col) */}
@@ -1128,13 +1113,6 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                     className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                 </label>
-
-                <DisplayPositionPicker
-                  label="Store Display Position"
-                  value={form.sortOrder}
-                  onChange={(nextVal) => setForm({ ...form, sortOrder: nextVal })}
-                  hint="Pick a pinned position in Stores directory (#1 = top) or Auto."
-                />
               </div>
             </FormSection>
 
@@ -1243,8 +1221,47 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
 
         </div>
 
-        {/* Full-Width 100% Sections: Word Studio Editor, Popular Searches, FAQs */}
+        {/* Full-Width 100% Sections: Visual Assets, Word Studio Editor, Popular Searches, FAQs */}
         <div className="w-full space-y-6">
+          <FormSection
+            title="Visual Assets"
+            description="Step 2 (Optional): Upload brand logo and cover banner. If omitted, an automatic brand monogram badge is used."
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1" data-field="logoUrl">
+                <ImageUpload
+                  value={form.logoUrl}
+                  onChange={(url) => {
+                    setForm({ ...form, logoUrl: url });
+                    if (errors.logoUrl) setErrors((prev) => ({ ...prev, logoUrl: '' }));
+                  }}
+                  folder="store-logos"
+                  label="Store Brand Logo (Optional)"
+                  description="Square logo (PNG or JPG). Recommended 200x200."
+                  aspectRatio="square"
+                  defaultTags={form.name.trim() ? [form.name.trim()] : []}
+                />
+                {errors.logoUrl && (
+                  <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
+                    <AlertCircle size={11} /> {errors.logoUrl}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <ImageUpload
+                  value={form.bannerUrl}
+                  onChange={(url) => setForm({ ...form, bannerUrl: url })}
+                  folder="store-banners"
+                  label="Store Banner / Cover (Optional)"
+                  description="Wide banner for store coupon landing page."
+                  aspectRatio="video"
+                  defaultTags={form.name.trim() ? [form.name.trim()] : []}
+                />
+              </div>
+            </div>
+          </FormSection>
+
           {/* Word Studio Editor */}
           <FormSection
             title="Editorial Overview & Description"
@@ -1731,17 +1748,18 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
 
                         <div className="space-y-1">
                           <label className="text-[11px] font-bold text-slate-700">Star Rating (1 - 5)</label>
-                          <select
-                            value={review.rating}
-                            onChange={(e) => handleUpdateReview(idx, 'rating', Number(e.target.value))}
-                            className={`${inputClass} text-xs`}
-                          >
-                            <option value={5}>5 Stars (★★★★★)</option>
-                            <option value={4}>4 Stars (★★★★☆)</option>
-                            <option value={3}>3 Stars (★★★☆☆)</option>
-                            <option value={2}>2 Stars (★★☆☆☆)</option>
-                            <option value={1}>1 Star (★☆☆☆☆)</option>
-                          </select>
+                          <AdminSearchableSelect
+                            value={String(review.rating)}
+                            searchable={false}
+                            onChange={(val) => handleUpdateReview(idx, 'rating', Number(val))}
+                            options={[
+                              { value: '5', label: '5 Stars (★★★★★)' },
+                              { value: '4', label: '4 Stars (★★★★☆)' },
+                              { value: '3', label: '3 Stars (★★★☆☆)' },
+                              { value: '2', label: '2 Stars (★★☆☆☆)' },
+                              { value: '1', label: '1 Star (★☆☆☆☆)' },
+                            ]}
+                          />
                         </div>
 
                         <div className="space-y-1">
@@ -1811,234 +1829,280 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
         </div>
       </form>
       ) : (
-        /* LIVE CLIENT STORE PAGE PREVIEW VIEW */
-        <div className="space-y-6 animate-fadeIn">
-          {/* Preview Toolbar with Device Selector */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-white shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-brand-primary">
-                <Eye size={16} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Client Store Landing Page Preview</h3>
-                <p className="text-[11px] text-slate-400">URL: https://{SITE_DOMAIN}/stores/{form.slug || 'store-name'}</p>
-              </div>
-            </div>
+        /* LIVE CLIENT STORE PAGE PREVIEW (1:1 with /store/[slug]) */
+        <AdminDevicePreviewFrame
+          title="Client Store Landing Page Preview"
+          urlPath={`/store/${form.slug || 'store-name'}`}
+        >
+          {(device) => {
+            const isDesktop = device === 'desktop';
+            const isMobile = device === 'mobile';
+            const displayStoreName = form.name.trim() || 'Store Name Preview';
+            const displayDesc =
+              form.shortDescription?.trim() ||
+              `Browse verified promo codes and active deals from ${displayStoreName}.`;
+            const previewTags =
+              form.tags && form.tags.length > 0 ? form.tags : [displayStoreName];
+            const previewFaqs =
+              form.faqs.length > 0 ? form.faqs : buildDefaultStoreFaqs(displayStoreName);
+            const previewSearches =
+              parsePopularSearchesText(form.popularSearchesText).length > 0
+                ? parsePopularSearchesText(form.popularSearchesText)
+                : buildDefaultPopularSearches(displayStoreName);
 
-            <div className="flex items-center gap-1 bg-slate-800/90 p-1 rounded-xl border border-slate-700 text-xs">
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('desktop')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'desktop' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Monitor size={13} />
-                <span>Desktop (1000px)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('tablet')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'tablet' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Tablet size={13} />
-                <span>Tablet (768px)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('mobile')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'mobile' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Smartphone size={13} />
-                <span>Mobile (375px)</span>
-              </button>
-            </div>
-          </div>
+            return (
+              <div className={isMobile ? 'p-3 space-y-3.5' : 'p-5 sm:p-6 space-y-5 max-w-6xl mx-auto'}>
+                {/* Breadcrumb */}
+                <nav className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                  <span>Home</span>
+                  <span>›</span>
+                  <span>Stores</span>
+                  <span>›</span>
+                  <span className="text-slate-800 font-semibold truncate">{displayStoreName} Coupons</span>
+                </nav>
 
-          {/* Canvas Wrapper */}
-          <div className="flex justify-center items-start overflow-x-auto py-2">
-            <div
-              className={`transition-all duration-300 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden ${
-                previewDevice === 'desktop'
-                  ? 'w-full max-w-[1000px]'
-                  : previewDevice === 'tablet'
-                  ? 'w-[768px]'
-                  : 'w-[375px] border-4 border-slate-800'
-              }`}
-            >
-              {/* Browser mockup header */}
-              <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                </div>
-                <div className="flex-1 bg-white border border-slate-200 rounded px-2.5 py-0.5 text-[11px] text-slate-500 font-mono truncate">
-                  https://{SITE_DOMAIN}/stores/{form.slug || 'store-name'}
-                </div>
-              </div>
+                {/* Main Layout: Desktop 12-col (4 sticky left + 8 right), iPad/Mobile stacked */}
+                <div className={isDesktop ? 'grid grid-cols-12 gap-5 items-start' : 'space-y-4'}>
+                  {/* LEFT SIDEBAR: Store Brand Card + Active Offers Stats */}
+                  <aside className={isDesktop ? 'col-span-4 space-y-4' : 'space-y-3'}>
+                    <div className={`bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs ${isDesktop ? 'text-center' : 'text-left'}`}>
+                      {form.bannerUrl && isDesktop && (
+                        <div className="w-full h-24 overflow-hidden relative bg-slate-900">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={form.bannerUrl}
+                            alt={`${displayStoreName} banner`}
+                            className="w-full h-full object-cover opacity-90"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                        </div>
+                      )}
 
-              {/* Store Header Banner */}
-              <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 p-6 sm:p-8 text-white relative">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-                  <div className="w-20 h-20 rounded-2xl bg-white p-2 shadow-lg flex items-center justify-center shrink-0 border border-slate-200">
-                    {form.logoUrl ? (
-                      <img src={form.logoUrl} alt={form.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <span className="text-2xl font-black text-slate-400">{form.name?.[0] || 'S'}</span>
+                      <div className={`${isDesktop ? 'p-5' : 'p-3.5'} ${form.bannerUrl && isDesktop ? '-mt-11 pt-0 relative z-10' : ''} space-y-3`}>
+                        <div className={isDesktop ? 'space-y-2.5' : 'flex items-center gap-3'}>
+                          <div
+                            className={`${
+                              isDesktop ? 'w-20 h-20 mx-auto rounded-2xl' : 'w-12 h-12 rounded-xl'
+                            } overflow-hidden flex items-center justify-center shadow-md border-2 border-white bg-slate-900 text-white shrink-0`}
+                          >
+                            {form.logoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={form.logoUrl} alt={displayStoreName} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className={`font-black ${isDesktop ? 'text-2xl' : 'text-sm'}`}>
+                                {displayStoreName.substring(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <h1 className={`font-black text-slate-950 ${isDesktop ? 'text-lg' : 'text-base truncate'}`}>
+                              {displayStoreName}
+                            </h1>
+                            <div className={`flex items-center ${isDesktop ? 'justify-center' : 'justify-start'} gap-1 text-[11px] text-slate-500`}>
+                              <span className="text-amber-400">★</span>
+                              <span className="font-bold text-slate-800">{Number(form.rating || 4.8).toFixed(1)}</span>
+                              <span>/ {(form.reviewsCount ?? 0).toLocaleString()} ratings</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className={`text-xs text-slate-500 leading-relaxed line-clamp-3 pt-2 border-t border-slate-100 ${isDesktop ? 'text-center' : 'text-left'}`}>
+                          {displayDesc}
+                        </p>
+
+                        {previewTags.length > 0 && (
+                          <div className={`flex flex-wrap gap-1.5 ${isDesktop ? 'justify-center' : 'justify-start'}`}>
+                            {previewTags.slice(0, 6).map((tag, i) => (
+                              <span
+                                key={i}
+                                className="px-2 py-0.5 rounded-full text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200/80"
+                              >
+                                #{tag.replace(/^#+/, '')}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className={isDesktop ? 'flex flex-col gap-2 pt-1' : 'grid grid-cols-2 gap-2 pt-1'}>
+                          <span className="w-full py-2 px-3 bg-slate-900 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 truncate">
+                            <span className="truncate">Visit Official {displayStoreName}</span>
+                            <ExternalLink size={12} className="shrink-0" />
+                          </span>
+                          <span className="w-full py-2 px-3 rounded-lg border border-brand-primary text-brand-primary font-bold text-[11px] flex items-center justify-center gap-1.5 truncate">
+                            <span>Get Coupon Alert</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {isDesktop && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-2 text-xs">
+                        <h4 className="font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider text-[11px]">
+                          2 Active Offers
+                        </h4>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Coupon Codes:</span>
+                          <span className="font-bold text-slate-900">2</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Best Offer:</span>
+                          <span className="font-black text-brand-primary">{form.maxDiscount || 'Up to 50% OFF'}</span>
+                        </div>
+                      </div>
+                    )}
+                  </aside>
+
+                  {/* RIGHT STREAM: Filter Bar + Sample Offers + Trust Strip + About + FAQs + Popular Searches */}
+                  <div className={isDesktop ? 'col-span-8 space-y-4' : 'space-y-3.5'}>
+                    {/* Filter Tabs */}
+                    <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-xl p-1.5 shadow-2xs">
+                      <div className="flex items-center gap-1">
+                        <span className="px-3 py-1.5 rounded-lg font-bold text-[11px] bg-brand-primary text-white">All (2)</span>
+                        <span className="px-3 py-1.5 rounded-lg font-bold text-[11px] text-slate-600">Codes (2)</span>
+                        <span className="px-3 py-1.5 rounded-lg font-bold text-[11px] text-slate-600">Deals (0)</span>
+                      </div>
+                      {!isMobile && (
+                        <span className="flex items-center gap-1 pr-2 text-[11px] font-semibold text-emerald-700">
+                          <ShieldCheck size={13} className="text-emerald-600" />
+                          <span>Hand-tested &amp; verified</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Sample #1 Top Offer Card */}
+                    <div className={`bg-white border-2 border-emerald-500/45 rounded-xl p-4 shadow-sm flex ${isMobile ? 'flex-col gap-3' : 'flex-row items-center justify-between gap-4'}`}>
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="w-11 h-11 rounded-xl border border-slate-200 bg-white p-1 flex items-center justify-center shrink-0">
+                          {form.logoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={form.logoUrl} alt={displayStoreName} className="w-full h-full object-contain" />
+                          ) : (
+                            <span className="font-black text-xs text-slate-700">{displayStoreName.substring(0, 2).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <h3 className="text-sm font-black text-slate-900 leading-snug">
+                            {form.maxDiscount || '25% Off'} {displayStoreName} Exclusive Promo Code
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                            <span className="font-extrabold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">CODE</span>
+                            <span className="font-bold text-emerald-700">✓ Verified</span>
+                            <span className="font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">★ Exclusive</span>
+                          </div>
+                        </div>
+                      </div>
+                      <GetCodeButton code="SAVE25" isCode={true} highlight={true} size="md" fullWidth={isMobile} />
+                    </div>
+
+                    {/* Trust Value Props Strip */}
+                    <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs">
+                      <div className={`grid ${isMobile ? 'grid-cols-2 gap-3' : 'grid-cols-4 gap-0 divide-x divide-slate-100'}`}>
+                        <div className="flex items-center gap-2 pr-2">
+                          <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <ShieldCheck size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <h5 className="text-[11px] font-bold text-slate-900 leading-tight">Hand-Tested</h5>
+                            <p className="text-[10px] text-slate-500 truncate">Verified carts</p>
+                          </div>
+                        </div>
+                        <div className={`flex items-center gap-2 ${isMobile ? '' : 'px-2.5'}`}>
+                          <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Clock size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <h5 className="text-[11px] font-bold text-slate-900 leading-tight">Live Audited</h5>
+                            <p className="text-[10px] text-slate-500 truncate">Daily sync</p>
+                          </div>
+                        </div>
+                        <div className={`flex items-center gap-2 ${isMobile ? 'pt-2 border-t border-slate-100' : 'px-2.5'}`}>
+                          <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Tag size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <h5 className="text-[11px] font-bold text-slate-900 leading-tight">Direct Links</h5>
+                            <p className="text-[10px] text-slate-500 truncate">Official offers</p>
+                          </div>
+                        </div>
+                        <div className={`flex items-center gap-2 ${isMobile ? 'pt-2 border-t border-slate-100' : 'pl-2.5'}`}>
+                          <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Users size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <h5 className="text-[11px] font-bold text-slate-900 leading-tight">Editorial</h5>
+                            <p className="text-[10px] text-slate-500 truncate">Zero fake codes</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* About Store + FAQs */}
+                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-4">
+                      <div className="border-b border-slate-100 pb-3">
+                        <h2 className="text-base font-black text-slate-900">About {displayStoreName}</h2>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Merchant overview and coupon verification details.</p>
+                      </div>
+                      <div
+                        className="prose prose-slate max-w-none text-xs text-slate-700 leading-relaxed font-sans"
+                        dangerouslySetInnerHTML={{
+                          __html: form.description || `<p>${displayDesc}</p>`,
+                        }}
+                      />
+
+                      {previewFaqs.length > 0 && (
+                        <div className="space-y-2.5 pt-3 border-t border-slate-100">
+                          <div className="flex items-center gap-1.5">
+                            <HelpCircle size={15} className="text-emerald-600 shrink-0" />
+                            <h3 className={`font-black ${isMobile ? 'text-xs' : 'text-sm'} text-slate-900`}>
+                              Frequently Asked Questions About {displayStoreName}
+                            </h3>
+                          </div>
+                          <div className="space-y-2">
+                            {previewFaqs.map((faq, idx) => (
+                              <div key={idx} className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-1">
+                                <p className="text-xs font-bold text-slate-900">{faq.question}</p>
+                                <p className="text-[11px] text-slate-600 leading-relaxed">{faq.answer}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Popular Searches */}
+                    {previewSearches.length > 0 && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-2.5">
+                        <h4 className="text-xs font-black text-slate-900">
+                          Popular Searches Related to {displayStoreName} Coupons
+                        </h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {previewSearches.map((q, idx) => (
+                            <span
+                              key={idx}
+                              className="px-3 py-1 rounded-full text-xs font-medium text-emerald-700 bg-emerald-50/70 border border-emerald-200"
+                            >
+                              {q}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <div className="space-y-2 text-center sm:text-left flex-1 min-w-0">
-                    <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                      <h1 className="text-2xl sm:text-3xl font-black text-white">{form.name || 'Store Name Preview'}</h1>
-                    </div>
-                    <p className="text-xs text-slate-300 flex items-center justify-center sm:justify-start gap-3">
-                      <span>Website: <strong className="text-white font-mono">{form.domain || 'domain.com'}</strong></span>
-                      <span>•</span>
-                      <span>Category: <strong className="text-white">{form.category}</strong></span>
-                      <span>•</span>
-                      <span className="text-amber-400 font-bold flex items-center gap-1">★ {form.rating || 4.8} / 5.0</span>
-                    </p>
-                    {form.shortDescription && (
-                      <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed pt-1 max-w-xl">
-                        {form.shortDescription}
-                      </p>
-                    )}
-                  </div>
-                  <div className="shrink-0 pt-2 sm:pt-0">
-                    <a
-                      href={form.affiliateUrl || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition"
-                    >
-                      <span>Visit Store &amp; Claim Deals</span>
-                      <ExternalLink size={13} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Store Body & Full-Width 100% Sections Preview */}
-              <div className="p-6 sm:p-8 space-y-6 bg-slate-50/50">
-                
-                {/* 1. Trust Value Props Bar */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                    <div className="flex items-center gap-2.5 pt-1 md:pt-0">
-                      <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                        <ShieldCheck size={16} />
-                      </div>
-                      <div>
-                        <h5 className="text-[11px] font-bold text-slate-900 leading-tight">Hand-Tested</h5>
-                        <p className="text-[10px] text-slate-400">Tested at checkout</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 pt-1 md:pt-0 md:pl-3">
-                      <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                        <Clock size={16} />
-                      </div>
-                      <div>
-                        <h5 className="text-[11px] font-bold text-slate-900 leading-tight">Updated Daily</h5>
-                        <p className="text-[10px] text-slate-400">Fresh deals every day</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 pt-1 md:pt-0 md:pl-3">
-                      <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                        <Tag size={16} />
-                      </div>
-                      <div>
-                        <h5 className="text-[11px] font-bold text-slate-900 leading-tight">Save up to {form.maxDiscount || '70%'}</h5>
-                        <p className="text-[10px] text-slate-400">Exclusive brand codes</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 pt-1 md:pt-0 md:pl-3">
-                      <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                        <Users size={16} />
-                      </div>
-                      <div>
-                        <h5 className="text-[11px] font-bold text-slate-900 leading-tight">Shopper Trusted</h5>
-                        <p className="text-[10px] text-slate-400">Thousands of happy savers</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
-                {/* 2. Popular Searches Preview */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-2.5">
-                  <h4 className="text-xs font-black text-slate-900">
-                    Popular Searches Related to {form.name || 'Store'} Coupons
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(parsePopularSearchesText(form.popularSearchesText).length > 0
-                      ? parsePopularSearchesText(form.popularSearchesText)
-                      : buildDefaultPopularSearches(form.name || 'Store')
-                    ).map((q, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 rounded-full text-xs font-medium text-emerald-700 bg-emerald-50/70 border border-emerald-200"
-                      >
-                        {q}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2.5. Customer Reviews Preview */}
+                {/* Full-Width Customer Reviews Preview */}
                 <StoreCustomerReviewsSection
-                  storeName={form.name || 'Store'}
+                  storeName={displayStoreName}
                   rating={form.rating}
                   reviewCount={form.reviewsCount ?? 0}
                   ratingBreakdown={form.ratingBreakdown}
                   reviews={form.customerReviews}
+                  previewDevice={device}
                 />
-
-                {/* 3. Editorial Description from Word Studio */}
-                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs space-y-4">
-                  <h2 className="text-base font-black text-slate-900 border-b border-slate-100 pb-3">
-                    About {form.name || 'Store'}
-                  </h2>
-                  <div
-                    className="prose prose-slate max-w-none text-xs text-slate-700 leading-relaxed font-sans"
-                    dangerouslySetInnerHTML={{
-                      __html: form.description || '<p class="text-slate-400 italic">Store editorial overview is being drafted in Word Studio...</p>',
-                    }}
-                  />
-                </div>
-
-                {/* 5. FAQs Preview */}
-                <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs space-y-4">
-                  <div className="flex items-center gap-2">
-                    <HelpCircle size={16} className="text-emerald-600" />
-                    <h3 className="font-black text-sm text-slate-900">
-                      Frequently Asked Questions (FAQ) About {form.name || 'Store'}
-                    </h3>
-                  </div>
-
-                  <div className="space-y-2">
-                    {(form.faqs.length > 0
-                      ? form.faqs
-                      : buildDefaultStoreFaqs(form.name || 'Store')
-                    ).map((faq, idx) => (
-                      <div key={idx} className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-1">
-                        <p className="text-xs font-bold text-slate-900">❓ {faq.question}</p>
-                        <p className="text-[11px] text-slate-600 leading-relaxed pl-4">{faq.answer}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
               </div>
-            </div>
-          </div>
-        </div>
+            );
+          }}
+        </AdminDevicePreviewFrame>
       )}
 
       <FaqLibraryModal

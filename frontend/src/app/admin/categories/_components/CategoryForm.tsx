@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, Plus, ExternalLink, Edit2, Eye, Monitor, Tablet, Smartphone, FolderTree, RefreshCw, AlertCircle } from 'lucide-react';
+import { BookOpen, Plus, ExternalLink, Edit2, Eye, RefreshCw, AlertCircle, ChevronRight, Flame, ArrowRight } from 'lucide-react';
 import ImageUpload from '@/components/admin/ImageUpload';
-import DisplayPositionPicker from '@/components/admin/DisplayPositionPicker';
+import AdminDevicePreviewFrame from '@/components/admin/AdminDevicePreviewFrame';
 import AdminFormPage, {
   FormErrorBanner,
   FormLoading,
@@ -275,11 +275,9 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
           />
           <FormErrorBanner errors={errors} fieldLabels={CATEGORY_FIELD_LABELS} />
 
-          {/* TOP ROW: CATEGORY IDENTITY & MEDIA + DISPLAY & PREVIEW */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            
-            {/* Main Column (Left - 2 Cols) */}
-            <div className="lg:col-span-2 space-y-6">
+          {/* ROW 1: CATEGORY INFORMATION (2 COLS) + DISPLAY STATUS (1 COL) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            <div className="lg:col-span-2">
               <FormSection title="Category Information">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -343,7 +341,29 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                   </div>
                 </div>
               </FormSection>
+            </div>
 
+            <div className="lg:col-span-1">
+              <FormSection title="Display & Taxonomy">
+                <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Category Active</span>
+                    <span className="text-[11px] text-slate-400">Visible in navigation bar</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                    className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                  />
+                </label>
+              </FormSection>
+            </div>
+          </div>
+
+          {/* ROW 2: CATEGORY MEDIA (2 COLS) + QUICK CARD PREVIEW (1 COL) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div className="lg:col-span-2">
               <FormSection title="Category Media & Cover">
                 <ImageUpload
                   value={form.imageUrl}
@@ -356,32 +376,7 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
               </FormSection>
             </div>
 
-            {/* Sidebar Column (Right - 1 Col) */}
-            <div className="lg:col-span-1 space-y-6">
-              <FormSection title="Display & Taxonomy">
-                <div className="space-y-4">
-                  <DisplayPositionPicker
-                    label="Navigation Display Position"
-                    value={form.sortOrder}
-                    onChange={(nextVal) => setForm({ ...form, sortOrder: nextVal })}
-                    hint="Pick a slot in header navigation (#1 = first) or Auto."
-                  />
-
-                  <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition">
-                    <div>
-                      <span className="text-xs font-bold text-slate-800 block">Category Active</span>
-                      <span className="text-[11px] text-slate-400">Visible in navigation bar</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={form.isActive}
-                      onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                      className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                    />
-                  </label>
-                </div>
-              </FormSection>
-
+            <div className="lg:col-span-1">
               {/* Quick Card Preview */}
               <FormSection title="Quick Card Preview">
                 <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shadow-2xs">
@@ -390,16 +385,16 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                       <img src={form.imageUrl} alt="Banner" className="w-full h-full object-cover" />
                     </div>
                   ) : (
-                    <div className="h-20 w-full bg-linear-to-r from-slate-800 to-slate-900 flex items-center justify-center text-white/40 text-xs font-mono">
+                    <div className="h-24 w-full bg-linear-to-r from-slate-800 to-slate-900 flex items-center justify-center text-white/40 text-xs font-mono">
                       No banner uploaded
                     </div>
                   )}
                   <div className="p-3.5 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-slate-900">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-xs font-bold text-slate-900 truncate">
                         {form.name || 'Category Name'}
                       </h4>
-                      <span className="text-[10px] font-mono font-semibold bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-500">
+                      <span className="text-[10px] font-mono font-semibold bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-500 shrink-0">
                         /{form.slug || 'slug'}
                       </span>
                     </div>
@@ -410,7 +405,6 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                 </div>
               </FormSection>
             </div>
-
           </div>
 
           {/* FULL-WIDTH 100% ROW: DESCRIPTION & EDITORIAL NOTES WORD STUDIO */}
@@ -549,192 +543,162 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
           )}
         </form>
       ) : (
-        /* LIVE CLIENT CATEGORY LANDING PAGE PREVIEW */
-        <div className="space-y-6 animate-fadeIn">
-          {/* Preview Toolbar with Device Selector */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-white shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-brand-primary">
-                <Eye size={16} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Category Landing Page Preview</h3>
-                <p className="text-[11px] text-slate-400">URL: https://{SITE_DOMAIN}/categories/{form.slug || 'category-name'}</p>
-              </div>
-            </div>
+        /* LIVE CLIENT CATEGORY LANDING PAGE PREVIEW (1:1 with /category/[slug]) */
+        <AdminDevicePreviewFrame
+          title="Client Category Landing Page Preview"
+          urlPath={`/category/${form.slug || 'category-name'}`}
+        >
+          {(device) => {
+            const isMobile = device === 'mobile';
+            const isTablet = device === 'tablet';
+            const displayName = form.name.trim() || 'Category Title';
+            const hasHtmlDesc = Boolean(form.description && /<[a-z][\s\S]*>/i.test(form.description));
 
-            <div className="flex items-center gap-1 bg-slate-800/90 p-1 rounded-xl border border-slate-700 text-xs">
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('desktop')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'desktop' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Monitor size={13} />
-                <span>Desktop (1000px)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('tablet')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'tablet' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Tablet size={13} />
-                <span>Tablet (768px)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreviewDevice('mobile')}
-                className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  previewDevice === 'mobile' ? 'bg-brand-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Smartphone size={13} />
-                <span>Mobile (375px)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Canvas Wrapper */}
-          <div className="flex justify-center items-start overflow-x-auto py-2">
-            <div
-              className={`transition-all duration-300 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden ${
-                previewDevice === 'desktop'
-                  ? 'w-full max-w-[1000px]'
-                  : previewDevice === 'tablet'
-                  ? 'w-[768px]'
-                  : 'w-[375px] border-4 border-slate-800'
-              }`}
-            >
-              {/* Browser mockup header */}
-              <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                </div>
-                <div className="flex-1 bg-white border border-slate-200 rounded px-2.5 py-0.5 text-[11px] text-slate-500 font-mono truncate">
-                  https://{SITE_DOMAIN}/categories/{form.slug || 'category-name'}
-                </div>
-              </div>
-
-              {/* Category Hero / Header */}
-              <div className="relative bg-linear-to-r from-slate-900 via-slate-800 to-slate-950 text-white overflow-hidden">
-                {form.imageUrl && (
-                  <div className="absolute inset-0 z-0">
-                    <img src={form.imageUrl} alt={form.name} className="w-full h-full object-cover opacity-35" />
-                    <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-slate-950/70 to-transparent"></div>
-                  </div>
-                )}
-
-                <div className="relative z-10 px-6 sm:px-10 py-10 max-w-4xl">
-                  {/* Breadcrumb */}
-                  <div className="flex items-center gap-2 text-xs text-slate-300 mb-4 font-medium">
+            return (
+              <div className={`bg-[#f4f5f7] text-[#171717] ${isMobile ? 'p-3.5 space-y-4' : isTablet ? 'p-5 space-y-6' : 'p-8 space-y-7'}`}>
+                <div className="max-w-7xl mx-auto space-y-5">
+                  {/* 1. Breadcrumb */}
+                  <nav className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                     <span>Home</span>
-                    <span>/</span>
+                    <ChevronRight size={12} className="shrink-0" />
                     <span>Categories</span>
-                    <span>/</span>
-                    <span className="text-white font-bold">{form.name || 'Category'}</span>
-                  </div>
+                    <ChevronRight size={12} className="shrink-0" />
+                    <span className="text-slate-900 font-semibold truncate">{displayName}</span>
+                  </nav>
 
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-brand-primary text-white">
-                      Editorial Category
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-white/10 text-slate-200 border border-white/15">
-                      /{form.slug || 'slug'}
-                    </span>
-                  </div>
+                  {/* 2. Category Header Banner (1:1 with client /category/[slug]) */}
+                  <div className={`bg-white border border-slate-200 rounded-2xl ${isMobile ? 'p-4' : isTablet ? 'p-6' : 'p-9'} shadow-2xs`}>
+                    <div className={`flex ${isMobile ? 'flex-col gap-4' : 'flex-row items-center justify-between gap-6'}`}>
+                      <div className="space-y-3.5 max-w-3xl flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="bg-brand-primary text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs">
+                            Editorial Desk
+                          </span>
+                          <span className="text-xs font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
+                            {categoryArticles.length} Published Articles
+                          </span>
+                        </div>
 
-                  <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
-                    {form.name || 'Category Title'}
-                  </h1>
+                        <div className="space-y-2">
+                          <h1 className={`${isMobile ? 'text-2xl' : isTablet ? 'text-3xl' : 'text-4xl'} font-black text-slate-950 tracking-tight font-editorial`}>
+                            {displayName}
+                          </h1>
+                          {form.description ? (
+                            hasHtmlDesc ? (
+                              <div
+                                className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-600 leading-relaxed prose prose-sm max-w-none`}
+                                dangerouslySetInnerHTML={{ __html: form.description }}
+                              />
+                            ) : (
+                              <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-600 leading-relaxed`}>
+                                {form.description}
+                              </p>
+                            )
+                          ) : (
+                            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-slate-400 italic`}>
+                              Explore in-depth buying guides, objective lab reviews, and the best verified promo codes for {displayName}.
+                            </p>
+                          )}
+                        </div>
+                      </div>
 
-                  <p className="text-sm sm:text-base text-slate-300 max-w-2xl">
-                    Explore in-depth buying guides, objective lab reviews, and the best verified promo codes for {form.name || 'this category'}.
-                  </p>
-                </div>
-              </div>
-
-              {/* Main Content Area */}
-              <div className="p-6 sm:p-10 space-y-10">
-                {/* Editorial Description / Buying Guide Box */}
-                <div className="bg-slate-50/70 rounded-2xl border border-slate-200 p-6 sm:p-8">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-primary mb-4">
-                    <FolderTree size={16} />
-                    <span>Editorial Buying Guide &amp; Category Overview</span>
-                  </div>
-
-                  {form.description ? (
-                    <div
-                      className="article-content font-serif text-slate-800 leading-relaxed text-sm sm:text-base space-y-4 prose prose-slate max-w-none"
-                      dangerouslySetInnerHTML={{ __html: form.description }}
-                    />
-                  ) : (
-                    <div className="text-center py-6 text-sm text-slate-400 italic">
-                      No editorial description added yet. Switch to the Editor tab to compose content.
+                      {form.imageUrl && (
+                        <div className={`${isMobile ? 'w-full h-36' : 'w-64 h-36'} rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={form.imageUrl}
+                            alt={displayName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                {/* Articles & Deals in this Category */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-900">
-                        Latest Articles &amp; Reviews in This Category
-                      </h2>
-                      <p className="text-xs text-slate-500">Curated and updated continuously by our editorial team</p>
-                    </div>
-                    <span className="text-xs font-bold text-brand-primary bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
-                      {categoryArticles.length} articles
-                    </span>
                   </div>
 
+                  {/* 3. Toolbar & Sorting */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                      <Flame size={15} className="text-brand-primary" />
+                      <span>Editorial Articles ({categoryArticles.length})</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="px-3 py-1.5 rounded-lg font-bold bg-brand-primary text-white shadow-2xs">
+                        Latest
+                      </span>
+                      <span className="px-3 py-1.5 rounded-lg font-bold text-slate-600">
+                        Popular
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 4. Article Grid (1 col mobile, 2 cols iPad, 3 cols desktop) */}
                   {categoryArticles.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : isTablet ? 'grid-cols-2 gap-5' : 'grid-cols-3 gap-6'}`}>
                       {categoryArticles.map((art) => (
                         <div
                           key={art.id}
-                          className="border border-slate-200 rounded-xl p-4 bg-white hover:shadow-md transition space-y-3 flex flex-col justify-between"
+                          className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs flex flex-col justify-between"
                         >
-                          <div className="space-y-2">
-                            {art.imageUrl && (
+                          <div>
+                            {art.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={art.imageUrl}
                                 alt={art.title}
-                                className="w-full h-36 object-cover rounded-lg border border-slate-100"
+                                className="w-full h-40 object-cover border-b border-slate-100"
                               />
+                            ) : (
+                              <div className="w-full h-40 bg-slate-100 border-b border-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">
+                                {displayName}
+                              </div>
                             )}
-                            <h4 className="text-sm font-bold text-slate-900 line-clamp-2 hover:text-brand-primary transition-colors">
-                              {art.title}
-                            </h4>
+                            <div className="p-4 space-y-2">
+                              <span className="inline-block text-[10px] font-black uppercase tracking-wider text-brand-primary">
+                                {displayName}
+                              </span>
+                              <h4 className="font-editorial text-sm font-bold text-slate-900 line-clamp-2 leading-snug">
+                                {art.title}
+                              </h4>
+                            </div>
                           </div>
 
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-400">
-                            <span>{art.author?.name}</span>
-                            <span>{art.publishedAt}</span>
+                          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                            <span className="truncate">{art.author?.name || 'Editorial Team'}</span>
+                            <span className="shrink-0">{art.publishedAt || 'Today'}</span>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-                      No articles have been assigned to this category yet.
+                    <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-xs text-slate-500">
+                      No published articles assigned to this category yet.
                     </div>
                   )}
+
+                  {/* 5. Editorial Archive Callout */}
+                  <div className={`bg-white border border-slate-200 rounded-2xl ${isMobile ? 'p-5' : 'p-8'} text-center space-y-3 shadow-2xs`}>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary block">
+                      Editorial Archive
+                    </span>
+                    <h3 className={`font-editorial ${isMobile ? 'text-lg' : 'text-2xl'} font-bold text-slate-900 tracking-tight`}>
+                      Explore More In-Depth Product Reviews &amp; Guides
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
+                      Browse our full library of laboratory benchmarks, hands-on product evaluations, and smart consumer buying guides across all categories.
+                    </p>
+                    <div className="pt-1">
+                      <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-xs">
+                        <span>Explore Full Editorial Archive</span>
+                        <ArrowRight size={14} />
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Mock Footer */}
-              <div className="bg-slate-900 border-t border-slate-800 p-6 text-center text-xs text-slate-400">
-                <p>© 2026 HeyGoodly Editorial. All reviews and curated deals are independently verified.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+            );
+          }}
+        </AdminDevicePreviewFrame>
       )}
     </AdminFormPage>
   );

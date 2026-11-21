@@ -21,10 +21,16 @@ import {
   Sparkles,
   Users,
   Loader2,
+  GripVertical,
 } from 'lucide-react';
 import { type AdminStore } from '../_lib/data';
 import { type OfferItem } from '../../offers/_lib/data';
 import { offerService } from '@/services/offerService';
+import PositionReorderCell, { reorderListItems } from '@/components/admin/PositionReorderCell';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import { API_ENDPOINTS } from '@/constants/api-endpoints';
+import { apiClient } from '@/lib/api/axios-client';
+import { useToast } from '@/context/ToastContext';
 
 interface StoreOffersModalProps {
   isOpen: boolean;
@@ -45,10 +51,14 @@ export default function StoreOffersModal({
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   // Server data state
+  const { toast } = useToast();
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Debounce search input
   useEffect(() => {
@@ -111,6 +121,7 @@ export default function StoreOffersModal({
           destinationUrl: o.urlRef || `/out/${o.id}`,
           terms: o.description || `Valid on ${store.name} official store.`,
           imageUrl: o.image || o.imageUrl || o.storeLogo || store.logoUrl || undefined,
+          sortOrder: Number((o as any).sortOrder ?? 9999),
         }));
 
         setOffers(mapped);
@@ -133,6 +144,56 @@ export default function StoreOffersModal({
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
   const startItem = totalElements === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const endItem = Math.min(safePage * pageSize, totalElements);
+
+  const canReorder = debouncedSearch.trim() === '' && typeFilter === 'ALL';
+
+  const handleMoveOffer = async (index: number, delta: -1 | 1) => {
+    if (reordering) return;
+    setReordering(true);
+    try {
+      const updated = await reorderListItems(
+        offers,
+        index,
+        delta,
+        API_ENDPOINTS.ADMIN.OFFERS_REORDER
+      );
+      if (updated) {
+        const offset = (safePage - 1) * pageSize;
+        setOffers(updated.map((item, idx) => ({ ...item, sortOrder: offset + idx + 1 })));
+        toast.success('Updated offer priority inside store!');
+      }
+    } catch {
+      toast.error('Failed to update offer order');
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const handleDropOffer = async (targetIndex: number) => {
+    if (!canReorder || reordering || dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    const reordered = [...offers];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+    setDragIndex(null);
+    setDragOverIndex(null);
+    setReordering(true);
+    try {
+      await apiClient.patch(API_ENDPOINTS.ADMIN.OFFERS_REORDER, {
+        orderedIds: reordered.map((item) => Number(item.id)),
+      });
+      const offset = (safePage - 1) * pageSize;
+      setOffers(reordered.map((item, idx) => ({ ...item, sortOrder: offset + idx + 1 })));
+      toast.success('Updated offer priority inside store!');
+    } catch {
+      toast.error('Failed to update offer order');
+    } finally {
+      setReordering(false);
+    }
+  };
 
   const handleCopyCode = (id: number, code: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -304,15 +365,69 @@ export default function StoreOffersModal({
             </div>
           ) : offers.length > 0 ? (
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
-              {offers.map((offer) => {
+              {offers.map((offer, idx) => {
                 const isCode = offer.offerType === 'coupon' && Boolean(offer.couponCode);
                 return (
                   <div
                     key={offer.id}
-                    className="p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 group"
+                    draggable={canReorder && !reordering}
+                    onDragStart={(e) => {
+                      if (!canReorder) return;
+                      setDragIndex(idx);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => {
+                      if (!canReorder || dragIndex === null) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragOverIndex !== idx) setDragOverIndex(idx);
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverIndex === idx) setDragOverIndex(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      void handleDropOffer(idx);
+                    }}
+                    onDragEnd={() => {
+                      setDragIndex(null);
+                      setDragOverIndex(null);
+                    }}
+                    className={`p-3.5 sm:p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 group ${
+                      dragOverIndex === idx && dragIndex !== idx
+                        ? 'bg-brand-primary/5 ring-2 ring-inset ring-brand-primary/40'
+                        : dragIndex === idx
+                        ? 'opacity-50 bg-slate-50'
+                        : 'hover:bg-slate-50/70'
+                    }`}
                   >
-                    {/* Left: Content */}
+                    {/* Left: Drag Handle + Position + Content */}
                     <div className="flex items-start gap-3 sm:gap-3.5 flex-1 min-w-0">
+                      <div className="pt-0.5 shrink-0 inline-flex items-center gap-1">
+                        <span
+                          className={
+                            canReorder
+                              ? 'text-slate-400 hover:text-brand-primary cursor-grab active:cursor-grabbing'
+                              : 'text-slate-300 opacity-40 cursor-not-allowed'
+                          }
+                          title={canReorder ? 'Drag to reorder offer priority in store' : 'Clear search and filter to drag'}
+                        >
+                          <GripVertical size={15} />
+                        </span>
+                        <PositionReorderCell
+                          sortOrder={
+                            canReorder
+                              ? (safePage - 1) * pageSize + idx + 1
+                              : offer.sortOrder
+                          }
+                          index={idx}
+                          total={offers.length}
+                          canReorder={canReorder}
+                          disabled={reordering}
+                          disabledReason="Clear search and filter to reorder in-store priority"
+                          onMove={(delta) => handleMoveOffer(idx, delta)}
+                        />
+                      </div>
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-100 relative shrink-0 border border-slate-200 flex items-center justify-center">
                         <Tag size={22} className="text-slate-400" />
                         <span className="absolute bottom-1 left-1 bg-brand-primary text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs max-w-[90%] truncate">
@@ -437,17 +552,20 @@ export default function StoreOffersModal({
               </span>
             )}
 
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="text-[11px] font-semibold bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:border-brand-primary cursor-pointer"
-              title="Items per page"
-            >
-              <option value={3}>3 / page</option>
-              <option value={4}>4 / page</option>
-              <option value={5}>5 / page</option>
-              <option value={10}>10 / page</option>
-            </select>
+            <AdminSearchableSelect
+              value={String(pageSize)}
+              placement="top"
+              searchable={false}
+              className="w-auto min-w-[100px]"
+              triggerClassName="py-1 px-2.5 text-[11px]"
+              onChange={(val) => setPageSize(Number(val))}
+              options={[
+                { value: '3', label: '3 / page' },
+                { value: '4', label: '4 / page' },
+                { value: '5', label: '5 / page' },
+                { value: '10', label: '10 / page' },
+              ]}
+            />
           </div>
 
           {totalElements > 0 && (

@@ -104,6 +104,7 @@ public class StoreServiceImpl implements StoreService {
                         cb.like(cb.lower(root.get("name")), pattern),
                         cb.like(cb.lower(root.get("slug")), pattern),
                         cb.like(cb.lower(cb.coalesce(root.get("afWebsite"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.get("displayDomain"), "")), pattern),
                         cb.like(cb.lower(cb.coalesce(root.get("metaKeywords"), "")), pattern),
                         cb.like(cb.lower(cb.coalesce(root.get("aboutStore"), "")), pattern)
                 ));
@@ -205,6 +206,7 @@ public class StoreServiceImpl implements StoreService {
                         cb.like(cb.lower(root.get("name")), pattern),
                         cb.like(cb.lower(root.get("slug")), pattern),
                         cb.like(cb.lower(cb.coalesce(root.get("afWebsite"), "")), pattern),
+                        cb.like(cb.lower(cb.coalesce(root.get("displayDomain"), "")), pattern),
                         cb.like(cb.lower(cb.coalesce(root.get("metaKeywords"), "")), pattern),
                         cb.like(cb.lower(cb.coalesce(root.get("aboutStore"), "")), pattern)
                 ));
@@ -300,6 +302,7 @@ public class StoreServiceImpl implements StoreService {
                 .ratingScore(request.getRatingScore() != null ? request.getRatingScore() : BigDecimal.valueOf(5.00))
                 .ratingCount(request.getRatingCount() != null ? request.getRatingCount() : 0)
                 .afWebsite(request.getAfWebsite())
+                .displayDomain(normalizeDisplayDomain(request.getDisplayDomain()))
                 .afStatus(request.getAfStatus() != null ? request.getAfStatus() : "unregistered")
                 .afPortalUrl(request.getAfPortalUrl())
                 .afAccount(request.getAfAccount())
@@ -385,6 +388,7 @@ public class StoreServiceImpl implements StoreService {
         if (request.getRatingScore() != null) store.setRatingScore(request.getRatingScore());
         if (request.getRatingCount() != null) store.setRatingCount(request.getRatingCount());
         store.setAfWebsite(request.getAfWebsite());
+        store.setDisplayDomain(normalizeDisplayDomain(request.getDisplayDomain()));
         if (request.getAfStatus() != null) store.setAfStatus(request.getAfStatus());
         store.setAfPortalUrl(request.getAfPortalUrl());
         store.setAfAccount(request.getAfAccount());
@@ -467,6 +471,7 @@ public class StoreServiceImpl implements StoreService {
                 saved.getRatingScore(),
                 saved.getRatingCount(),
                 saved.getAfWebsite(),
+                saved.getDisplayDomain(),
                 saved.getAfVisitCount(),
                 saved.getAfCommission(),
                 saved.getAfStatus(),
@@ -520,6 +525,7 @@ public class StoreServiceImpl implements StoreService {
                 .ratingScore(source.getRatingScore())
                 .ratingCount(0)
                 .afWebsite(source.getAfWebsite())
+                .displayDomain(source.getDisplayDomain())
                 .afStatus(source.getAfStatus())
                 .afVisitCount(0L)
                 .afPortalUrl(source.getAfPortalUrl())
@@ -777,6 +783,18 @@ public class StoreServiceImpl implements StoreService {
         redisCacheService.evictByPrefix(RedisCacheService.OFFERS_PUBLIC_PREFIX);
         redisCacheService.evictByPrefix(RedisCacheService.CATEGORIES_PREFIX);
         redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
+    }
+
+    private String normalizeDisplayDomain(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String cleaned = raw.trim()
+                .replaceFirst("(?i)^https?://", "")
+                .replaceFirst("(?i)^www\\.", "")
+                .replaceFirst("[/?#].*$", "")
+                .trim();
+        return cleaned.isEmpty() ? null : cleaned;
     }
 
     private <T> T deserializeJson(String json, TypeReference<T> typeRef) {

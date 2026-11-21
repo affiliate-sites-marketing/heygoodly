@@ -20,6 +20,7 @@ import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { adminSelectClass, adminSearchInputClass } from '@/components/admin/adminStyles';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { useServerPagination } from '@/lib/admin/useServerPagination';
@@ -61,7 +62,7 @@ export default function AdminTagsPage() {
   const [search, setSearch] = useState('');
   const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>('ALL');
   const [entityTypeFilter, setEntityTypeFilter] = useState<EntityTypeFilter>('ALL');
-  const [sortBy, setSortBy] = useState<SortBy>('name-asc');
+  const [sortBy, setSortBy] = useState<SortBy>('id-desc');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<TagItem | null>(null);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
@@ -81,8 +82,8 @@ export default function AdminTagsPage() {
     defaultPageSize: 15,
     initialParams: {
       search: '',
-      sortBy: 'name',
-      direction: 'asc',
+      sortBy: 'id',
+      direction: 'desc',
     },
     mapItem: (item: any): TagItem => ({
       id: Number(item.id),
@@ -142,18 +143,18 @@ export default function AdminTagsPage() {
     }
   };
 
-  const isFiltered = search !== '' || featuredFilter !== 'ALL' || entityTypeFilter !== 'ALL' || sortBy !== 'name-asc';
+  const isFiltered = search !== '' || featuredFilter !== 'ALL' || entityTypeFilter !== 'ALL' || sortBy !== 'id-desc';
 
   const handleResetFilters = () => {
     setSearch('');
     setFeaturedFilter('ALL');
     setEntityTypeFilter('ALL');
-    setSortBy('name-asc');
+    setSortBy('id-desc');
     setParam('search', undefined);
     setParam('isFeatured', undefined);
     setParam('entityType', undefined);
-    setParam('sortBy', 'name');
-    setParam('direction', 'asc');
+    setParam('sortBy', 'id');
+    setParam('direction', 'desc');
   };
 
   const handleOpenCreate = () => {
@@ -263,44 +264,44 @@ export default function AdminTagsPage() {
 
           {/* Entity Type Filter */}
           <div>
-            <select
+            <AdminSearchableSelect
               value={entityTypeFilter}
-              onChange={(e) => handleEntityTypeChange(e.target.value as EntityTypeFilter)}
-              className={adminSelectClass}
-            >
-              <option value="ALL">{t('All Entities')}</option>
-              <option value="POST">{t('Posts & Reviews')}</option>
-              <option value="STORE">{t('Stores')}</option>
-              <option value="OFFER">{t('Offers & Deals')}</option>
-              <option value="MEDIA">{t('Media Assets')}</option>
-              <option value="UNUSED">{t('Unused / Standalone')}</option>
-            </select>
+              onChange={(val) => handleEntityTypeChange(val as EntityTypeFilter)}
+              options={[
+                { value: 'ALL', label: 'All Entities' },
+                { value: 'POST', label: 'Posts & Reviews' },
+                { value: 'STORE', label: 'Stores' },
+                { value: 'OFFER', label: 'Offers & Deals' },
+                { value: 'MEDIA', label: 'Media Assets' },
+                { value: 'UNUSED', label: 'Unused / Standalone' },
+              ]}
+            />
           </div>
 
           {/* Featured Filter */}
           <div>
-            <select
+            <AdminSearchableSelect
               value={featuredFilter}
-              onChange={(e) => handleFeaturedChange(e.target.value as FeaturedFilter)}
-              className={adminSelectClass}
-            >
-              <option value="ALL">{t('All Tags')}</option>
-              <option value="FEATURED">{t('Featured Tags')}</option>
-              <option value="REGULAR">{t('Regular Tags')}</option>
-            </select>
+              onChange={(val) => handleFeaturedChange(val as FeaturedFilter)}
+              options={[
+                { value: 'ALL', label: 'All Tags' },
+                { value: 'FEATURED', label: 'Featured Tags' },
+                { value: 'REGULAR', label: 'Regular Tags' },
+              ]}
+            />
           </div>
 
           {/* Sort By */}
           <div>
-            <select
+            <AdminSearchableSelect
               value={sortBy}
-              onChange={(e) => handleSortChange(e.target.value as SortBy)}
-              className={adminSelectClass}
-            >
-              <option value="name-asc">{t('Name: A → Z')}</option>
-              <option value="name-desc">{t('Name: Z → A')}</option>
-              <option value="id-desc">{t('Newest First')}</option>
-            </select>
+              onChange={(val) => handleSortChange(val as SortBy)}
+              options={[
+                { value: 'id-desc', label: 'Newest First' },
+                { value: 'name-asc', label: 'Name: A → Z' },
+                { value: 'name-desc', label: 'Name: Z → A' },
+              ]}
+            />
           </div>
         </div>
       </AdminFilterBar>

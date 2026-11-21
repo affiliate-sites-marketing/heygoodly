@@ -15,7 +15,8 @@ import AdminFormPage, {
   toValidSlug,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
-import { SITE_DOMAIN } from '@/constants/site';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import { SITE_DOMAIN, SITE_NAME } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { type MenuItem } from '../_lib/data';
@@ -23,6 +24,7 @@ import { useToast } from '@/context/ToastContext';
 import { useAdminI18n } from '@/context/AdminI18nContext';
 import {
   Monitor,
+  Tablet,
   Smartphone,
   Globe,
   ExternalLink,
@@ -138,7 +140,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
   const [targetTouched, setTargetTouched] = useState<boolean>(Boolean(existing?.targetValue));
 
   // Live Preview Settings
-  const [viewportMode, setViewportMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [viewportMode, setViewportMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [previewTab, setPreviewTab] = useState<'auto' | 'header' | 'footer'>('auto');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -318,15 +320,15 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className={labelClass}>Target Link Type</label>
-                  <select
+                  <AdminSearchableSelect
                     value={form.targetType}
-                    onChange={(e) => setForm({ ...form, targetType: e.target.value as MenuItem['targetType'] })}
-                    className={inputClass}
-                  >
-                    <option value="url">Custom Path / External URL</option>
-                    <option value="category">Category Landing Page</option>
-                    <option value="page">CMS Content Page</option>
-                  </select>
+                    onChange={(val) => setForm({ ...form, targetType: val as MenuItem['targetType'] })}
+                    options={[
+                      { value: 'url', label: 'Custom Path / External URL' },
+                      { value: 'category', label: 'Category Landing Page' },
+                      { value: 'page', label: 'CMS Content Page' },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1">
@@ -386,22 +388,6 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                       <span className="text-[10px] text-slate-400 block mt-0.5">Bottom footer column</span>
                     </button>
                   </div>
-                </div>
-
-                {/* Sort Order */}
-                <div className="space-y-1">
-                  <label className={labelClass}>Display Sort Order</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={99}
-                    value={form.sortOrder}
-                    onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 1 })}
-                    className={inputClass}
-                  />
-                  <span className="text-[11px] text-slate-400">
-                    Lower numbers appear further to the left (Header) or top (Footer).
-                  </span>
                 </div>
 
                 {/* Active Checkbox */}
@@ -487,6 +473,19 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                   </button>
                   <button
                     type="button"
+                    onClick={() => setViewportMode('tablet')}
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 text-[11px] ${
+                      viewportMode === 'tablet'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="iPad / Tablet Viewport (768px)"
+                  >
+                    <Tablet size={13} />
+                    <span className="hidden sm:inline">iPad</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setViewportMode('mobile')}
                     className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 text-[11px] ${
                       viewportMode === 'mobile'
@@ -506,10 +505,16 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
             <div className="bg-slate-900/5 p-3 sm:p-5 rounded-3xl border border-slate-200">
               
               {/* =====================================================
-                  DESKTOP PREVIEW MODE
+                  DESKTOP & IPAD PREVIEW MODE
                  ===================================================== */}
-              {viewportMode === 'desktop' && (
-                <div className="bg-white rounded-2xl border border-slate-300 shadow-xl overflow-hidden">
+              {(viewportMode === 'desktop' || viewportMode === 'tablet') && (
+                <div
+                  className={`bg-white shadow-xl overflow-hidden transition-all duration-200 ${
+                    viewportMode === 'tablet'
+                      ? 'max-w-[768px] mx-auto rounded-[24px] border-[6px] border-slate-800'
+                      : 'rounded-2xl border border-slate-300'
+                  }`}
+                >
                   
                   {/* Browser Chrome Header */}
                   <div className="bg-[#f0f0ee] border-b border-[#e5e5e3] px-4 py-2.5 flex items-center justify-between gap-3">
@@ -538,42 +543,48 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                     <div>
                       {/* Top Utility Bar */}
                       <div className="bg-[#F8F8F6] border-b border-[#E7E7E5] text-[10px] text-[#737373] py-1.5 px-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-brand-primary" />
-                          <span className="font-semibold text-[#171717]">Thu, Oct 24, 2026</span>
-                          <span>•</span>
-                          <span className="hidden sm:inline">The Independent Product Review &amp; Smart Deals Journal</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand-primary shrink-0" />
+                          <span className="font-semibold text-[#171717] shrink-0">Thu, Oct 24, 2026</span>
+                          {viewportMode === 'desktop' && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">The Independent Product Review &amp; Smart Deals Journal</span>
+                            </>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3 text-[10px] text-[#737373] hidden sm:flex">
+                        <div className="flex items-center gap-3 text-[10px] text-[#737373] shrink-0">
                           <span>About Us</span>
                           <span>Contact</span>
-                          <span>Editorial Guidelines</span>
+                          {viewportMode === 'desktop' && <span>Editorial Guidelines</span>}
                         </div>
                       </div>
 
                       {/* Masthead */}
-                      <div className="bg-white py-4 px-4 sm:px-6 border-b border-[#E7E7E5] flex items-center justify-between gap-4">
+                      <div className={`bg-white py-4 ${viewportMode === 'tablet' ? 'px-4' : 'px-6'} border-b border-[#E7E7E5] flex items-center justify-between gap-4`}>
                         <div>
-                          <span className="font-editorial text-2xl sm:text-3xl font-black text-[#171717] tracking-tight">
-                            HeyGoodly<span className="text-brand-primary">.</span>
+                          <span className={`font-editorial ${viewportMode === 'tablet' ? 'text-2xl' : 'text-3xl'} font-black text-[#171717] tracking-tight`}>
+                            {SITE_NAME}<span className="text-brand-primary">.</span>
                           </span>
                           <span className="text-[9px] uppercase tracking-widest text-[#737373] block mt-0.5">
                             Product Reviews &amp; Deals
                           </span>
                         </div>
 
-                        {/* Partner Spotlight Banner in Masthead */}
-                        <div className="hidden md:flex items-center justify-between gap-3 bg-[#171717] text-white px-4 py-2 rounded-lg text-xs max-w-sm">
-                          <div className="space-y-0.5">
-                            <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wider bg-amber-400/20 px-1.5 py-0.5 rounded">
-                              Partner Deal
+                        {/* Partner Spotlight Banner in Masthead (Desktop only) */}
+                        {viewportMode === 'desktop' && (
+                          <div className="flex items-center justify-between gap-3 bg-[#171717] text-white px-4 py-2 rounded-lg text-xs max-w-sm">
+                            <div className="space-y-0.5 min-w-0">
+                              <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wider bg-amber-400/20 px-1.5 py-0.5 rounded">
+                                Partner Deal
+                              </span>
+                              <div className="font-bold text-[11px] truncate">Featured Partner Promo Up to 65% Off</div>
+                            </div>
+                            <span className="text-[10px] font-bold bg-brand-primary text-white px-2 py-1 rounded shrink-0">
+                              View →
                             </span>
-                            <div className="font-bold text-[11px] truncate">Nilight LED Light Bars 65% Off</div>
                           </div>
-                          <span className="text-[10px] font-bold bg-brand-primary text-white px-2 py-1 rounded shrink-0">
-                            View →
-                          </span>
-                        </div>
+                        )}
                       </div>
 
                       {/* CLIENT STICKY NAVIGATION BAR (The target of this preview) */}
@@ -661,12 +672,12 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                         DESKTOP: FOOTER SITEMAP PREVIEW
                        ------------------------------------------------- */
                     <div className="bg-[#171717] text-[#D4D4D0] p-6 space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
+                      <div className={`grid ${viewportMode === 'tablet' ? 'grid-cols-2' : 'grid-cols-3'} gap-6 text-xs`}>
                         
                         {/* Brand Column */}
                         <div className="space-y-2">
                           <div className="font-editorial text-xl font-bold text-white">
-                            HeyGoodly<span className="text-brand-primary">.</span>
+                            {SITE_NAME}<span className="text-brand-primary">.</span>
                           </div>
                           <p className="text-[11px] text-[#A8A8A2] leading-relaxed">
                             Independent product review journal and curated deal discovery platform.
@@ -723,7 +734,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                       </div>
 
                       <div className="border-t border-[#262626] pt-3 text-center text-[10px] text-[#737373]">
-                        © 2026 HeyGoodly. All rights reserved.
+                        © 2026 {SITE_NAME}. All rights reserved.
                       </div>
                     </div>
                   )}
@@ -756,7 +767,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                     {/* Mobile Header Bar */}
                     <div className="bg-white border-b border-slate-200 p-3 flex items-center justify-between">
                       <span className="font-editorial text-xl font-bold tracking-tight text-[#171717]">
-                        HeyGoodly<span className="text-brand-primary">.</span>
+                        {SITE_NAME}<span className="text-brand-primary">.</span>
                       </span>
 
                       <div className="flex items-center gap-2">

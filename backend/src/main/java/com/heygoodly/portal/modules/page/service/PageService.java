@@ -15,4 +15,5 @@ public interface PageService {
     PageResponse createPage(PageRequest request);
     PageResponse updatePage(Long id, PageRequest request);
     void deletePage(Long id);
+    void reorderPages(List<Long> orderedIds);
 }

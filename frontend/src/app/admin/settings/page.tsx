@@ -466,7 +466,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2 space-y-1.5">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">{t('Corporate Office Address')}</label>
                   <Input
                     value={settings.contact_address ?? ''}
@@ -476,7 +476,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2 space-y-1.5">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">{t('Footer Copyright Notice')}</label>
                   <Input
                     value={settings.footer_copyright ?? ''}
@@ -537,7 +537,7 @@ export default function AdminSettingsPage() {
                 </div>
 
                 {/* Logo & Favicon Upload */}
-                <div className="sm:col-span-2 pt-2 border-t border-slate-100 space-y-6">
+                <div className="sm:col-span-2 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   <ImageUpload
                     label={t('Brand Logo')}
                     value={settings.site_logo ?? ''}
@@ -749,7 +749,7 @@ export default function AdminSettingsPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="sm:col-span-2 space-y-1.5">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">{t('Canonical Website URL')}</label>
                   <Input
                     value={settings.canonical_url ?? ''}
@@ -759,7 +759,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2 space-y-1.5">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">{t('Default Meta Title')}</label>
                   <Input
                     value={settings.meta_title ?? ''}
@@ -780,7 +780,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2 space-y-1.5">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-700">
                       {t('Google Search Console Meta Tag')}
@@ -795,7 +795,7 @@ export default function AdminSettingsPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2 space-y-1.5">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-700">
                       {t('Bing Webmaster Verification Meta Tag')}
@@ -1038,7 +1038,7 @@ export default function AdminSettingsPage() {
                     />
                   </div>
 
-                  <div className="space-y-1.5 sm:col-span-2">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">{t('Banner Headline Title')}</label>
                     <Input
                       value={settings.header_ads_title ?? ''}
@@ -1047,7 +1047,7 @@ export default function AdminSettingsPage() {
                     />
                   </div>
 
-                  <div className="space-y-1.5 sm:col-span-2">
+                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700">{t('Banner Supporting Description')}</label>
                     <Input
                       value={settings.header_ads_description ?? ''}

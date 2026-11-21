@@ -23,6 +23,7 @@ import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { usePermission } from '@/lib/admin/usePermission';
 import { useServerPagination } from '@/lib/admin/useServerPagination';
 import UnauthorizedAccess from '@/components/admin/UnauthorizedAccess';
@@ -51,7 +52,7 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [twoFactorFilter, setTwoFactorFilter] = useState<TwoFactorFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sortBy, setSortBy] = useState<SortBy>('name-asc');
+  const [sortBy, setSortBy] = useState<SortBy>('created-desc');
   const [roles, setRoles] = useState<{ id: number; name: string; slug: string }[]>([]);
 
   // Trace Modal state
@@ -538,26 +539,28 @@ export default function AdminUsersPage() {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-slate-600 block mb-1">Auth Method</label>
-                      <select
+                      <AdminSearchableSelect
                         value={newLoginAuthMethod}
-                        onChange={(e) => setNewLoginAuthMethod(e.target.value)}
-                        className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5"
-                      >
-                        <option value="Password">Password</option>
-                        <option value="2FA (TOTP)">2FA (TOTP)</option>
-                        <option value="API Key">API Key</option>
-                      </select>
+                        onChange={setNewLoginAuthMethod}
+                        triggerClassName="py-1.5 px-2.5 text-xs"
+                        options={[
+                          { value: 'Password', label: 'Password' },
+                          { value: '2FA (TOTP)', label: '2FA (TOTP)' },
+                          { value: 'API Key', label: 'API Key' },
+                        ]}
+                      />
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-slate-600 block mb-1">Status</label>
-                      <select
+                      <AdminSearchableSelect
                         value={newLoginStatus}
-                        onChange={(e) => setNewLoginStatus(e.target.value)}
-                        className="w-full text-xs bg-white border border-slate-300 rounded-lg px-2.5 py-1.5"
-                      >
-                        <option value="Success">Success</option>
-                        <option value="Failed">Failed</option>
-                      </select>
+                        onChange={setNewLoginStatus}
+                        triggerClassName="py-1.5 px-2.5 text-xs"
+                        options={[
+                          { value: 'Success', label: 'Success' },
+                          { value: 'Failed', label: 'Failed' },
+                        ]}
+                      />
                     </div>
                   </div>
                   <div className="flex justify-end pt-1">
@@ -637,25 +640,29 @@ export default function AdminUsersPage() {
                                 />
                               </td>
                               <td className="py-2.5 px-3.5">
-                                <select
+                                <AdminSearchableSelect
                                   value={editLoginAuthMethod}
-                                  onChange={(e) => setEditLoginAuthMethod(e.target.value)}
-                                  className="text-xs bg-white border border-slate-300 rounded px-2 py-1"
-                                >
-                                  <option value="Password">Password</option>
-                                  <option value="2FA (TOTP)">2FA (TOTP)</option>
-                                  <option value="API Key">API Key</option>
-                                </select>
+                                  onChange={setEditLoginAuthMethod}
+                                  className="min-w-[120px]"
+                                  triggerClassName="py-1 px-2 text-xs"
+                                  options={[
+                                    { value: 'Password', label: 'Password' },
+                                    { value: '2FA (TOTP)', label: '2FA (TOTP)' },
+                                    { value: 'API Key', label: 'API Key' },
+                                  ]}
+                                />
                               </td>
                               <td className="py-2.5 px-3.5">
-                                <select
+                                <AdminSearchableSelect
                                   value={editLoginStatus}
-                                  onChange={(e) => setEditLoginStatus(e.target.value)}
-                                  className="text-xs bg-white border border-slate-300 rounded px-2 py-1"
-                                >
-                                  <option value="Success">Success</option>
-                                  <option value="Failed">Failed</option>
-                                </select>
+                                  onChange={setEditLoginStatus}
+                                  className="min-w-[100px]"
+                                  triggerClassName="py-1 px-2 text-xs"
+                                  options={[
+                                    { value: 'Success', label: 'Success' },
+                                    { value: 'Failed', label: 'Failed' },
+                                  ]}
+                                />
                               </td>
                               <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
                                 <div className="flex items-center justify-end gap-1">

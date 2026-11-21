@@ -1143,3 +1143,7 @@ WHERE NOT EXISTS (SELECT 1 FROM public.categories WHERE slug = 'other');
 UPDATE public.posts
 SET category_id = (SELECT id FROM public.categories WHERE slug = 'other' LIMIT 1)
 WHERE category_id IS NULL AND is_deleted = FALSE;
+
+
+--changeset heygoodly:008-store-display-domain splitStatements:true endDelimiter:;
+ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS display_domain VARCHAR(255);

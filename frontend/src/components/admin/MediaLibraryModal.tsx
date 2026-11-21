@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import {
   X,
   Upload,
@@ -409,20 +410,19 @@ export default function MediaLibraryModal({
 
                 {/* Tag Filter Dropdown */}
                 {Object.keys(tagCounts).length > 0 && (
-                  <select
+                  <AdminSearchableSelect
                     value={selectedTag || 'all'}
-                    onChange={(e) => handleTagToggle(e.target.value === 'all' ? null : e.target.value)}
-                    className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value="all">
-                      All Tags ({Object.keys(tagCounts).length})
-                    </option>
-                    {Object.entries(tagCounts).map(([tag, count]) => (
-                      <option key={tag} value={tag}>
-                        #{tag} ({count})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => handleTagToggle(val === 'all' ? null : val)}
+                    className="w-auto min-w-[140px]"
+                    searchPlaceholder="Search tag..."
+                    options={[
+                      { value: 'all', label: `All Tags (${Object.keys(tagCounts).length})` },
+                      ...Object.entries(tagCounts).map(([tag, count]) => ({
+                        value: tag,
+                        label: `#${tag} (${count})`,
+                      })),
+                    ]}
+                  />
                 )}
 
                 {/* Active Tag Chip Indicator */}
@@ -763,18 +763,22 @@ export default function MediaLibraryModal({
               )}
             </span>
 
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
+            <AdminSearchableSelect
+              value={String(pageSize)}
+              placement="top"
+              searchable={false}
+              className="w-auto min-w-[100px]"
+              triggerClassName="py-1 px-2.5 text-xs"
+              onChange={(val) => {
+                setPageSize(Number(val));
                 setCurrentPage(1);
               }}
-              className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-            >
-              <option value={6}>6 / page</option>
-              <option value={12}>12 / page</option>
-              <option value={24}>24 / page</option>
-            </select>
+              options={[
+                { value: '6', label: '6 / page' },
+                { value: '12', label: '12 / page' },
+                { value: '24', label: '24 / page' },
+              ]}
+            />
 
             {/* Always visible pagination controls */}
             <div className="flex items-center gap-1 select-none">
@@ -915,17 +919,19 @@ export default function MediaLibraryModal({
                     {Math.round(stagingFile.size / 1024)} KB • {stagingFile.name.split('.').pop()?.toUpperCase()}
                   </p>
                   <div className="flex items-center gap-1.5 pt-0.5">
-                    <span className="text-[10px] font-bold text-slate-500">Folder:</span>
-                    <select
+                    <span className="text-[10px] font-bold text-slate-500 shrink-0">Folder:</span>
+                    <AdminSearchableSelect
                       value={stagingFolder}
-                      onChange={(e) => setStagingFolder(e.target.value as any)}
-                      className="text-[11px] font-bold bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-slate-700 focus:outline-none"
-                    >
-                      <option value="articles">Articles (articles)</option>
-                      <option value="stores">Stores (stores)</option>
-                      <option value="banners">Banners (banners)</option>
-                      <option value="icons">Icons / Logos (icons)</option>
-                    </select>
+                      onChange={(val) => setStagingFolder(val as any)}
+                      className="max-w-[200px]"
+                      triggerClassName="py-1 px-2 text-[11px]"
+                      options={[
+                        { value: 'articles', label: 'Articles (articles)' },
+                        { value: 'stores', label: 'Stores (stores)' },
+                        { value: 'banners', label: 'Banners (banners)' },
+                        { value: 'icons', label: 'Icons / Logos (icons)' },
+                      ]}
+                    />
                   </div>
                 </div>
               </div>

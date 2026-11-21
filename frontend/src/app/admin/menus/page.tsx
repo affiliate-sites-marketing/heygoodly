@@ -9,6 +9,7 @@ import {
   Filter,
   ArrowUpDown,
   Loader2,
+  LayoutGrid,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useServerPagination } from '@/lib/admin/useServerPagination';
@@ -17,18 +18,19 @@ import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
-import { adminSelectClass, adminSearchInputClass } from '@/components/admin/adminStyles';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import { adminSearchInputClass } from '@/components/admin/adminStyles';
 import { type MenuItem } from './_lib/data';
 import MenuTableRow from './_components/MenuTableRow';
+import MenuOrderMatrixModal from './_components/MenuOrderMatrixModal';
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 
 type TabPosition = 'all' | 'main' | 'footer';
 type StatusFilter = 'all' | 'active' | 'inactive';
-type SortBy = 'order-asc' | 'order-desc' | 'title-asc' | 'title-desc';
+type SortBy = 'newest' | 'order-asc' | 'order-desc' | 'title-asc' | 'title-desc';
 
 const TABLE_COLUMNS = [
-  { label: 'Order', className: 'w-16' },
   { label: 'Menu Label' },
   { label: 'Placement' },
   { label: 'Destination Type' },
@@ -40,11 +42,12 @@ const TABLE_COLUMNS = [
 export default function AdminMenusPage() {
   const { toast, confirm: confirmModal } = useToast();
 
+  const [orderMatrixOpen, setOrderMatrixOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabPosition>('all');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sortBy, setSortBy] = useState<SortBy>('order-asc');
+  const [sortBy, setSortBy] = useState<SortBy>('newest');
 
   const {
     items: displayedMenus,
@@ -62,6 +65,16 @@ export default function AdminMenusPage() {
     search,
     filters: {
       position: activeTab !== 'all' ? activeTab : undefined,
+      sortBy:
+        sortBy === 'newest'
+          ? 'id'
+          : sortBy === 'title-asc' || sortBy === 'title-desc'
+            ? 'title'
+            : 'sortOrder',
+      direction:
+        sortBy === 'newest' || sortBy === 'order-desc' || sortBy === 'title-desc'
+          ? 'desc'
+          : 'asc',
     },
     transformItem: (m: any) => ({
       id: Number(m.id),
@@ -81,14 +94,14 @@ export default function AdminMenusPage() {
     search.trim() !== '' ||
     typeFilter !== 'all' ||
     statusFilter !== 'all' ||
-    sortBy !== 'order-asc';
+    sortBy !== 'newest';
 
   const handleResetFilters = () => {
     setActiveTab('all');
     setSearch('');
     setTypeFilter('all');
     setStatusFilter('all');
-    setSortBy('order-asc');
+    setSortBy('newest');
   };
 
   const handleDelete = async (id: number) => {
@@ -128,12 +141,22 @@ export default function AdminMenusPage() {
         badge={`${totalElements} Links Total`}
         description="Configure primary header links, footer sitemaps, category drop-downs, and custom affiliate routes."
       >
-        <Link
-          href={ROUTES.ADMIN.MENU_CREATE}
-          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
-        >
-          <Plus size={15} /> Add Menu Item
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOrderMatrixOpen(true)}
+            className="h-9 px-3.5 inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-brand-primary/40 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <LayoutGrid size={15} className="text-brand-primary" />
+            <span>Arrange Order</span>
+          </button>
+          <Link
+            href={ROUTES.ADMIN.MENU_CREATE}
+            className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <Plus size={15} /> Add Menu Item
+          </Link>
+        </div>
       </AdminPageHeader>
 
       {/* Advanced Filter Box */}
@@ -198,43 +221,44 @@ export default function AdminMenusPage() {
             {/* Target Type Filter */}
             <div className="flex items-center gap-1.5">
               <Filter size={14} className="text-slate-400 shrink-0" />
-              <select
+              <AdminSearchableSelect
                 value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className={adminSelectClass}
-              >
-                <option value="all">All Destination Types</option>
-                <option value="custom">Custom External URL</option>
-                <option value="page">Static Page</option>
-                <option value="category">Category</option>
-                <option value="store">Merchant Store</option>
-              </select>
+                onChange={setTypeFilter}
+                options={[
+                  { value: 'all', label: 'All Destination Types' },
+                  { value: 'custom', label: 'Custom External URL' },
+                  { value: 'page', label: 'Static Page' },
+                  { value: 'category', label: 'Category' },
+                  { value: 'store', label: 'Merchant Store' },
+                ]}
+              />
             </div>
 
             {/* Status Filter */}
-            <select
+            <AdminSearchableSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className={adminSelectClass}
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active Only</option>
-              <option value="inactive">Inactive Only</option>
-            </select>
+              onChange={(val) => setStatusFilter(val as StatusFilter)}
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'active', label: 'Active Only' },
+                { value: 'inactive', label: 'Inactive Only' },
+              ]}
+            />
 
             {/* Sort By */}
             <div className="flex items-center gap-1.5">
               <ArrowUpDown size={14} className="text-slate-400 shrink-0" />
-              <select
+              <AdminSearchableSelect
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortBy)}
-                className={adminSelectClass}
-              >
-                <option value="order-asc">Order (1 → 99)</option>
-                <option value="order-desc">Order (99 → 1)</option>
-                <option value="title-asc">Label (A → Z)</option>
-                <option value="title-desc">Label (Z → A)</option>
-              </select>
+                onChange={(val) => setSortBy(val as SortBy)}
+                options={[
+                  { value: 'newest', label: 'Sort: Newly Created' },
+                  { value: 'order-asc', label: 'Order (1 → 99)' },
+                  { value: 'order-desc', label: 'Order (99 → 1)' },
+                  { value: 'title-asc', label: 'Label (A → Z)' },
+                  { value: 'title-desc', label: 'Label (Z → A)' },
+                ]}
+              />
             </div>
           </div>
         </div>
@@ -264,6 +288,14 @@ export default function AdminMenusPage() {
           <MenuTableRow key={item.id} item={item} onDelete={handleDelete} />
         ))}
       </AdminTableShell>
+
+      {/* Menu Matrix Drag & Drop Order Modal (by Placement) */}
+      <MenuOrderMatrixModal
+        isOpen={orderMatrixOpen}
+        onClose={() => setOrderMatrixOpen(false)}
+        initialPosition={activeTab === 'footer' ? 'footer' : 'main'}
+        onSaved={refresh}
+      />
     </div>
   );
 }

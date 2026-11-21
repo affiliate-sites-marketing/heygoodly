@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useAdminI18n } from '@/context/AdminI18nContext';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 
 interface PaginationProps {
   currentPage: number;
@@ -74,21 +75,22 @@ export default function Pagination({
         {showPageSizeSelector && onPageSizeChange && (
           <div className="flex items-center gap-1.5 pl-2 sm:border-l sm:border-slate-200">
             <span className="text-[11px] text-slate-400">{t('Rows per page:')}</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                const newSize = Number(e.target.value);
+            <AdminSearchableSelect
+              value={String(pageSize)}
+              placement="top"
+              searchable={false}
+              className="w-auto min-w-[105px]"
+              triggerClassName="py-1 px-2.5 text-xs"
+              onChange={(val) => {
+                const newSize = Number(val);
                 onPageSizeChange(newSize);
                 onPageChange(1);
               }}
-              className="bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-primary cursor-pointer transition"
-            >
-              {pageSizeOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {locale === 'vi' ? `${opt} / trang` : `${opt} / page`}
-                </option>
-              ))}
-            </select>
+              options={pageSizeOptions.map((opt) => ({
+                value: String(opt),
+                label: locale === 'vi' ? `${opt} / trang` : `${opt} / page`,
+              }))}
+            />
           </div>
         )}
       </div>

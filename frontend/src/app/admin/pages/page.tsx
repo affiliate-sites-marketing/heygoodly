@@ -8,6 +8,7 @@ import {
   Search,
   ArrowUpDown,
   Loader2,
+  LayoutGrid,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useServerPagination } from '@/lib/admin/useServerPagination';
@@ -16,17 +17,18 @@ import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
-import { adminSelectClass, adminSearchInputClass } from '@/components/admin/adminStyles';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import { adminSearchInputClass } from '@/components/admin/adminStyles';
 import { type StaticPageData } from './_lib/data';
 import StaticPageTableRow from './_components/StaticPageTableRow';
+import PageOrderMatrixModal from './_components/PageOrderMatrixModal';
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 
 type StatusFilter = 'all' | 'published' | 'draft';
-type SortBy = 'order-asc' | 'order-desc' | 'title-asc' | 'updated-desc';
+type SortBy = 'newest' | 'order-asc' | 'order-desc' | 'title-asc' | 'updated-desc';
 
 const TABLE_COLUMNS = [
-  { label: 'Order', className: 'w-16' },
   { label: 'Page Title' },
   { label: 'Live URL' },
   { label: 'Last Modified' },
@@ -37,9 +39,10 @@ const TABLE_COLUMNS = [
 export default function AdminPagesPage() {
   const { toast, confirm: confirmModal } = useToast();
 
+  const [orderMatrixOpen, setOrderMatrixOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sortBy, setSortBy] = useState<SortBy>('order-asc');
+  const [sortBy, setSortBy] = useState<SortBy>('newest');
 
   const {
     items: displayedPages,
@@ -57,8 +60,18 @@ export default function AdminPagesPage() {
     search,
     filters: {
       isActive: statusFilter === 'published' ? true : statusFilter === 'draft' ? false : undefined,
-      sortBy: sortBy === 'title-asc' ? 'title' : sortBy === 'updated-desc' ? 'updatedAt' : 'sortOrder',
-      direction: sortBy === 'order-desc' || sortBy === 'updated-desc' ? 'desc' : 'asc',
+      sortBy:
+        sortBy === 'newest'
+          ? 'createdAt'
+          : sortBy === 'title-asc'
+            ? 'title'
+            : sortBy === 'updated-desc'
+              ? 'updatedAt'
+              : 'sortOrder',
+      direction:
+        sortBy === 'newest' || sortBy === 'order-desc' || sortBy === 'updated-desc'
+          ? 'desc'
+          : 'asc',
     },
     transformItem: (p: any) => ({
       id: Number(p.id),
@@ -74,12 +87,12 @@ export default function AdminPagesPage() {
     fallbackItems: [],
   });
 
-  const isFiltered = search.trim() !== '' || statusFilter !== 'all' || sortBy !== 'order-asc';
+  const isFiltered = search.trim() !== '' || statusFilter !== 'all' || sortBy !== 'newest';
 
   const handleResetFilters = () => {
     setSearch('');
     setStatusFilter('all');
-    setSortBy('order-asc');
+    setSortBy('newest');
   };
 
   const handleDelete = async (id: number) => {
@@ -119,12 +132,22 @@ export default function AdminPagesPage() {
         badge={`${totalElements} Pages Total`}
         description="Manage legal disclosures, affiliate compliance statements, terms of service, and editorial guidelines."
       >
-        <Link
-          href={ROUTES.ADMIN.PAGE_CREATE}
-          className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
-        >
-          <Plus size={15} /> Create Static Page
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOrderMatrixOpen(true)}
+            className="h-9 px-3.5 inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-brand-primary/40 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <LayoutGrid size={15} className="text-brand-primary" />
+            <span>Arrange Order</span>
+          </button>
+          <Link
+            href={ROUTES.ADMIN.PAGE_CREATE}
+            className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <Plus size={15} /> Create Static Page
+          </Link>
+        </div>
       </AdminPageHeader>
 
       {/* Advanced Filter Box */}
@@ -187,29 +210,30 @@ export default function AdminPagesPage() {
             </div>
 
             {/* Status Dropdown */}
-            <select
+            <AdminSearchableSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className={adminSelectClass}
-            >
-              <option value="all">Status: All</option>
-              <option value="published">Status: Published Only</option>
-              <option value="draft">Status: Drafts Only</option>
-            </select>
+              onChange={(val) => setStatusFilter(val as StatusFilter)}
+              options={[
+                { value: 'all', label: 'Status: All' },
+                { value: 'published', label: 'Status: Published Only' },
+                { value: 'draft', label: 'Status: Drafts Only' },
+              ]}
+            />
 
             {/* Sort By */}
             <div className="flex items-center gap-1.5">
               <ArrowUpDown size={14} className="text-slate-400 shrink-0" />
-              <select
+              <AdminSearchableSelect
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortBy)}
-                className={adminSelectClass}
-              >
-                <option value="order-asc">Navigation Order (1 → 99)</option>
-                <option value="order-desc">Navigation Order (99 → 1)</option>
-                <option value="title-asc">Page Title (A → Z)</option>
-                <option value="updated-desc">Last Modified</option>
-              </select>
+                onChange={(val) => setSortBy(val as SortBy)}
+                options={[
+                  { value: 'newest', label: 'Sort: Newly Created' },
+                  { value: 'order-asc', label: 'Navigation Order (1 → 99)' },
+                  { value: 'order-desc', label: 'Navigation Order (99 → 1)' },
+                  { value: 'title-asc', label: 'Page Title (A → Z)' },
+                  { value: 'updated-desc', label: 'Last Modified' },
+                ]}
+              />
             </div>
           </div>
         </div>
@@ -239,6 +263,13 @@ export default function AdminPagesPage() {
           <StaticPageTableRow key={p.id} page={p} onDelete={handleDelete} />
         ))}
       </AdminTableShell>
+
+      {/* Static Page Matrix Drag & Drop Order Modal */}
+      <PageOrderMatrixModal
+        isOpen={orderMatrixOpen}
+        onClose={() => setOrderMatrixOpen(false)}
+        onSaved={refresh}
+      />
     </div>
   );
 }

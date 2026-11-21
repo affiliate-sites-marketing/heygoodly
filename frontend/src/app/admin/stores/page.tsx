@@ -18,27 +18,29 @@ import {
   Globe,
   SlidersHorizontal,
   Eye,
+  LayoutGrid,
 } from 'lucide-react';
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
 import AdminActionButton from '@/components/admin/AdminActionButton';
-import PositionReorderCell, { reorderListItems } from '@/components/admin/PositionReorderCell';
-import { adminSelectClass, adminSearchInputClass } from '@/components/admin/adminStyles';
+import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import { adminSearchInputClass } from '@/components/admin/adminStyles';
 import { ROUTES } from '@/constants/routes';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import storeService from '@/services/storeService';
 import { type AdminStore } from './_lib/data';
 import StoreOffersModal from './_components/StoreOffersModal';
+import StoreOrderMatrixModal from './_components/StoreOrderMatrixModal';
 import { usePermission } from '@/lib/admin/usePermission';
 import { useServerPagination } from '@/lib/admin/useServerPagination';
 import { useToast } from '@/context/ToastContext';
 import UnauthorizedAccess from '@/components/admin/UnauthorizedAccess';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'FEATURED';
-type SortBy = 'order-asc' | 'name-asc' | 'rating-desc' | 'coupons-desc' | 'clicks-desc';
+type SortBy = 'order-asc' | 'newest' | 'name-asc' | 'rating-desc' | 'coupons-desc' | 'clicks-desc';
 
 interface CategoryOption {
   id: number;
@@ -77,7 +79,6 @@ async function fetchCategoriesCached(): Promise<CategoryOption[]> {
 }
 
 const TABLE_COLUMNS = [
-  { label: 'Position' },
   { label: 'Merchant Brand' },
   { label: 'Category' },
   { label: 'Coupons & Deals' },
@@ -91,11 +92,11 @@ export default function AdminStoresPage() {
   const { toast, confirm: confirmModal } = useToast();
 
   const [selectedStoreForOffers, setSelectedStoreForOffers] = useState<AdminStore | null>(null);
+  const [orderMatrixOpen, setOrderMatrixOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [sortBy, setSortBy] = useState<SortBy>('order-asc');
-  const [reordering, setReordering] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [availableCategories, setAvailableCategories] = useState<CategoryOption[]>(() => cachedCategories || []);
 
   const loadCategories = useCallback(async () => {
@@ -124,16 +125,18 @@ export default function AdminStoresPage() {
     initialParams: {
       search: '',
       status: undefined,
-      sortBy: 'sortOrder',
-      direction: 'asc',
+      sortBy: 'createdAt',
+      direction: 'desc',
     },
     mapItem: (s: any): AdminStore => ({
       id: String(s.id),
       name: String(s.name),
       slug: String(s.slug),
-      domain: s.afWebsite
-        ? s.afWebsite.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '')
-        : (s.domain || `${s.slug}.com`),
+      domain: s.displayDomain
+        ? String(s.displayDomain)
+        : s.afWebsite
+          ? s.afWebsite.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '')
+          : (s.domain || `${s.slug}.com`),
       logoUrl: s.logo || s.logoUrl,
       categoryId: s.categoryId ? Number(s.categoryId) : undefined,
       category: s.categoryName || s.category || 'General',
@@ -179,6 +182,9 @@ export default function AdminStoresPage() {
     } else if (val === 'rating-desc') {
       setParam('sortBy', 'ratingScore');
       setParam('direction', 'desc');
+    } else if (val === 'newest') {
+      setParam('sortBy', 'createdAt');
+      setParam('direction', 'desc');
     } else if (val === 'coupons-desc') {
       setParam('sortBy', 'sortOrder');
       setParam('direction', 'asc');
@@ -191,42 +197,19 @@ export default function AdminStoresPage() {
     }
   };
 
-  const canReorder = sortBy === 'order-asc' && search === '' && categoryFilter === 'ALL' && statusFilter === 'ALL';
-
-  const handleMove = async (index: number, delta: -1 | 1) => {
-    if (reordering) return;
-    setReordering(true);
-    try {
-      const updated = await reorderListItems(
-        pagedItems,
-        index,
-        delta,
-        API_ENDPOINTS.ADMIN.STORES_REORDER
-      );
-      if (updated) {
-        setItems(updated.map((item, idx) => ({ ...item, sortOrder: idx + 1 })));
-        toast.success('Updated store display order!');
-      }
-    } catch {
-      toast.error('Failed to update store order');
-    } finally {
-      setReordering(false);
-    }
-  };
-
-  const isFiltered = search !== '' || categoryFilter !== 'ALL' || statusFilter !== 'ALL' || sortBy !== 'order-asc';
+  const isFiltered = search !== '' || categoryFilter !== 'ALL' || statusFilter !== 'ALL' || sortBy !== 'newest';
 
   const handleResetFilters = () => {
     setSearch('');
     setCategoryFilter('ALL');
     setStatusFilter('ALL');
-    setSortBy('order-asc');
+    setSortBy('newest');
     setParam('search', undefined);
     setParam('categoryId', undefined);
     setParam('category', undefined);
     setParam('status', undefined);
-    setParam('sortBy', 'sortOrder');
-    setParam('direction', 'asc');
+    setParam('sortBy', 'createdAt');
+    setParam('direction', 'desc');
   };
 
   const handleClone = async (store: AdminStore) => {
@@ -293,14 +276,26 @@ export default function AdminStoresPage() {
         badge={`${totalItems} Stores Total`}
         description="Manage merchant brand profiles, logos, and verified discount coupons."
       >
-        {hasPermission('store.create') && (
-          <Link
-            href={ROUTES.ADMIN.STORE_CREATE}
-            className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
-          >
-            <Plus size={16} /> Add New Store
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {hasPermission('store.update') && (
+            <button
+              type="button"
+              onClick={() => setOrderMatrixOpen(true)}
+              className="h-9 px-3.5 inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-brand-primary/40 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <LayoutGrid size={15} className="text-brand-primary" />
+              <span>Arrange Order</span>
+            </button>
+          )}
+          {hasPermission('store.create') && (
+            <Link
+              href={ROUTES.ADMIN.STORE_CREATE}
+              className="h-9 px-4 inline-flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <Plus size={16} /> Add New Store
+            </Link>
+          )}
+        </div>
       </AdminPageHeader>
 
       {/* Filters */}
@@ -318,35 +313,41 @@ export default function AdminStoresPage() {
             />
           </div>
 
-          <select
+          <AdminSearchableSelect
             value={categoryFilter}
-            onFocus={loadCategories}
-            onClick={loadCategories}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            className={adminSelectClass}
-          >
-            <option value="ALL">All Categories</option>
-            {availableCategories.map((c) => (
-              <option key={c.id} value={String(c.id)}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            onOpen={loadCategories}
+            onChange={handleCategoryChange}
+            placeholder="All Categories"
+            searchPlaceholder="Search category..."
+            options={[
+              { value: 'ALL', label: 'All Categories' },
+              ...availableCategories.map((c) => ({ value: String(c.id), label: c.name })),
+            ]}
+          />
 
-          <select value={statusFilter} onChange={(e) => handleStatusChange(e.target.value as StatusFilter)} className={adminSelectClass}>
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active Only</option>
-            <option value="INACTIVE">Inactive Only</option>
-            <option value="FEATURED">Featured Directory Only</option>
-          </select>
+          <AdminSearchableSelect
+            value={statusFilter}
+            onChange={(val) => handleStatusChange(val as StatusFilter)}
+            options={[
+              { value: 'ALL', label: 'All Statuses' },
+              { value: 'ACTIVE', label: 'Active Only' },
+              { value: 'INACTIVE', label: 'Inactive Only' },
+              { value: 'FEATURED', label: 'Featured Directory Only' },
+            ]}
+          />
 
-          <select value={sortBy} onChange={(e) => handleSortChange(e.target.value as SortBy)} className={adminSelectClass}>
-            <option value="order-asc">Sort: Display Position (#1, #2...)</option>
-            <option value="name-asc">Sort: Name (A to Z)</option>
-            <option value="rating-desc">Sort: Highest Rating</option>
-            <option value="coupons-desc">Sort: Most Coupons</option>
-            <option value="clicks-desc">Sort: Highest Traffic / Clicks</option>
-          </select>
+          <AdminSearchableSelect
+            value={sortBy}
+            onChange={(val) => handleSortChange(val as SortBy)}
+            options={[
+              { value: 'newest', label: 'Sort: Newly Created' },
+              { value: 'order-asc', label: 'Sort: Display Position (#1, #2...)' },
+              { value: 'name-asc', label: 'Sort: Name (A to Z)' },
+              { value: 'rating-desc', label: 'Sort: Highest Rating' },
+              { value: 'coupons-desc', label: 'Sort: Most Coupons' },
+              { value: 'clicks-desc', label: 'Sort: Highest Traffic / Clicks' },
+            ]}
+          />
         </div>
       </AdminFilterBar>
 
@@ -356,20 +357,10 @@ export default function AdminStoresPage() {
         rowCount={pagedItems.length}
         emptyMessage="No merchant stores match your current filters."
       >
-        {pagedItems.map((store, idx) => {
+        {pagedItems.map((store) => {
           const liveOffersCount = store.activeCoupons ?? 0;
           return (
             <tr key={store.id} className="hover:bg-slate-50/60 transition-colors group">
-              <td className="py-3.5 px-4 whitespace-nowrap">
-                <PositionReorderCell
-                  sortOrder={store.sortOrder}
-                  index={idx}
-                  total={pagedItems.length}
-                  canReorder={canReorder}
-                  disabled={reordering}
-                  onMove={(delta) => handleMove(idx, delta)}
-                />
-              </td>
               {/* Brand */}
               <td className="py-3.5 px-4">
                 <div className="flex items-center gap-3">
@@ -500,6 +491,13 @@ export default function AdminStoresPage() {
         isOpen={selectedStoreForOffers !== null}
         onClose={() => setSelectedStoreForOffers(null)}
         store={selectedStoreForOffers}
+      />
+
+      {/* Store Matrix Drag & Drop Order Modal */}
+      <StoreOrderMatrixModal
+        isOpen={orderMatrixOpen}
+        onClose={() => setOrderMatrixOpen(false)}
+        onSaved={refreshStores}
       />
     </div>
   );
