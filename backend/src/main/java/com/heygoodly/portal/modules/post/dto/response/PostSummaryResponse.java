@@ -23,6 +23,7 @@ public record PostSummaryResponse(
         BigDecimal rating,
         List<String> tags,
         boolean isFeatured,
+        boolean isHero,
         boolean isActive,
         Instant publishedAt,
         long viewCount,

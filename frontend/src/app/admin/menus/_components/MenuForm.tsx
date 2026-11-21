@@ -4,11 +4,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminFormPage, {
+  FormErrorBanner,
   FormLoading,
   FormNotFound,
+  FormQuickGuide,
   FormSection,
   inputClass,
   labelClass,
+  scrollToFormField,
+  toValidSlug,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
 import { SITE_DOMAIN } from '@/constants/site';
@@ -16,6 +20,7 @@ import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { type MenuItem } from '../_lib/data';
 import { useToast } from '@/context/ToastContext';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 import {
   Monitor,
   Smartphone,
@@ -119,11 +124,18 @@ export default function MenuForm({ id }: { id?: string }) {
   return <MenuFormInner key={id ?? 'new'} existing={existing} initial={initial} />;
 }
 
+const MENU_FIELD_LABELS: Record<string, string> = {
+  title: 'Menu Label / Title',
+  targetValue: 'Destination Target',
+};
+
 function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: MenuFormState }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useAdminI18n();
   const [allMenus, setAllMenus] = useState<MenuItem[]>(() => existing ? [existing] : []);
   const [form, setForm] = useState<MenuFormState>(initial);
+  const [targetTouched, setTargetTouched] = useState<boolean>(Boolean(existing?.targetValue));
 
   // Live Preview Settings
   const [viewportMode, setViewportMode] = useState<'desktop' | 'mobile'>('desktop');
@@ -160,6 +172,25 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+
+    const nextErrors: Record<string, string> = {};
+    if (!form.title.trim()) {
+      nextErrors.title = t('Please enter the menu label / title.');
+    }
+    if (!form.targetValue.trim()) {
+      nextErrors.targetValue = t('Please enter the destination target path or URL (e.g. /stores).');
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const firstKey = Object.keys(nextErrors)[0];
+      const fieldNames = Object.keys(nextErrors)
+        .map((k) => t(MENU_FIELD_LABELS[k] || k))
+        .join(', ');
+      toast.error(`${t('Please check required fields')}: ${fieldNames}`);
+      scrollToFormField(firstKey);
+      return;
+    }
+
     const payload = {
       title: form.title.trim(),
       position: form.position,
@@ -179,15 +210,27 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
       }
       router.push(ROUTES.ADMIN.MENUS);
     } catch (err: any) {
+      const mappedErrors: Record<string, string> = {};
       if (err?.response?.data?.errors && typeof err.response.data.errors === 'object') {
-        setErrors(err.response.data.errors);
+        Object.assign(mappedErrors, err.response.data.errors);
       }
       const msg = err?.response?.data?.message || err?.message || 'Failed to save menu item.';
-      toast.error(msg);
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(mappedErrors);
+        const firstKey = Object.keys(mappedErrors)[0];
+        const fieldNames = Object.keys(mappedErrors)
+          .map((k) => t(MENU_FIELD_LABELS[k] || k))
+          .join(', ');
+        toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
+        scrollToFormField(firstKey);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
   const applyPreset = (preset: typeof QUICK_PRESETS[number]) => {
+    setTargetTouched(true);
     setForm({
       ...form,
       title: preset.title,
@@ -195,6 +238,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
       targetType: preset.type,
       position: preset.position,
     });
+    setErrors({});
   };
 
   return (
@@ -208,6 +252,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
       width="full"
     >
       <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+        <FormErrorBanner errors={errors} fieldLabels={MENU_FIELD_LABELS} />
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
           
           {/* =========================================================
@@ -240,13 +285,23 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                 <label className={labelClass}>Menu Label / Title *</label>
                 <input
                   type="text"
+                  data-field="title"
                   value={form.title}
                   onChange={(e) => {
-                    setForm({ ...form, title: e.target.value });
+                    const nextTitle = e.target.value;
+                    const autoTarget = toValidSlug(nextTitle) ? `/${toValidSlug(nextTitle)}` : '';
+                    setForm((prev) => ({
+                      ...prev,
+                      title: nextTitle,
+                      targetValue: targetTouched ? prev.targetValue : autoTarget,
+                    }));
                     if (errors.title) setErrors((prev) => ({ ...prev, title: '' }));
+                    if (!targetTouched && autoTarget && errors.targetValue) {
+                      setErrors((prev) => ({ ...prev, targetValue: '' }));
+                    }
                   }}
                   placeholder="e.g. Stores, Top Deals, Tech, About Us"
-                  className={`${inputClass} text-base font-bold ${errors.title ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                  className={`${inputClass} text-base font-bold ${errors.title ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   autoFocus
                 />
                 {errors.title && (
@@ -278,13 +333,16 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
                   <label className={labelClass}>Destination Target *</label>
                   <input
                     type="text"
+                    data-field="targetValue"
                     value={form.targetValue}
                     onChange={(e) => {
-                      setForm({ ...form, targetValue: e.target.value });
+                      const val = e.target.value;
+                      setTargetTouched(Boolean(val.trim()));
+                      setForm({ ...form, targetValue: val });
                       if (errors.targetValue) setErrors((prev) => ({ ...prev, targetValue: '' }));
                     }}
                     placeholder="e.g. /stores, /category/tech"
-                    className={`${inputClass} font-mono ${errors.targetValue ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    className={`${inputClass} font-mono ${errors.targetValue ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.targetValue && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">

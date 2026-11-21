@@ -3,12 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminFormPage, {
+  FormErrorBanner,
   FormSection,
   inputClass,
   labelClass,
+  scrollToFormField,
+  toValidSlug,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
 import { useToast } from '@/context/ToastContext';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import {
@@ -22,9 +26,14 @@ import { CheckSquare, Square, Lock, AlertCircle } from 'lucide-react';
 
 const FORM_ID = 'role-create-form';
 
+const ROLE_FIELD_LABELS: Record<string, string> = {
+  name: 'Role Name',
+};
+
 export default function CreateRolePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useAdminI18n();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -59,8 +68,16 @@ export default function CreateRolePage() {
     e.preventDefault();
     setErrors({});
 
+    if (!name.trim()) {
+      const nextErrors = { name: t('Please enter the Role Name.') };
+      setErrors(nextErrors);
+      toast.error(`${t('Please check required fields')}: ${t('Role Name')}`);
+      scrollToFormField('name');
+      return;
+    }
+
     try {
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const slug = toValidSlug(name);
       const payload = {
         name: name.trim(),
         slug,
@@ -73,10 +90,18 @@ export default function CreateRolePage() {
       router.push(ROUTES.ADMIN.ROLES);
     } catch (err: any) {
       const respData = err?.response?.data;
+      const mappedErrors: Record<string, string> = {};
       if (respData?.errors && typeof respData.errors === 'object') {
-        setErrors(respData.errors);
+        Object.assign(mappedErrors, respData.errors);
       }
-      toast.error(respData?.message || 'Failed to create role.');
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(mappedErrors);
+        const firstKey = Object.keys(mappedErrors)[0];
+        toast.error(`${t('Please check required fields')}: ${t(ROLE_FIELD_LABELS[firstKey] || firstKey)} — ${mappedErrors[firstKey]}`);
+        scrollToFormField(firstKey);
+      } else {
+        toast.error(respData?.message || 'Failed to create role.');
+      }
     }
   };
 
@@ -91,17 +116,19 @@ export default function CreateRolePage() {
       width="wide"
     >
       <form noValidate id={FORM_ID} onSubmit={handleSubmit} className="space-y-6">
+        <FormErrorBanner errors={errors} fieldLabels={ROLE_FIELD_LABELS} />
         <FormSection title="Role Information">
           <div className="space-y-1">
             <label className={labelClass}>Role Name *</label>
             <input
+              data-field="name"
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
                 if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
               }}
               placeholder="e.g. SEO Campaign Lead"
-              className={`${inputClass} ${errors.name ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+              className={`${inputClass} ${errors.name ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
             />
             {errors.name && (
               <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1">

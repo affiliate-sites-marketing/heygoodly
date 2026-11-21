@@ -121,8 +121,22 @@ public class PostServiceImpl implements PostService {
                 new TypeReference<List<PostSummaryResponse>>() {},
                 java.time.Duration.ofMinutes(2),
                 () -> {
-                    List<PostEntity> featured = postRepository.findFeaturedPosts(PageRequest.of(0, 4));
-                    return mapToSummaryList(featured, true);
+                    List<PostEntity> hero = postRepository.findHeroPosts(PageRequest.of(0, 1));
+                    List<PostEntity> featured = postRepository.findFeaturedPosts(PageRequest.of(0, 7));
+                    List<PostEntity> combined = new ArrayList<>();
+                    Set<Long> usedIds = new HashSet<>();
+                    for (PostEntity p : hero) {
+                        if (usedIds.add(p.getId())) {
+                            combined.add(p);
+                        }
+                    }
+                    for (PostEntity p : featured) {
+                        if (combined.size() >= 7) break;
+                        if (usedIds.add(p.getId())) {
+                            combined.add(p);
+                        }
+                    }
+                    return mapToSummaryList(combined, true);
                 }
         );
     }
@@ -134,8 +148,43 @@ public class PostServiceImpl implements PostService {
                 new TypeReference<List<PostSummaryResponse>>() {},
                 java.time.Duration.ofMinutes(2),
                 () -> {
-                    List<PostEntity> picks = postRepository.findRecentPosts(PageRequest.of(0, 6));
-                    return mapToSummaryList(picks, true);
+                    final int maxPicks = 6;
+                    List<PostEntity> hero = postRepository.findHeroPosts(PageRequest.of(0, 1));
+                    List<PostEntity> featured = postRepository.findFeaturedPosts(PageRequest.of(0, maxPicks + 2));
+                    List<PostEntity> selected = new ArrayList<>();
+                    Set<Long> usedIds = new HashSet<>();
+
+                    Long leadId = null;
+                    if (!hero.isEmpty()) {
+                        leadId = hero.get(0).getId();
+                        usedIds.add(leadId);
+                    } else if (!featured.isEmpty()) {
+                        leadId = featured.get(0).getId();
+                        usedIds.add(leadId);
+                    }
+
+                    for (PostEntity p : featured) {
+                        if (selected.size() >= maxPicks) break;
+                        if (usedIds.add(p.getId())) {
+                            selected.add(p);
+                        }
+                    }
+
+                    if (selected.size() < maxPicks) {
+                        List<PostEntity> recent = postRepository.findRecentPosts(PageRequest.of(0, maxPicks + 4));
+                        if (leadId == null && !recent.isEmpty()) {
+                            leadId = recent.get(0).getId();
+                            usedIds.add(leadId);
+                        }
+                        for (PostEntity p : recent) {
+                            if (selected.size() >= maxPicks) break;
+                            if (usedIds.add(p.getId())) {
+                                selected.add(p);
+                            }
+                        }
+                    }
+
+                    return mapToSummaryList(selected, true);
                 }
         );
     }
@@ -490,10 +539,18 @@ public class PostServiceImpl implements PostService {
             readTime = estimateReadTime(request.getContent());
         }
 
+        boolean isFeatured = NullSafeUtils.safeBoolean(request.getIsFeatured());
+        boolean isHero = NullSafeUtils.safeBoolean(request.getIsHero());
+        if (isHero) {
+            postRepository.clearOtherHeroes(null);
+        }
+
+        Long resolvedCategoryId = resolvePostCategoryId(request.getCategoryId());
+
         PostEntity post = PostEntity.builder()
                 .title(NullSafeUtils.safeTrim(request.getTitle()))
                 .slug(slug)
-                .categoryId(request.getCategoryId())
+                .categoryId(resolvedCategoryId)
                 .authorId(authorId)
                 .authorName(NullSafeUtils.trimToNull(request.getAuthorName()))
                 .authorRole(NullSafeUtils.trimToNull(request.getAuthorRole()))
@@ -506,7 +563,9 @@ public class PostServiceImpl implements PostService {
                 .status(resolvedStatus)
                 .tags(tagsJson)
                 .sidebarConfig(sidebarJson)
-                .isFeatured(NullSafeUtils.safeBoolean(request.getIsFeatured()))
+                .isFeatured(isFeatured)
+                .featuredAt(isFeatured ? now : null)
+                .isHero(isHero)
                 .isActive(isActive)
                 .sortOrder(NullSafeUtils.safeInt(request.getSortOrder(), AppConstants.DEFAULT_SORT_ORDER))
                 .publishedAt(publishedAt)
@@ -557,7 +616,7 @@ public class PostServiceImpl implements PostService {
 
         post.setTitle(NullSafeUtils.safeTrim(request.getTitle()));
         post.setSlug(slug);
-        post.setCategoryId(request.getCategoryId());
+        post.setCategoryId(resolvePostCategoryId(request.getCategoryId()));
 
         if (request.getStoreId() != null || request.getStoreSlug() != null) {
             post.setStoreId(resolveStoreId(request.getStoreId(), request.getStoreSlug()));
@@ -580,7 +639,21 @@ public class PostServiceImpl implements PostService {
             post.setRating(request.getRating());
         }
         if (request.getIsFeatured() != null) {
-            post.setIsFeatured(request.getIsFeatured());
+            boolean wasFeatured = Boolean.TRUE.equals(post.getIsFeatured());
+            boolean nextFeatured = Boolean.TRUE.equals(request.getIsFeatured());
+            post.setIsFeatured(nextFeatured);
+            if (nextFeatured && (!wasFeatured || post.getFeaturedAt() == null)) {
+                post.setFeaturedAt(Instant.now());
+            } else if (!nextFeatured) {
+                post.setFeaturedAt(null);
+            }
+        }
+        if (request.getIsHero() != null) {
+            boolean nextHero = Boolean.TRUE.equals(request.getIsHero());
+            if (nextHero) {
+                postRepository.clearOtherHeroes(post.getId());
+            }
+            post.setIsHero(nextHero);
         }
         if (request.getSortOrder() != null) {
             post.setSortOrder(request.getSortOrder());
@@ -717,6 +790,27 @@ public class PostServiceImpl implements PostService {
         postRepository.save(post);
         auditLogService.recordAction("DELETE", "posts", String.valueOf(id), deletedTitle, null);
         evictPostCaches();
+    }
+
+    private Long resolvePostCategoryId(Long requestedCategoryId) {
+        if (requestedCategoryId != null && categoryRepository.existsById(requestedCategoryId)) {
+            return requestedCategoryId;
+        }
+        return categoryRepository.findBySlugAndIsDeletedFalse("other")
+                .map(CategoryEntity::getId)
+                .orElseGet(() -> {
+                    CategoryEntity other = CategoryEntity.builder()
+                            .name("Other")
+                            .slug("other")
+                            .type("post")
+                            .isActive(true)
+                            .showOnHome(true)
+                            .sortOrder(999)
+                            .description("General articles, guides, and miscellaneous reviews.")
+                            .build();
+                    other.setCreatedBy(AppConstants.SYSTEM_USER);
+                    return categoryRepository.save(other).getId();
+                });
     }
 
     private Long resolveStoreId(Long storeId, String storeSlug) {

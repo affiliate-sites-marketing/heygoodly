@@ -1065,3 +1065,81 @@ CREATE INDEX IF NOT EXISTS idx_posts_tags_gin ON public.posts USING gin (tags);
 CREATE INDEX IF NOT EXISTS idx_stores_tags_gin ON public.stores USING gin (tags);
 CREATE INDEX IF NOT EXISTS idx_media_items_tags_gin ON public.media_items USING gin (tags);
 CREATE INDEX IF NOT EXISTS idx_offers_tags_gin ON public.offers USING gin (tags);
+
+--changeset heygoodly:004-store-template-library splitStatements:true endDelimiter:;
+CREATE TABLE IF NOT EXISTS public.store_review_templates (
+    id BIGSERIAL PRIMARY KEY,
+    category VARCHAR(50) NOT NULL DEFAULT 'savings',
+    title VARCHAR(180) NOT NULL,
+    reviewer_name VARCHAR(120) NOT NULL,
+    rating SMALLINT NOT NULL DEFAULT 5,
+    review_date_label VARCHAR(80),
+    is_verified BOOLEAN NOT NULL DEFAULT TRUE,
+    comment_template TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 100,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_store_review_templates_active
+    ON public.store_review_templates (is_deleted, category, sort_order, id);
+
+CREATE TABLE IF NOT EXISTS public.store_faq_templates (
+    id BIGSERIAL PRIMARY KEY,
+    category VARCHAR(50) NOT NULL DEFAULT 'promo',
+    title VARCHAR(180) NOT NULL,
+    question_template TEXT NOT NULL,
+    answer_template TEXT NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    sort_order INTEGER NOT NULL DEFAULT 100,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_store_faq_templates_active
+    ON public.store_faq_templates (is_deleted, is_default, sort_order, id);
+
+
+--changeset heygoodly:005-seed-default-review-templates splitStatements:true endDelimiter:;
+INSERT INTO public.store_review_templates (category, title, reviewer_name, rating, review_date_label, is_verified, comment_template, sort_order, created_by)
+SELECT v.category, v.title, v.reviewer_name, v.rating, v.review_date_label, TRUE, v.comment_template, v.sort_order, 'system'
+FROM (VALUES
+    ('savings', 'Instant Checkout Promo Worked', 'Hannah M.', 5, '2 days ago', 10, 'Grabbed a verified {brand} coupon code here right before checking out and saved 20% instantly. Took less than ten seconds and worked on the first try.'),
+    ('savings', 'Stacked Welcome Offer + Sale', 'Daniel R.', 5, '5 days ago', 11, 'Used the {brand} promo code on a bundle that was already marked down. Nice extra savings and no expired coupon guesswork like other sites.'),
+    ('savings', 'Saved Enough to Upgrade Order', 'Rachel K.', 5, '1 week ago', 12, 'Almost placed my {brand} order at full price until I checked for a discount code first. Knocked over $25 off the total effortlessly.'),
+    ('savings', 'Storewide Code Applied Cleanly', 'Kevin T.', 5, '2 weeks ago', 13, 'Great experience ordering directly from {brand}. The storewide promo code applied smoothly in the cart and I still qualified for free shipping.'),
+    ('savings', 'Repeat Customer Discount Find', 'Sophia B.', 5, '3 weeks ago', 14, 'I reorder from {brand} every few months and always check this page beforehand. The seasonal markdown link saved me a solid chunk this time too.'),
+    ('savings', 'Verified Deal on Best-Seller', 'Marcus W.', 5, '1 month ago', 15, 'Wasn’t expecting a coupon to work on their newest release, but the {brand} promo link unlocked a real percentage discount right in the cart.'),
+    ('quality', 'Exceeded Expectations on Quality', 'Emily C.', 5, '4 days ago', 20, 'Everything from {brand} arrived well packaged and feels genuinely well-made. Combined with the promo code discount, the value is hard to beat.'),
+    ('quality', 'Worth Every Penny With Promo', 'Jason P.', 5, '1 week ago', 21, 'Compared a few brands before picking {brand}. Solid build, clean checkout, and getting extra money off made the decision easy.'),
+    ('quality', 'Clear Details & Zero Surprises', 'Olivia N.', 5, '10 days ago', 22, 'Product specs on {brand} matched what showed up at my door. Love that the deal terms were clear up front with no hidden checkout fees.'),
+    ('quality', 'Gift Order Was a Hit', 'Tyler H.', 5, '2 weeks ago', 23, 'Ordered a gift set from {brand} using one of the verified deals. Presentation looked premium and the coupon covered more than the shipping cost.'),
+    ('quality', 'Glad I Switched to This Brand', 'Natalie G.', 5, '3 weeks ago', 24, 'First-time buyer with {brand} and very impressed so far. Quality noticeably beats budget alternatives, especially with the new-customer savings.'),
+    ('shipping', 'Fast Dispatch & Smooth Tracking', 'Brandon D.', 5, '3 days ago', 30, 'My {brand} order shipped out the very next morning with tracking updates all the way to delivery. Promo code applied cleanly at checkout too.'),
+    ('shipping', 'Helpful Support Team', 'Chloe S.', 5, '6 days ago', 31, 'Had a quick question about sizing before ordering from {brand} and support replied the same afternoon. Smooth delivery and nice coupon savings.'),
+    ('shipping', 'Hassle-Free Size Exchange', 'Austin F.', 5, '2 weeks ago', 32, 'Needed to swap one item from {brand} and their exchange portal was painless. Fast turnaround and the discount from my original order still held.'),
+    ('shipping', 'Free Shipping Threshold Worked', 'Samantha V.', 5, '1 month ago', 33, 'Hit the {brand} free shipping minimum easily and stacked a 15% off coupon on top. Arrived two days earlier than estimated.'),
+    ('balanced', 'Great Product, Slight Shipping Wait', 'Nathan L.', 4, '5 days ago', 40, 'Really happy with what I ordered from {brand} and the coupon code gave a real discount. Standard shipping took an extra day over the weekend, otherwise great.'),
+    ('balanced', 'Second Code Worked Great', 'Grace Y.', 4, '2 weeks ago', 41, 'The top code only applied to full-priced items, so I switched to the second {brand} deal for 15% off my whole cart. Smooth checkout after that.'),
+    ('balanced', 'Good Value When Discounted', 'Ryan Z.', 4, '3 weeks ago', 42, '{brand} pricing feels a touch steep without a promo, so definitely grab a coupon from this page first. With 20% off, I’d gladly order again.')
+) AS v(category, title, reviewer_name, rating, review_date_label, sort_order, comment_template)
+WHERE NOT EXISTS (SELECT 1 FROM public.store_review_templates);
+
+
+--changeset heygoodly:006-post-hero-and-featured-at splitStatements:true endDelimiter:;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS is_hero BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS featured_at TIMESTAMPTZ;
+UPDATE public.posts SET featured_at = COALESCE(updated_at, published_at, created_at) WHERE is_featured = TRUE AND featured_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_posts_public_hero ON public.posts (is_hero, updated_at DESC) WHERE is_deleted = false AND is_active = true AND is_hero = true;
+CREATE INDEX IF NOT EXISTS idx_posts_public_featured_at ON public.posts (featured_at DESC, id DESC) WHERE is_deleted = false AND is_active = true AND is_featured = true;
+
+
+--changeset heygoodly:007-ensure-other-post-category splitStatements:true endDelimiter:;
+INSERT INTO public.categories (name, slug, type, is_active, show_on_home, sort_order, description, is_deleted, created_by, created_at, updated_at)
+SELECT 'Other', 'other', 'post', TRUE, TRUE, 999, 'General articles, guides, and miscellaneous reviews.', FALSE, 'system', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM public.categories WHERE slug = 'other');
+UPDATE public.posts
+SET category_id = (SELECT id FROM public.categories WHERE slug = 'other' LIMIT 1)
+WHERE category_id IS NULL AND is_deleted = FALSE;

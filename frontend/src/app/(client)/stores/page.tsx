@@ -16,7 +16,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
-import storeService from '@/services/storeService';
+import storeService, { extractPlainTextExcerpt } from '@/services/storeService';
 import categoryService, { CategoryItem } from '@/services/categoryService';
 import Pagination from '@/components/admin/Pagination';
 import { Store } from '@/types/deals';
@@ -487,8 +487,25 @@ export default function StoresDirectoryPage() {
 
                   {/* Store Description */}
                   <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                    {store.shortDescription || store.description}
+                    {store.shortDescription ||
+                      extractPlainTextExcerpt(store.description, 180) ||
+                      `Discover verified ${store.name} coupon codes, promo deals, and active discounts.`}
                   </p>
+
+                  {/* Store Tags (Auto-generated or custom tags from Admin) */}
+                  {store.tags && store.tags.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                      {store.tags.slice(0, 3).map((tag) => (
+                        <Link
+                          key={tag}
+                          href={ROUTES.PUBLIC.TAG_DETAIL(tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))}
+                          className="text-[10px] font-semibold text-slate-500 hover:text-brand-primary bg-slate-50 hover:bg-brand-primary-soft border border-slate-200/80 hover:border-brand-primary-border px-2 py-0.5 rounded-md transition"
+                        >
+                          #{tag.replace(/^#+/, '')}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Bottom CTA */}
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">

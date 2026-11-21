@@ -28,7 +28,11 @@ import CouponModal from '@/components/deals/CouponModal';
 import StoreCustomerReviewsSection from '@/components/store/StoreCustomerReviewsSection';
 import { triggerDualActionCoupon } from '@/lib/deals/affiliateAction';
 import { Store, Coupon } from '@/types/deals';
-import storeService from '@/services/storeService';
+import storeService, {
+  extractPlainTextExcerpt,
+  buildDefaultPopularSearches,
+  buildDefaultStoreFaqs,
+} from '@/services/storeService';
 import dealService from '@/services/dealService';
 import JsonLd from '@/components/seo/JsonLd';
 import subscriberService from '@/services/subscriberService';
@@ -137,16 +141,21 @@ export default function StoreAffiliatePage() {
   const storeReviews = typeof store.reviewCount === 'number' && store.reviewCount > 0 ? store.reviewCount : null;
   const storeBestOffer = store.maxDiscount || coupons[0]?.discount || null;
   const storeAffiliateUrl = store.affiliateUrl || ROUTES.PUBLIC.GO_AFFILIATE(store.slug);
-  const rawDescription = store.shortDescription || store.description || '';
   const cleanDescription =
-    rawDescription.replace(/<[^>]*>?/gm, '').trim() ||
+    extractPlainTextExcerpt(store.shortDescription, 260) ||
+    extractPlainTextExcerpt(store.description, 240) ||
     `Browse verified promo codes and active deals from ${storeName}.`;
 
-  const popularSearches = store.popularSearches && store.popularSearches.length > 0 ? store.popularSearches : [];
+  const popularSearches =
+    store.popularSearches && store.popularSearches.length > 0
+      ? store.popularSearches
+      : buildDefaultPopularSearches(storeName);
+  const storeTags =
+    store.tags && store.tags.length > 0 ? store.tags : [storeName];
   const storeFaqs =
     store.faqs && store.faqs.length > 0
       ? store.faqs.map((f) => ({ q: f.question, a: f.answer }))
-      : [];
+      : buildDefaultStoreFaqs(storeName).map((f) => ({ q: f.question, a: f.answer }));
 
   const filteredCoupons = coupons.filter((c) => {
     if (activeTab === 'codes') return c.isCode;
@@ -279,11 +288,27 @@ export default function StoreAffiliatePage() {
                 </div>
 
                 <p
-                  className="text-xs text-slate-500 leading-relaxed line-clamp-2 text-left lg:text-center lg:px-1 pt-2 border-t border-slate-100"
+                  className="text-xs text-slate-500 leading-relaxed line-clamp-3 text-left lg:text-center lg:px-1 pt-2 border-t border-slate-100"
                   title={cleanDescription}
                 >
                   {cleanDescription}
                 </p>
+
+                {storeTags.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-start lg:justify-center gap-1.5 pt-0.5">
+                    {storeTags.map((tag) => (
+                      <Link
+                        key={tag}
+                        href={ROUTES.PUBLIC.TAG_DETAIL(
+                          tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                        )}
+                        className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-slate-600 hover:text-brand-primary bg-slate-100 hover:bg-brand-primary-soft border border-slate-200/80 hover:border-brand-primary-border transition"
+                      >
+                        #{tag.replace(/^#+/, '')}
+                      </Link>
+                    ))}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 lg:flex lg:flex-col gap-2 lg:gap-2.5">
                   <button

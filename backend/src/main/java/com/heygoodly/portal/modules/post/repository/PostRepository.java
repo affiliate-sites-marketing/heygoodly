@@ -56,7 +56,14 @@ public interface PostRepository extends JpaRepository<PostEntity, Long>, JpaSpec
     @Query("UPDATE PostEntity p SET p.viewCount = p.viewCount + :delta WHERE p.id = :id")
     void addViewCount(@Param("id") Long id, @Param("delta") long delta);
 
-    @Query("SELECT p FROM PostEntity p WHERE p.isActive = true AND p.isDeleted = false AND p.publishedAt <= CURRENT_TIMESTAMP AND p.isFeatured = true AND (p.categoryId IS NULL OR EXISTS (SELECT c.id FROM com.heygoodly.portal.modules.category.entity.CategoryEntity c WHERE c.id = p.categoryId AND c.isActive = true AND c.isDeleted = false)) ORDER BY p.publishedAt DESC")
+    @Modifying
+    @Query("UPDATE PostEntity p SET p.isHero = false WHERE p.isHero = true AND (:excludeId IS NULL OR p.id <> :excludeId)")
+    void clearOtherHeroes(@Param("excludeId") Long excludeId);
+
+    @Query("SELECT p FROM PostEntity p WHERE p.isActive = true AND p.isDeleted = false AND p.publishedAt <= CURRENT_TIMESTAMP AND p.isHero = true AND (p.categoryId IS NULL OR EXISTS (SELECT c.id FROM com.heygoodly.portal.modules.category.entity.CategoryEntity c WHERE c.id = p.categoryId AND c.isActive = true AND c.isDeleted = false)) ORDER BY p.updatedAt DESC, p.id DESC")
+    List<PostEntity> findHeroPosts(Pageable pageable);
+
+    @Query("SELECT p FROM PostEntity p WHERE p.isActive = true AND p.isDeleted = false AND p.publishedAt <= CURRENT_TIMESTAMP AND p.isFeatured = true AND (p.categoryId IS NULL OR EXISTS (SELECT c.id FROM com.heygoodly.portal.modules.category.entity.CategoryEntity c WHERE c.id = p.categoryId AND c.isActive = true AND c.isDeleted = false)) ORDER BY COALESCE(p.featuredAt, p.updatedAt, p.publishedAt) DESC, p.id DESC")
     List<PostEntity> findFeaturedPosts(Pageable pageable);
 
     @Query("SELECT p FROM PostEntity p WHERE p.isActive = true AND p.isDeleted = false AND p.publishedAt <= CURRENT_TIMESTAMP AND (p.categoryId IS NULL OR EXISTS (SELECT c.id FROM com.heygoodly.portal.modules.category.entity.CategoryEntity c WHERE c.id = p.categoryId AND c.isActive = true AND c.isDeleted = false)) ORDER BY p.publishedAt DESC")

@@ -52,6 +52,8 @@ public class PostRequest {
     @Builder.Default
     private Boolean isFeatured = false;
 
+    private Boolean isHero;
+
     @Builder.Default
     private Boolean isActive = true;
 

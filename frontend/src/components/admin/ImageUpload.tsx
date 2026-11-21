@@ -28,6 +28,7 @@ interface ImageUploadProps {
   label?: string;
   description?: string;
   aspectRatio?: 'video' | 'square' | 'banner';
+  defaultTags?: string[];
 }
 
 export default function ImageUpload({
@@ -37,6 +38,7 @@ export default function ImageUpload({
   label = 'Featured Image / Cover',
   description = 'PNG, JPG, WEBP or GIF (Max 10MB). High resolution recommended.',
   aspectRatio = 'video',
+  defaultTags = [],
 }: ImageUploadProps) {
   const toastCtx = useOptionalToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -96,7 +98,9 @@ export default function ImageUpload({
     setError(null);
     setStagedFile(file);
     setStagedPreview(URL.createObjectURL(file));
-    setStagedTags([folder === 'stores' ? 'store' : folder === 'banners' ? 'banner' : 'article']);
+    const cleanDefaultTags = defaultTags.map((t) => t.trim()).filter(Boolean);
+    const fallbackFolderTag = folder.includes('store') ? 'store' : folder.includes('banner') ? 'banner' : 'article';
+    setStagedTags(cleanDefaultTags.length > 0 ? Array.from(new Set(cleanDefaultTags)) : [fallbackFolderTag]);
     setShowTagModal(true);
 
     if (fileInputRef.current) fileInputRef.current.value = '';

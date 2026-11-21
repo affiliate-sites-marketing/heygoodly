@@ -27,6 +27,7 @@ public record PostDetailResponse(
         List<String> tags,
         Map<String, Object> sidebarConfig,
         boolean isFeatured,
+        boolean isHero,
         boolean isActive,
         Instant publishedAt,
         long viewCount,

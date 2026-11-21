@@ -33,17 +33,22 @@ import ImageUpload from '@/components/admin/ImageUpload';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import DisplayPositionPicker from '@/components/admin/DisplayPositionPicker';
 import AdminFormPage, {
+  FormErrorBanner,
   FormLoading,
   FormNotFound,
+  FormQuickGuide,
   FormSection,
   inputClass,
   labelClass,
+  scrollToFormField,
+  toValidSlug,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { STORAGE_KEYS } from '@/constants/ui-constants';
 import { apiClient } from '@/lib/api/axios-client';
 import { useToast } from '@/context/ToastContext';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 import {
   type AdminArticle,
   type CategoryOption,
@@ -65,6 +70,7 @@ interface PostFormState {
   scheduledAt: string;
   imageUrl: string;
   featured: boolean;
+  isHero: boolean;
   sortOrder: number;
   tags: string;
   storeSlug: string;
@@ -82,13 +88,42 @@ interface PostFormState {
 const FORM_ID = 'post-form';
 
 function generateSlug(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  return toValidSlug(text);
 }
+
+function extractExcerptFromHtml(html?: string | null, maxChars = 240): string {
+  if (!html) return '';
+  const withoutHeadings = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, ' ');
+  const rawSource = withoutHeadings.replace(/<[^>]+>/g, ' ').trim() ? withoutHeadings : html;
+  const plain = rawSource
+    .replace(/<\/(p|div|li|br|h[1-6])>/gi, '. ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s*\.\s*\./g, '.')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!plain || plain.includes('Provide a detailed introduction to the product review')) return '';
+  if (plain.length <= maxChars) return plain;
+  const sliced = plain.slice(0, maxChars);
+  const lastPeriod = Math.max(sliced.lastIndexOf('. '), sliced.lastIndexOf('! '), sliced.lastIndexOf('? '));
+  if (lastPeriod >= Math.floor(maxChars * 0.5)) {
+    return sliced.slice(0, lastPeriod + 1).trim();
+  }
+  const lastSpace = sliced.lastIndexOf(' ');
+  return (lastSpace > 0 ? sliced.slice(0, lastSpace) : sliced).trim() + '...';
+}
+
+const POST_FIELD_LABELS: Record<string, string> = {
+  title: 'Headline / Title',
+  slug: 'Article URL Slug',
+  content: 'Article Body Content',
+  categoryId: 'Editorial Category',
+  rating: 'Score & Rating',
+  scheduledAt: 'Scheduled Publish Time',
+};
 
 function getDefaultScheduledTime(): string {
   const tomorrow = new Date();
@@ -189,6 +224,7 @@ function PostFormContent({ id }: { id?: string }) {
             scheduledAt,
             imageUrl: data.image || '',
             featured: Boolean(data.isFeatured),
+            isHero: Boolean(data.isHero),
             sortOrder: Number(data.sortOrder ?? 9999),
             tags: parsedTags,
             storeSlug: data.storeSlug || '',
@@ -241,8 +277,9 @@ function PostFormContent({ id }: { id?: string }) {
         scheduledAt: existing.scheduledAt || getDefaultScheduledTime(),
         imageUrl: existing.imageUrl,
         featured: existing.featured,
+        isHero: Boolean(existing.isHero),
         sortOrder: existing.sortOrder ?? 9999,
-        tags: existing.tags.join(', '),
+        tags: mergeCategoryTag(existing.tags.join(', '), existing.category),
         storeSlug: existing.storeSlug || '',
         storeName: existing.sidebarConfig?.storeName || existing.storeName || '',
         showBrandCard: existing.sidebarConfig?.showBrandCard !== false,
@@ -295,8 +332,9 @@ function PostFormContent({ id }: { id?: string }) {
         scheduledAt: getDefaultScheduledTime(),
         imageUrl: '',
         featured: false,
+        isHero: false,
         sortOrder: 9999,
-        tags: categoryParam ? `${categoryParam}, Reviews` : 'Tech, Hardware, Lab Test',
+        tags: categoryParam && isNaN(Number(categoryParam)) ? categoryParam : '',
         storeSlug: '',
         storeName: '',
         showBrandCard: true,
@@ -313,6 +351,53 @@ function PostFormContent({ id }: { id?: string }) {
   return <PostFormInner key={id ?? 'new'} existing={existing} initial={initial} />;
 }
 
+function toTagKey(raw?: string | null): string {
+  return (raw || '')
+    .trim()
+    .replace(/^#+/, '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function mergeCategoryTagList(
+  tags: string[],
+  categoryName?: string,
+  previousCategoryName?: string
+): string[] {
+  const prevKey = toTagKey(previousCategoryName);
+  const nextClean = (categoryName || '').trim();
+  const nextKey = toTagKey(nextClean);
+
+  const filtered = (tags || [])
+    .map((tg) => tg.trim().replace(/^#+/, ''))
+    .filter(Boolean)
+    .filter((tg) => {
+      const key = toTagKey(tg);
+      if (!key) return false;
+      if (prevKey && prevKey !== nextKey && key === prevKey) return false;
+      return true;
+    });
+
+  if (!nextClean || !nextKey) return filtered;
+  if (filtered.some((tg) => toTagKey(tg) === nextKey)) return filtered;
+  return [nextClean, ...filtered];
+}
+
+function mergeCategoryTag(
+  tagsCsv: string,
+  categoryName?: string,
+  previousCategoryName?: string
+): string {
+  const list = (tagsCsv || '')
+    .split(',')
+    .map((tg) => tg.trim())
+    .filter(Boolean);
+  return mergeCategoryTagList(list, categoryName, previousCategoryName).join(', ');
+}
+
 interface StoreOption {
   id: number;
   name: string;
@@ -327,7 +412,13 @@ interface StoreOption {
 function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial: PostFormState }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useAdminI18n();
   const [form, setForm] = useState<PostFormState>(initial);
+  const [slugTouched, setSlugTouched] = useState<boolean>(Boolean(existing?.slug));
+  const [excerptTouched, setExcerptTouched] = useState<boolean>(Boolean(existing?.excerpt?.trim()));
+  const [autoCategoryTag, setAutoCategoryTag] = useState<string>(
+    existing?.category?.trim() || (initial.categoryId ? initial.category.trim() : '')
+  );
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [stores, setStores] = useState<StoreOption[]>(() => {
     if (existing?.storeName) {
@@ -361,17 +452,54 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       const res = await apiClient.get(API_ENDPOINTS.PUBLIC.CATEGORIES);
       const list = res.data?.data?.content || res.data?.data;
       if (Array.isArray(list)) {
-        setCategories(
-          list.map((c: any) => ({
-            id: Number(c.id),
-            name: String(c.name),
-            slug: String(c.slug),
-          }))
-        );
+        const mapped = list.map((c: any) => ({
+          id: Number(c.id),
+          name: String(c.name),
+          slug: String(c.slug),
+        }));
+        setCategories(mapped);
         setHasLoadedCategories(true);
+        if (form.categoryId) {
+          const matched = mapped.find((c) => c.id === form.categoryId);
+          if (matched) {
+            setForm((prev) => ({
+              ...prev,
+              category: matched.name,
+              tags: mergeCategoryTag(prev.tags, matched.name, autoCategoryTag),
+            }));
+            setAutoCategoryTag(matched.name);
+          }
+        } else if (mapped.length > 0) {
+          const defaultCat =
+            mapped.find(
+              (c) =>
+                form.category &&
+                (c.name.toLowerCase() === form.category.toLowerCase() ||
+                  c.slug.toLowerCase() === form.category.toLowerCase())
+            ) ||
+            mapped.find(
+              (c) => c.slug.toLowerCase() === 'other' || c.name.toLowerCase() === 'other'
+            ) ||
+            mapped[0];
+          if (defaultCat) {
+            setForm((prev) => ({
+              ...prev,
+              categoryId: prev.categoryId ?? defaultCat.id,
+              category: prev.categoryId ? prev.category : defaultCat.name,
+              tags: prev.categoryId
+                ? prev.tags
+                : mergeCategoryTag(prev.tags, defaultCat.name, autoCategoryTag),
+            }));
+            setAutoCategoryTag(defaultCat.name);
+          }
+        }
       }
     } catch {}
   };
+
+  useEffect(() => {
+    loadCategoriesOnDemand();
+  }, []);
 
   const loadStoresOnDemand = async () => {
     if (stores.length > 1) return;
@@ -412,6 +540,8 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
 
   useEffect(() => {
     loadTagsOnDemand();
+    loadCategoriesOnDemand();
+    loadStoresOnDemand();
   }, []);
 
   const currentTagList = form.tags
@@ -485,23 +615,54 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
     e.preventDefault();
     setErrors({});
 
-    const cleanSlug = form.slug.trim() || generateSlug(form.title);
-    const parsedTags = form.tags
+    const nextErrors: Record<string, string> = {};
+    if (!form.title.trim()) {
+      nextErrors.title = t('Please enter the article headline / title.');
+    }
+    const cleanSlug = generateSlug(form.slug.trim() || form.title);
+    if (form.title.trim() && !cleanSlug) {
+      nextErrors.slug = t('URL Slug must contain letters or numbers.');
+    }
+    const strippedContent = (form.content || '').replace(/<[^>]*>/g, '').trim();
+    if (!strippedContent) {
+      nextErrors.content = t('Please write the article body content.');
+    }
+
+    let finalCategoryId: number | undefined = form.categoryId;
+    if (!finalCategoryId && form.category) {
+      const matchedCat = categories.find((c) => c.name.toLowerCase() === form.category.toLowerCase());
+      if (matchedCat) finalCategoryId = matchedCat.id;
+    }
+    if (finalCategoryId && categories.length > 0 && !categories.some((c) => c.id === finalCategoryId)) {
+      finalCategoryId = undefined;
+    }
+    if (!finalCategoryId) {
+      const otherCat = categories.find(
+        (c) => c.slug.toLowerCase() === 'other' || c.name.toLowerCase() === 'other'
+      );
+      if (otherCat) {
+        finalCategoryId = otherCat.id;
+      } else {
+        nextErrors.categoryId = t('Please select an editorial category (or choose Other).');
+      }
+    }
+
+    const rawParsedTags = form.tags
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
 
-    let finalPublishedAt: string;
+    let finalPublishedAt: string = new Date().toISOString();
     let isActive = true;
 
     if (form.status === 'SCHEDULED') {
       const scheduleDate = new Date(form.scheduledAt);
       if (isNaN(scheduleDate.getTime()) || scheduleDate.getTime() <= Date.now()) {
-        toast.error('Scheduled publish time must be in the future.');
-        return;
+        nextErrors.scheduledAt = t('Scheduled publish time must be in the future.');
+      } else {
+        isActive = true;
+        finalPublishedAt = scheduleDate.toISOString();
       }
-      isActive = true;
-      finalPublishedAt = scheduleDate.toISOString();
     } else if (form.status === 'DRAFT') {
       isActive = false;
       finalPublishedAt = new Date().toISOString();
@@ -516,6 +677,17 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       finalPublishedAt = !Number.isNaN(parsedTime)
         ? new Date(parsedTime).toISOString()
         : new Date().toISOString();
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const firstKey = Object.keys(nextErrors)[0];
+      const fieldNames = Object.keys(nextErrors)
+        .map((k) => t(POST_FIELD_LABELS[k] || k))
+        .join(', ');
+      toast.error(`${t('Please check required fields')}: ${fieldNames}`);
+      scrollToFormField(firstKey);
+      return;
     }
 
     const sidebarConfig = {
@@ -537,12 +709,19 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
         ? Number(form.rating)
         : null;
 
+    const resolvedCategoryName =
+      categories.find((c) => c.id === finalCategoryId)?.name ||
+      (finalCategoryId ? form.category.trim() : '');
+    const parsedTags = mergeCategoryTagList(rawParsedTags, resolvedCategoryName);
+
+    const resolvedExcerpt = form.excerpt.trim() || extractExcerptFromHtml(form.content) || '';
+
     const payload = {
       title: form.title.trim(),
       slug: cleanSlug,
-      excerpt: form.excerpt.trim(),
+      excerpt: resolvedExcerpt,
       content: form.content,
-      categoryId: form.categoryId,
+      categoryId: finalCategoryId,
       storeSlug: form.storeSlug.trim() || null,
       authorName: form.authorName.trim() || null,
       authorRole: form.authorRole.trim() || null,
@@ -550,6 +729,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       readTime: form.readTime.trim() || null,
       rating: numericRating,
       isFeatured: form.featured,
+      isHero: form.isHero,
       isActive: isActive,
       sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 9999,
       publishedAt: finalPublishedAt,
@@ -557,7 +737,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       tags: parsedTags,
       sidebarConfig,
       metaTitle: form.title.trim(),
-      metaDescription: form.excerpt.trim(),
+      metaDescription: resolvedExcerpt,
       metaKeywords: parsedTags.join(', '),
     };
 
@@ -571,11 +751,25 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       }
       router.push(ROUTES.ADMIN.POSTS);
     } catch (err: any) {
+      const mappedErrors: Record<string, string> = {};
       if (err?.response?.data?.errors && typeof err.response.data.errors === 'object') {
-        setErrors(err.response.data.errors);
+        Object.assign(mappedErrors, err.response.data.errors);
       }
       const msg = err?.response?.data?.message || err?.message || 'Failed to save article.';
-      toast.error(msg);
+      if (err?.response?.data?.code === 'DUPLICATE_RESOURCE' || /slug/i.test(msg)) {
+        mappedErrors.slug = msg;
+      }
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(mappedErrors);
+        const firstKey = Object.keys(mappedErrors)[0];
+        const fieldNames = Object.keys(mappedErrors)
+          .map((k) => t(POST_FIELD_LABELS[k] || k))
+          .join(', ');
+        toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
+        scrollToFormField(firstKey);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -632,27 +826,41 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
     >
       {activeTab === 'edit' ? (
         <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+          <FormQuickGuide
+            title="Quick Article & Review Setup"
+            description="Headline / Title (*), Editorial Category (*), and Article Body Content (*) are required. URL Slug is generated automatically; pick Other if no specific category fits."
+          />
+          <FormErrorBanner errors={errors} fieldLabels={POST_FIELD_LABELS} />
+
           {/* TOP ROW: HEADLINE & SUMMARY + PUBLISHING SETTINGS */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* Left 2 Cols: Headline & Excerpt */}
             <div className="lg:col-span-2">
               <FormSection title="Headline & Summary">
                 <div className="space-y-1">
-                  <label className={labelClass}>Headline / Title *</label>
+                  <label className={labelClass}>
+                    {t('Headline / Title')} <span className="text-rose-600 font-black">*</span>
+                  </label>
                   <input
                     type="text"
+                    data-field="title"
                     value={form.title}
                     onChange={(e) => {
                       const newTitle = e.target.value;
-                      setForm({
-                        ...form,
+                      const detectedStore = stores.find(
+                        (s) => s.name && newTitle.toLowerCase().includes(s.name.toLowerCase())
+                      );
+                      setForm((prev) => ({
+                        ...prev,
                         title: newTitle,
-                        slug: existing ? form.slug : generateSlug(newTitle),
-                      });
+                        slug: slugTouched ? prev.slug : generateSlug(newTitle),
+                        storeSlug: !prev.storeSlug && detectedStore ? detectedStore.slug : prev.storeSlug,
+                        storeName: !prev.storeName && detectedStore ? detectedStore.name : prev.storeName,
+                      }));
                       if (errors.title) setErrors((prev) => ({ ...prev, title: '' }));
                     }}
                     placeholder="e.g. Nilight 20-Inch Curved LED Light Bar: 500-Mile Extreme Off-Road Test"
-                    className={`${inputClass} font-semibold ${errors.title ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    className={`${inputClass} font-semibold ${errors.title ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.title && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -663,20 +871,29 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
 
                 <div className="space-y-1">
                   <label className={`${labelClass} flex items-center justify-between`}>
-                    <span>Article URL Slug *</span>
-                    <span className="text-[10px] text-slate-400 font-normal">
-                      Preview: /post/{form.slug || 'your-slug'}
+                    <span>{t('Article URL Slug')}</span>
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      {t('Auto-generated')}
                     </span>
                   </label>
                   <input
                     type="text"
+                    data-field="slug"
                     value={form.slug}
                     onChange={(e) => {
-                      setForm({ ...form, slug: e.target.value });
+                      const val = e.target.value;
+                      setSlugTouched(Boolean(val.trim()));
+                      setForm({ ...form, slug: val });
                       if (errors.slug) setErrors((prev) => ({ ...prev, slug: '' }));
                     }}
-                    placeholder="nilight-led-light-bar-review"
-                    className={`${inputClass} font-mono ${errors.slug ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    onBlur={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        slug: generateSlug(prev.slug || prev.title),
+                      }));
+                    }}
+                    placeholder={generateSlug(form.title) || 'nilight-led-light-bar-review'}
+                    className={`${inputClass} font-mono ${errors.slug ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.slug && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -685,13 +902,44 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <label className={labelClass}>Summary / Lead Excerpt *</label>
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <label className={labelClass}>{t('Summary / Lead Excerpt (Optional)')}</label>
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                        {t('Optional • Auto-extracted from Review if blank')}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const extracted = extractExcerptFromHtml(form.content);
+                        if (extracted) {
+                          setForm((prev) => ({ ...prev, excerpt: extracted }));
+                          setExcerptTouched(false);
+                          toast.success(t('Extracted summary from Review section!'));
+                        } else {
+                          toast.info(t('Write content in the Article Body Content section below first, or leave this blank.'));
+                        }
+                      }}
+                      className="text-[11px] font-bold text-brand-primary hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles size={11} />
+                      <span>{t('Extract from Review')}</span>
+                    </button>
+                  </div>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={form.excerpt}
-                    onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
-                    placeholder="Concise 1-2 sentence executive summary displayed on cards and under headline..."
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setExcerptTouched(Boolean(val.trim()));
+                      setForm({ ...form, excerpt: val });
+                    }}
+                    placeholder={
+                      extractExcerptFromHtml(form.content) ||
+                      t('Optional: Leave blank to automatically take the opening paragraph from the Review / Description below...')
+                    }
                     className={inputClass}
                   />
                 </div>
@@ -846,24 +1094,48 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   hint="Pick a pinned position in article listings (#1 = top) or Auto."
                 />
 
-                {/* Hero / Spotlight Toggle */}
-                <label className="flex items-center gap-2 cursor-pointer pt-2 border-t border-slate-100">
-                  <input
-                    type="checkbox"
-                    checked={form.featured}
-                    onChange={(e) => setForm({ ...form, featured: e.target.checked })}
-                    className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                  />
-                  <span className="text-xs font-bold text-slate-800">
-                    Feature on Homepage Hero / Spotlight
-                  </span>
-                </label>
+                {/* Homepage Placement Toggles */}
+                <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.isHero}
+                      onChange={(e) => setForm({ ...form, isHero: e.target.checked })}
+                      className="mt-0.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                    />
+                    <span className="leading-tight">
+                      <span className="text-xs font-bold text-slate-900 block">
+                        {t('Pin as Homepage Hero (Lead Story)')}
+                      </span>
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
+                        {t('Displays this article in the main top Hero slot regardless of category (replaces previous Hero).')}
+                      </span>
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.featured}
+                      onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+                      className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                    />
+                    <span className="leading-tight">
+                      <span className="text-xs font-bold text-slate-800 block">
+                        {t("Add to Curated Desk · Editor's Picks")}
+                      </span>
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
+                        {t("Most recently ticked articles automatically appear at the top of Editor's Picks.")}
+                      </span>
+                    </span>
+                  </label>
+                </div>
               </FormSection>
             </div>
           </div>
 
           {/* MIDDLE FULL-WIDTH ROW: ARTICLE BODY CONTENT AT 100% WIDTH */}
-          <div className="w-full">
+          <div className="w-full" data-field="content">
             <FormSection
               title="Article Body Content"
               description="Microsoft Word Studio Editor • Full support for Font Family, Font Size, Data Tables, Alignment, A4 Paper View & Affiliate Blocks"
@@ -877,7 +1149,11 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
               <RichTextEditor
                 value={form.content}
                 onChange={(html) => {
-                  setForm({ ...form, content: html });
+                  setForm((prev) => ({
+                    ...prev,
+                    content: html,
+                    excerpt: excerptTouched ? prev.excerpt : extractExcerptFromHtml(html),
+                  }));
                   if (errors.content) setErrors((prev) => ({ ...prev, content: '' }));
                 }}
                 minHeight="560px"
@@ -895,19 +1171,26 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
             {/* Category & Media */}
             <FormSection title="Category & Media">
               <div className="space-y-1">
-                <label className={labelClass}>Editorial Category *</label>
+                <label className={labelClass}>
+                  {t('Editorial Category')} <span className="text-rose-600 font-black">*</span>
+                </label>
                 <select
+                  data-field="categoryId"
+                  required
                   value={form.categoryId ?? ''}
                   onFocus={loadCategoriesOnDemand}
                   onClick={loadCategoriesOnDemand}
                   onChange={(e) => {
                     const val = e.target.value ? Number(e.target.value) : undefined;
                     const found = categories.find((c) => c.id === val);
-                    setForm({
-                      ...form,
+                    const nextCategoryName = found ? found.name : '';
+                    setForm((prev) => ({
+                      ...prev,
                       categoryId: val,
-                      category: found ? found.name : form.category,
-                    });
+                      category: nextCategoryName,
+                      tags: mergeCategoryTag(prev.tags, nextCategoryName, autoCategoryTag || prev.category),
+                    }));
+                    setAutoCategoryTag(nextCategoryName);
                     if (errors.categoryId) setErrors((prev) => ({ ...prev, categoryId: '' }));
                   }}
                   className={`${inputClass} ${errors.categoryId ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
@@ -915,13 +1198,17 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   <option value="">Select Editorial Category...</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.name}
+                      {cat.slug === 'other' ? `${cat.name} (Khác)` : cat.name}
                     </option>
                   ))}
                 </select>
-                {errors.categoryId && (
+                {errors.categoryId ? (
                   <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
                     <AlertCircle size={11} /> {errors.categoryId}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    {t('Every article must belong to at least 1 category. Pick "Other" if none of the specific categories fit.')}
                   </p>
                 )}
               </div>
@@ -933,6 +1220,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   folder="article-covers"
                   label="Featured Cover Image"
                   aspectRatio="video"
+                  defaultTags={[previewStoreName || form.title.trim()].filter(Boolean)}
                 />
               </div>
             </FormSection>
@@ -988,6 +1276,9 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <Hash size={13} className="text-rose-600" />
                     <span>Taxonomy Tags</span>
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      {t('Auto-generated from Category')}
+                    </span>
                   </label>
                   <Link
                     href={ROUTES.ADMIN.TAGS}
@@ -1144,11 +1435,11 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                         onChange={(e) => {
                           const chosenSlug = e.target.value;
                           const matched = stores.find((s) => s.slug === chosenSlug);
-                          setForm({
-                            ...form,
+                          setForm((prev) => ({
+                            ...prev,
                             storeSlug: chosenSlug,
-                            storeName: matched ? matched.name : form.storeName,
-                          });
+                            storeName: matched ? matched.name : prev.storeName,
+                          }));
                         }}
                         className={inputClass}
                       >

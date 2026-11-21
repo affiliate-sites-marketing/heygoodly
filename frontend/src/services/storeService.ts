@@ -2,19 +2,109 @@ import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { Store, ReviewerProfile } from '@/types/deals';
 import { TtlCache } from '@/lib/utils/ttlCache';
+import { buildDefaultStoreFaqs } from '@/constants/storeTemplates';
+
+export { buildDefaultStoreFaqs };
+
+export function extractPlainTextExcerpt(htmlOrText?: string | null, maxChars = 240): string {
+  if (!htmlOrText) return '';
+  const raw = String(htmlOrText).trim();
+  if (!raw) return '';
+  const withoutHeadings = raw
+    .replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, ' ')
+    .replace(/<\/(p|div|li|br|tr)>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const candidate = withoutHeadings || raw
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!candidate) return '';
+  if (candidate.length <= maxChars) return candidate;
+  const sentences = candidate.match(/[^.!?]+[.!?]+/g);
+  if (sentences && sentences.length > 0) {
+    let summary = '';
+    for (const s of sentences) {
+      if ((summary + ' ' + s.trim()).trim().length <= maxChars) {
+        summary = (summary + ' ' + s.trim()).trim();
+      } else {
+        break;
+      }
+    }
+    if (summary.length >= 60) return summary;
+  }
+  return candidate.slice(0, maxChars - 3).replace(/\s+\S*$/, '') + '...';
+}
+
+export function buildDefaultPopularSearches(storeName: string): string[] {
+  const clean = (storeName || '').trim();
+  if (!clean) return [];
+  return [clean];
+}
 
 export function mapBackendStoreToStore(s: any): Store {
+  const storeName = String(s.name || '').trim();
   const maxOfferNum = Number(s.maxOffer ?? 0);
   const maxOfferVal = maxOfferNum > 0 ? `Up to ${maxOfferNum}% OFF` : 'Verified Offers';
   const domain = s.afWebsite
     ? String(s.afWebsite).replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '')
     : (s.domain ? String(s.domain) : '');
 
+  const rawDescription = String(s.aboutStore || s.description || '');
+  const rawShort = s.socialDescription || s.metaDescription || s.shortDescription || '';
+  const resolvedShortDescription =
+    extractPlainTextExcerpt(rawShort, 260) ||
+    extractPlainTextExcerpt(rawDescription, 240) ||
+    (storeName
+      ? `Discover verified ${storeName} coupon codes, exclusive promo deals, and active discounts tested daily.`
+      : undefined);
+
+  let parsedTags: string[] = [];
+  if (Array.isArray(s.tags)) {
+    parsedTags = s.tags.map((t: unknown) => String(t).trim()).filter(Boolean);
+  } else if (typeof s.tags === 'string' && s.tags.trim()) {
+    try {
+      const parsed = JSON.parse(s.tags);
+      if (Array.isArray(parsed)) {
+        parsedTags = parsed.map((t: unknown) => String(t).trim()).filter(Boolean);
+      }
+    } catch {
+      parsedTags = s.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
+  }
+  if (parsedTags.length === 0 && storeName) {
+    parsedTags = [storeName];
+  }
+
+  const rawPopularSearches = Array.isArray(s.popularSearches)
+    ? s.popularSearches.map((q: unknown) => String(q).trim()).filter(Boolean)
+    : [];
+  const resolvedPopularSearches =
+    rawPopularSearches.length > 0 ? rawPopularSearches : buildDefaultPopularSearches(storeName);
+
+  const rawFaqs = Array.isArray(s.faqs)
+    ? s.faqs.filter((f: any) => f && (String(f.question || '').trim() || String(f.answer || '').trim()))
+    : [];
+  const resolvedFaqs = rawFaqs.length > 0 ? rawFaqs : buildDefaultStoreFaqs(storeName);
+
   return {
     id: String(s.id),
-    name: String(s.name || ''),
+    name: storeName,
     slug: String(s.slug || ''),
-    logoText: String(s.name || '').substring(0, 2).toUpperCase(),
+    logoText: storeName.substring(0, 2).toUpperCase(),
     logoBg: '#0f172a',
     logoUrl: s.logo || s.logoUrl || undefined,
     bannerUrl: s.socialCardImage || s.bannerUrl || undefined,
@@ -25,10 +115,11 @@ export function mapBackendStoreToStore(s: any): Store {
     couponsCount: Number(s.activeOffersCount ?? s.activeCoupons ?? s.couponsCount ?? 0),
     maxDiscount: s.maxDiscount ? String(s.maxDiscount) : maxOfferVal,
     maxOfferPercent: maxOfferNum > 0 ? maxOfferNum : undefined,
-    description: String(s.aboutStore || s.description || ''),
-    shortDescription: s.socialDescription || s.metaDescription || s.shortDescription || undefined,
-    popularSearches: Array.isArray(s.popularSearches) ? s.popularSearches : [],
-    faqs: Array.isArray(s.faqs) ? s.faqs : [],
+    description: rawDescription,
+    shortDescription: resolvedShortDescription,
+    popularSearches: resolvedPopularSearches,
+    tags: parsedTags,
+    faqs: resolvedFaqs,
     ratingBreakdown: s.ratingBreakdown && typeof s.ratingBreakdown === 'object'
       ? {
           fiveStar: Number(s.ratingBreakdown.fiveStar ?? 0),

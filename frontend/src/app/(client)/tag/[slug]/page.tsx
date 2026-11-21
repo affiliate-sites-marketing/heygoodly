@@ -3,8 +3,9 @@
 import { use, useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { ROUTES } from '@/constants/routes';
-import { Article } from '@/types/deals';
+import { Article, Store } from '@/types/deals';
 import postService from '@/services/postService';
+import storeService, { extractPlainTextExcerpt } from '@/services/storeService';
 import tagService, { type TagItem } from '@/services/tagService';
 import Pagination from '@/components/admin/Pagination';
 import ArticleCard from '@/components/deals/ArticleCard';
@@ -17,6 +18,9 @@ import {
   Search,
   X,
   ChevronDown,
+  Store as StoreIcon,
+  Star,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface TagPageProps {
@@ -30,6 +34,7 @@ export default function TagArchivePage({ params }: TagPageProps) {
   const pageSize = 6;
 
   const [articles, setArticles] = useState<Article[]>([]);
+  const [matchedStores, setMatchedStores] = useState<Store[]>([]);
   const [totalArticles, setTotalArticles] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,17 +96,25 @@ export default function TagArchivePage({ params }: TagPageProps) {
 
     async function fetchTagArticles() {
       setIsLoading(true);
-      const res = await postService.getPosts({
-        tag: rawTag,
-        page: currentPage,
-        size: pageSize,
-        sortBy,
-      });
+      const [res, storesRes] = await Promise.all([
+        postService.getPosts({
+          tag: rawTag,
+          page: currentPage,
+          size: pageSize,
+          sortBy,
+        }),
+        storeService.getPaginatedStores({
+          page: 0,
+          size: 8,
+          tag: rawTag,
+        }),
+      ]);
 
       if (isMounted) {
         setArticles(res.items);
         setTotalArticles(res.total);
         setTotalPages(Math.max(1, res.totalPages));
+        setMatchedStores(storesRes.content || []);
         setIsLoading(false);
       }
     }
@@ -303,6 +316,80 @@ export default function TagArchivePage({ params }: TagPageProps) {
             </div>
           )}
         </div>
+
+        {/* 2.5. Partner Stores Tagged Under This Topic */}
+        {matchedStores.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                <StoreIcon size={15} className="text-brand-primary" />
+                <span>Partner Brands Tagged #{tagData?.name || rawTag} ({matchedStores.length})</span>
+              </div>
+              <Link
+                href={ROUTES.PUBLIC.STORES}
+                className="text-xs font-bold text-brand-primary hover:underline flex items-center gap-1"
+              >
+                <span>All Stores</span>
+                <ArrowRight size={12} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {matchedStores.map((store) => (
+                <Link
+                  key={store.id}
+                  href={ROUTES.PUBLIC.STORE_DETAIL(store.slug)}
+                  className="bg-white border border-slate-200 hover:border-brand-primary rounded-2xl p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
+                      {store.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={store.logoUrl}
+                          alt={store.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="font-black text-base">
+                          {store.name.substring(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block truncate">
+                        {store.category}
+                      </span>
+                      <h3 className="font-black text-slate-900 text-sm group-hover:text-brand-primary transition truncate">
+                        {store.name}
+                      </h3>
+                      {store.rating > 0 && (
+                        <div className="flex items-center gap-1 text-[11px]">
+                          <Star size={11} className="fill-amber-400 text-amber-400" />
+                          <span className="font-bold text-slate-800">{store.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                    {store.shortDescription ||
+                      extractPlainTextExcerpt(store.description, 160) ||
+                      `Verified ${store.name} promo codes & active discounts.`}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] font-bold">
+                    <span className="text-brand-primary">{store.maxDiscount}</span>
+                    <span className="text-emerald-700 inline-flex items-center gap-1">
+                      <ShieldCheck size={12} /> {store.couponsCount ?? 0} Offers
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 3. Toolbar & Sorting */}
         <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3 sm:gap-4">

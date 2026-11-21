@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ImageUpload from '@/components/admin/ImageUpload';
 import TagInput from '@/components/admin/TagInput';
@@ -16,12 +16,22 @@ import { ROUTES } from '@/constants/routes';
 import { SITE_DOMAIN, SITE_NAME, SITE_SLUG } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
-import storeService from '@/services/storeService';
+import storeService, { buildDefaultPopularSearches } from '@/services/storeService';
+import {
+  buildDefaultStoreFaqs,
+  extractBrandToken,
+  FaqTemplateItem,
+  ReviewTemplateItem,
+} from '@/constants/storeTemplates';
+import { storeTemplateService } from '@/services/storeTemplateService';
 import { type AdminStore } from '../_lib/data';
 import { StoreCustomerReview, StoreRatingBreakdown } from '@/types/deals';
 import StoreCustomerReviewsSection from '@/components/store/StoreCustomerReviewsSection';
 import ReviewerPicker from './ReviewerPicker';
+import ReviewLibraryModal from './ReviewLibraryModal';
+import FaqLibraryModal from './FaqLibraryModal';
 import { useToast } from '@/context/ToastContext';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import { 
   Eye, 
@@ -43,6 +53,9 @@ import {
   ChevronDown,
   ArrowRight,
   AlertCircle,
+  BookOpen,
+  RotateCcw,
+  BookmarkPlus,
 } from 'lucide-react';
 
 interface StoreFormState {
@@ -150,8 +163,14 @@ export default function StoreForm({ id }: { id?: string }) {
       affiliateUrl: storeData.affiliateUrl,
       shortDescription: storeData.shortDescription || '',
       description: storeData.description,
-      popularSearchesText: storeData.popularSearches ? storeData.popularSearches.join(', ') : '',
-      faqs: storeData.faqs || [],
+      popularSearchesText:
+        storeData.popularSearches && storeData.popularSearches.length > 0
+          ? storeData.popularSearches.join(', ')
+          : buildDefaultPopularSearches(storeData.name).join(', '),
+      faqs:
+        storeData.faqs && storeData.faqs.length > 0
+          ? storeData.faqs
+          : buildDefaultStoreFaqs(storeData.name),
       ratingBreakdown: storeData.ratingBreakdown || {
         fiveStar: 0,
         fourStar: 0,
@@ -171,15 +190,16 @@ export default function StoreForm({ id }: { id?: string }) {
       domain: '',
       logoUrl: '',
       bannerUrl: '',
-      category: 'Technology & Gear',
+      categoryId: undefined,
+      category: '',
       rating: 4.8,
       reviewsCount: 0,
       maxDiscount: '20%',
-      affiliateUrl: 'https://',
+      affiliateUrl: '',
       shortDescription: '',
       description: '',
       popularSearchesText: '',
-      faqs: [],
+      faqs: buildDefaultStoreFaqs(''),
       ratingBreakdown: {
         fiveStar: 0,
         fourStar: 0,
@@ -197,42 +217,196 @@ export default function StoreForm({ id }: { id?: string }) {
   return <StoreFormInner key={storeData?.id ?? 'new'} id={id} existing={storeData ?? undefined} initial={initial} />;
 }
 
+function toCleanSlug(raw: string): string {
+  return raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function sanitizeUrlInput(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  // Strip accidental duplicate protocol prefixes like https://https:// or http://https://
+  return trimmed.replace(/^(https?:\/\/)+(https?:\/\/)/i, '$2');
+}
+
+function extractCleanDomain(raw: string): string {
+  const cleaned = sanitizeUrlInput(raw);
+  if (!cleaned) return '';
+  return cleaned
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/[/?#].*$/, '')
+    .trim();
+}
+
+const STORE_FIELD_LABELS: Record<string, string> = {
+  name: 'Store Name',
+  affiliateUrl: 'Affiliate Tracking URL',
+  slug: 'URL Slug',
+  domain: 'Official Domain',
+  categoryId: 'Category',
+  maxDiscount: 'Max Discount Display',
+  rating: 'Rating Score (1.0 - 5.0)',
+  reviewsCount: 'Total Reviews Count',
+  logoUrl: 'Store Brand Logo',
+};
+
+function parsePopularSearchesText(raw?: string): string[] {
+  if (!raw) return [];
+  return raw
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function hasCustomPopularSearches(store?: AdminStore): boolean {
+  if (!store?.popularSearches || store.popularSearches.length === 0) return false;
+  const saved = store.popularSearches.map((s) => s.trim().toLowerCase()).filter(Boolean).join(', ');
+  const defaults = buildDefaultPopularSearches(store.name).map((s) => s.toLowerCase()).join(', ');
+  return Boolean(saved) && saved !== defaults;
+}
+
+function hasCustomFaqs(store?: AdminStore): boolean {
+  if (!store?.faqs || store.faqs.length === 0) return false;
+  const defaults = buildDefaultStoreFaqs(store.name);
+  if (store.faqs.length !== defaults.length) return true;
+  return store.faqs.some(
+    (f, idx) =>
+      (f.question || '').trim() !== defaults[idx].question.trim() ||
+      (f.answer || '').trim() !== defaults[idx].answer.trim()
+  );
+}
+
+function extractSummaryFromReviewHtml(html?: string | null, maxChars = 260): string {
+  if (!html) return '';
+  // Prefer paragraph text after headings if available
+  const withoutHeadings = html.replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, ' ');
+  const rawSource = withoutHeadings.replace(/<[^>]+>/g, ' ').trim() ? withoutHeadings : html;
+  const plain = rawSource
+    .replace(/<\/(p|div|li|br|h[1-6])>/gi, '. ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s*\.\s*\./g, '.')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!plain) return '';
+  if (plain.length <= maxChars) return plain;
+  const sliced = plain.slice(0, maxChars);
+  const lastPeriod = Math.max(sliced.lastIndexOf('. '), sliced.lastIndexOf('! '), sliced.lastIndexOf('? '));
+  if (lastPeriod >= Math.floor(maxChars * 0.5)) {
+    return sliced.slice(0, lastPeriod + 1).trim();
+  }
+  const lastSpace = sliced.lastIndexOf(' ');
+  return (lastSpace > 0 ? sliced.slice(0, lastSpace) : sliced).trim() + '...';
+}
+
 function StoreFormInner({ id, existing, initial }: { id?: string; existing?: AdminStore; initial: StoreFormState }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useAdminI18n();
   const [form, setForm] = useState<StoreFormState>(initial);
+  const [slugTouched, setSlugTouched] = useState<boolean>(Boolean(existing?.slug));
+  const [domainTouched, setDomainTouched] = useState<boolean>(Boolean(existing?.domain));
+  const [shortDescTouched, setShortDescTouched] = useState<boolean>(Boolean(existing?.shortDescription?.trim()));
+  const [autoBrandTag, setAutoBrandTag] = useState<string>(existing?.name?.trim() || '');
+  const [popularSearchesTouched, setPopularSearchesTouched] = useState<boolean>(
+    hasCustomPopularSearches(existing)
+  );
+  const [faqsTouched, setFaqsTouched] = useState<boolean>(hasCustomFaqs(existing));
+  const faqsTouchedRef = useRef<boolean>(hasCustomFaqs(existing));
+  const [faqTemplates, setFaqTemplates] = useState<FaqTemplateItem[]>([]);
+  const faqTemplatesRef = useRef<FaqTemplateItem[]>([]);
+  const [reviewTemplates, setReviewTemplates] = useState<ReviewTemplateItem[]>([]);
+  const [faqLibraryOpen, setFaqLibraryOpen] = useState(false);
+  const [reviewLibraryState, setReviewLibraryState] = useState<{
+    open: boolean;
+    mode: 'append' | 'replace-single';
+    targetIndex: number | null;
+  }>({ open: false, mode: 'append', targetIndex: null });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([
-    { id: 1, name: 'Automotive & Accessories' },
-    { id: 2, name: 'Electronics & Gadgets' },
-    { id: 3, name: 'Gaming & Collectibles' },
-    { id: 4, name: 'Home & Garden' },
-    { id: 5, name: 'Hosting & Software' },
-    { id: 6, name: 'Technology & Gear' },
-    { id: 7, name: 'Business & Economy' },
-    { id: 8, name: 'Entertainment & Culture' },
-    { id: 9, name: 'US Politics & Global' },
-    { id: 10, name: 'Product Reviews' },
-    { id: 11, name: 'Lifestyle & Living' },
-  ]);
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>(() => {
+    if (existing?.categoryId && existing?.category) {
+      return [{ id: existing.categoryId, name: existing.category }];
+    }
+    return [];
+  });
+
+  const syncFaqTemplates = (list: FaqTemplateItem[]) => {
+    faqTemplatesRef.current = list;
+    setFaqTemplates(list);
+  };
 
   const loadCategoriesOnDemand = async () => {
     try {
       const res = await apiClient.get(API_ENDPOINTS.ADMIN.CATEGORIES, { params: { size: 100 } });
       const list = res.data?.data?.content || res.data?.data;
-      if (Array.isArray(list) && list.length > 0) {
+      if (Array.isArray(list)) {
         setCategories(list.map((c: any) => ({ id: Number(c.id), name: String(c.name) })));
+        return;
       }
-    } catch {}
+    } catch {
+      try {
+        const pubRes = await apiClient.get(API_ENDPOINTS.PUBLIC.CATEGORIES);
+        const pubList = pubRes.data?.data?.content || pubRes.data?.data;
+        if (Array.isArray(pubList)) {
+          setCategories(pubList.map((c: any) => ({ id: Number(c.id), name: String(c.name) })));
+        }
+      } catch {}
+    }
   };
 
   useEffect(() => {
-    setForm(initial);
-  }, [initial]);
+    loadCategoriesOnDemand();
+  }, []);
+
+  useEffect(() => {
+    const nextFaqsTouched = hasCustomFaqs(existing);
+    setForm(
+      !nextFaqsTouched && faqTemplatesRef.current.length > 0
+        ? {
+            ...initial,
+            faqs: storeTemplateService.getDefaultFaqsForBrand(
+              initial.name,
+              faqTemplatesRef.current
+            ),
+          }
+        : initial
+    );
+    setSlugTouched(Boolean(existing?.slug));
+    setDomainTouched(Boolean(existing?.domain));
+    setShortDescTouched(Boolean(existing?.shortDescription?.trim()));
+    setAutoBrandTag(existing?.name?.trim() || '');
+    setPopularSearchesTouched(hasCustomPopularSearches(existing));
+    setFaqsTouched(nextFaqsTouched);
+    faqsTouchedRef.current = nextFaqsTouched;
+  }, [initial, existing]);
+
+  const scrollToField = (fieldKey: string) => {
+    if (typeof document === 'undefined') return;
+    const el = document.querySelector<HTMLElement>(`[data-field="${fieldKey}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        el.focus?.();
+      }, 150);
+    }
+  };
 
   const handleAddFaq = () => {
+    setFaqsTouched(true);
+    faqsTouchedRef.current = true;
     setForm((prev) => ({
       ...prev,
       faqs: [...prev.faqs, { question: '', answer: '' }],
@@ -240,6 +414,8 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
   };
 
   const handleUpdateFaq = (index: number, field: 'question' | 'answer', value: string) => {
+    setFaqsTouched(true);
+    faqsTouchedRef.current = true;
     setForm((prev) => {
       const updated = [...prev.faqs];
       updated[index] = { ...updated[index], [field]: value };
@@ -248,9 +424,47 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
   };
 
   const handleRemoveFaq = (index: number) => {
+    setFaqsTouched(true);
+    faqsTouchedRef.current = true;
     setForm((prev) => ({
       ...prev,
       faqs: prev.faqs.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleResetDefaultFaqs = async () => {
+    setFaqsTouched(false);
+    faqsTouchedRef.current = false;
+    let latestTemplates = faqTemplatesRef.current;
+    if (latestTemplates.length === 0) {
+      try {
+        latestTemplates = await storeTemplateService.listFaqTemplates();
+        syncFaqTemplates(latestTemplates);
+      } catch {}
+    }
+    setForm((prev) => ({
+      ...prev,
+      faqs: storeTemplateService.getDefaultFaqsForBrand(prev.name, latestTemplates),
+    }));
+  };
+
+  const handleAddStarterReviews = async () => {
+    let latestTemplates = reviewTemplates;
+    if (latestTemplates.length === 0) {
+      try {
+        latestTemplates = await storeTemplateService.listReviewTemplates();
+        setReviewTemplates(latestTemplates);
+      } catch {}
+    }
+    const picks = storeTemplateService.getStarterReviewsForBrand(form.name, latestTemplates);
+    if (picks.length === 0) {
+      toast.info(t('Review library is empty. Create or save review templates first.'));
+      setReviewLibraryState({ open: true, mode: 'append', targetIndex: null });
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      customerReviews: [...prev.customerReviews, ...picks],
     }));
   };
 
@@ -307,42 +521,94 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
     e.preventDefault();
     setErrors({});
 
-    const cleanSlug = form.slug.trim() || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const nextErrors: Record<string, string> = {};
+    const trimmedName = form.name.trim();
+    if (!trimmedName) {
+      nextErrors.name = t('Please enter the store / brand name.');
+    } else if (trimmedName.length > 150) {
+      nextErrors.name = t('Store name must not exceed 150 characters.');
+    }
 
-    const popularSearches = form.popularSearchesText
-      ? form.popularSearchesText
-          .split(/[\n,]+/)
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : undefined;
+    const cleanSlug = toCleanSlug(form.slug.trim() || trimmedName);
+    if (trimmedName && !cleanSlug) {
+      nextErrors.slug = t('URL Slug must contain letters or numbers (e.g. dutch-vet).');
+    }
 
-    const maxOfferNum = parseInt(form.maxDiscount.replace(/[^0-9]/g, ''), 10) || 50;
-    
-    let finalCategoryId = form.categoryId;
-    if (!finalCategoryId && form.category) {
+    // Resolve affiliate URL (fall back to domain if user pasted full URL into domain)
+    let resolvedAffiliateUrl = sanitizeUrlInput(form.affiliateUrl);
+    if ((!resolvedAffiliateUrl || resolvedAffiliateUrl === 'https://' || resolvedAffiliateUrl === 'http://') && form.domain.trim()) {
+      const sanitizedDomain = sanitizeUrlInput(form.domain);
+      resolvedAffiliateUrl = /^https?:\/\//i.test(sanitizedDomain)
+        ? sanitizedDomain
+        : `https://${sanitizedDomain}`;
+    } else if (resolvedAffiliateUrl && !/^https?:\/\//i.test(resolvedAffiliateUrl) && !resolvedAffiliateUrl.startsWith('/')) {
+      resolvedAffiliateUrl = `https://${resolvedAffiliateUrl}`;
+    }
+
+    if (!resolvedAffiliateUrl || resolvedAffiliateUrl === 'https://' || resolvedAffiliateUrl === 'http://') {
+      nextErrors.affiliateUrl = t('Please enter the Affiliate Tracking URL (e.g. https://dutchpetinc.pxf.io/QYQax6).');
+    }
+
+    const parsedDiscount = parseInt((form.maxDiscount || '').replace(/[^0-9]/g, ''), 10);
+    const maxOfferNum = Number.isFinite(parsedDiscount) && parsedDiscount > 0 ? Math.min(500, parsedDiscount) : 20;
+
+    const ratingVal = Number(form.rating);
+    if (Number.isNaN(ratingVal) || ratingVal < 0 || ratingVal > 5) {
+      nextErrors.rating = t('Rating score must be between 0.0 and 5.0.');
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const firstKey = Object.keys(nextErrors)[0];
+      const missingFieldNames = Object.keys(nextErrors)
+        .map((k) => t(STORE_FIELD_LABELS[k] || k))
+        .join(', ');
+      toast.error(`${t('Please check required fields')}: ${missingFieldNames}`);
+      scrollToField(firstKey);
+      return;
+    }
+
+    const parsedPopularSearches = parsePopularSearchesText(form.popularSearchesText);
+
+    // Only attach categoryId if it exists in the real loaded categories list
+    let finalCategoryId: number | null = null;
+    if (form.categoryId && categories.some((c) => c.id === form.categoryId)) {
+      finalCategoryId = form.categoryId;
+    } else if (form.category) {
       const matched = categories.find((c) => c.name.toLowerCase() === form.category.toLowerCase());
       if (matched) finalCategoryId = matched.id;
     }
 
+    const resolvedShortDescription =
+      (form.shortDescription || '').trim() ||
+      extractSummaryFromReviewHtml(form.description) ||
+      null;
+
     const backendPayload = {
-      name: form.name.trim(),
+      name: trimmedName,
       slug: cleanSlug,
-      categoryId: finalCategoryId || null,
+      categoryId: finalCategoryId,
       logo: form.logoUrl || null,
       socialCardImage: form.bannerUrl || null,
-      socialDescription: form.shortDescription || null,
+      socialDescription: resolvedShortDescription,
       aboutStore: form.description || null,
-      afWebsite: form.affiliateUrl || null,
+      afWebsite: resolvedAffiliateUrl || null,
       maxOffer: maxOfferNum,
-      ratingScore: form.rating,
+      ratingScore: ratingVal || 4.8,
       ratingCount: form.reviewsCount ?? (existing?.reviewsCount ?? 0),
       isActive: form.isActive,
       isSearchable: true,
       isFeatured: form.isFeatured,
       sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 9999,
-      popularSearches: popularSearches || [],
-      faqs: form.faqs.filter((f) => f.question.trim() || f.answer.trim()),
-      tags: form.tags || [],
+      popularSearches:
+        parsedPopularSearches.length > 0
+          ? parsedPopularSearches
+          : buildDefaultPopularSearches(trimmedName),
+      faqs: (() => {
+        const cleanedFaqs = form.faqs.filter((f) => f.question.trim() || f.answer.trim());
+        return cleanedFaqs.length > 0 ? cleanedFaqs : buildDefaultStoreFaqs(trimmedName);
+      })(),
+      tags: (form.tags && form.tags.length > 0) ? form.tags : (trimmedName ? [trimmedName] : []),
       ratingBreakdown: form.ratingBreakdown,
       customerReviews: form.customerReviews
         .filter((r) => r.reviewerName.trim() || r.comment.trim())
@@ -360,30 +626,54 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
         })),
     };
 
-    const localPayload = {
-      ...form,
-      slug: cleanSlug,
-      categoryId: finalCategoryId,
-      popularSearches,
-      faqs: form.faqs.filter((f) => f.question.trim() || f.answer.trim()),
-    };
-
     try {
       const targetId = existing?.id || id;
       if (existing && targetId) {
         const res = await apiClient.put(API_ENDPOINTS.ADMIN.STORE_DETAIL(targetId), backendPayload);
-        toast.success(res.data?.message || `Updated store "${form.name}" successfully!`);
+        toast.success(res.data?.message || `Updated store "${trimmedName}" successfully!`);
       } else {
         const res = await apiClient.post(API_ENDPOINTS.ADMIN.STORES, backendPayload);
-        toast.success(res.data?.message || `Created store "${form.name}" successfully!`);
+        toast.success(res.data?.message || `Created store "${trimmedName}" successfully!`);
       }
       router.push(ROUTES.ADMIN.STORES);
     } catch (err: any) {
-      if (err?.response?.data?.errors && typeof err.response.data.errors === 'object') {
-        setErrors(err.response.data.errors);
+      const rawErrors = err?.response?.data?.errors;
+      const mappedErrors: Record<string, string> = {};
+      if (rawErrors && typeof rawErrors === 'object') {
+        const keyMap: Record<string, string> = {
+          name: 'name',
+          slug: 'slug',
+          afWebsite: 'affiliateUrl',
+          affiliateUrl: 'affiliateUrl',
+          categoryId: 'categoryId',
+          logo: 'logoUrl',
+          maxOffer: 'maxDiscount',
+          ratingScore: 'rating',
+          ratingCount: 'reviewsCount',
+        };
+        for (const [k, v] of Object.entries(rawErrors)) {
+          const uiKey = keyMap[k] || k;
+          mappedErrors[uiKey] = String(v);
+        }
       }
-      const msg = err?.response?.data?.message || err?.message || 'Failed to save store.';
-      toast.error(msg);
+
+      const errCode = err?.response?.data?.code;
+      const msg = err?.response?.data?.message || err?.message || t('Failed to save store.');
+      if (errCode === 'DUPLICATE_RESOURCE' || /slug/i.test(msg)) {
+        mappedErrors.slug = msg;
+      }
+
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(mappedErrors);
+        const firstKey = Object.keys(mappedErrors)[0];
+        const fieldNames = Object.keys(mappedErrors)
+          .map((k) => t(STORE_FIELD_LABELS[k] || k))
+          .join(', ');
+        toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
+        scrollToField(firstKey);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -429,63 +719,234 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
     >
       {activeTab === 'edit' ? (
         <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+          {/* Quick Setup Guide Banner for Admin */}
+          <div className="p-3.5 sm:p-4 rounded-2xl border border-blue-200/80 bg-blue-50/70 flex items-start gap-3 text-xs text-slate-700">
+            <Sparkles size={16} className="text-blue-600 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-bold text-slate-900">
+                {t('Quick Brand Setup Guide')}
+              </p>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                {t('Only Store Name (*) and Affiliate Tracking URL (*) are required to create a brand. URL Slug and Official Domain are auto-filled for you; Logo, Category, Description, FAQs, and Reviews are optional.')}
+              </p>
+            </div>
+          </div>
+
+          {/* Prominent Validation Error Summary Banner */}
+          {Object.keys(errors).length > 0 && (
+            <div
+              role="alert"
+              className="p-4 rounded-2xl border border-rose-300 bg-rose-50/90 text-rose-900 space-y-2.5 shadow-2xs animate-fadeIn"
+            >
+              <div className="flex items-center gap-2 text-xs font-extrabold text-rose-700">
+                <AlertCircle size={16} className="shrink-0 text-rose-600" />
+                <span>
+                  {t('Please fix the following fields before saving')} ({Object.keys(errors).length}):
+                </span>
+              </div>
+              <ul className="space-y-1.5 pl-1">
+                {Object.entries(errors)
+                  .filter(([, msg]) => Boolean(msg))
+                  .map(([fieldKey, msg]) => (
+                    <li key={fieldKey} className="text-xs flex items-center justify-between gap-2 bg-white/80 border border-rose-200/80 rounded-xl px-3 py-2">
+                      <div>
+                        <strong className="font-bold text-rose-800">
+                          {t(STORE_FIELD_LABELS[fieldKey] || fieldKey)}:
+                        </strong>{' '}
+                        <span className="text-rose-700">{msg}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => scrollToField(fieldKey)}
+                        className="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-[11px] font-bold shrink-0 cursor-pointer transition"
+                      >
+                        {t('Go to field')} →
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
           {/* Main Column (Left - 2 Cols) */}
           <div className="lg:col-span-2 space-y-6">
-            <FormSection title="Store Identity & Domain">
+            <FormSection
+              title="Store Identity & Domain"
+              description="Step 1 (Required): Enter brand name and affiliate tracking link. Slug and display domain are generated automatically."
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className={labelClass}>Store Name *</label>
+                  <label className={labelClass}>
+                    {t('Store Name')} <span className="text-rose-600 font-black">*</span>
+                  </label>
                   <input
                     type="text"
+                    data-field="name"
                     value={form.name}
                     onChange={(e) => {
-                      setForm({ ...form, name: e.target.value });
+                      const nextName = e.target.value;
+                      const trimmedNext = nextName.trim();
+                      setForm((prev) => {
+                        const existingTags = prev.tags || [];
+                        // Replace previous auto-generated brand tag with the new brand name while keeping any manual tags
+                        const manualTags = existingTags.filter(
+                          (tg) =>
+                            tg.toLowerCase() !== (autoBrandTag || '').toLowerCase() &&
+                            tg.toLowerCase() !== prev.name.trim().toLowerCase()
+                        );
+                        const nextTags = trimmedNext
+                          ? Array.from(new Set([trimmedNext, ...manualTags]))
+                          : manualTags;
+
+                        return {
+                          ...prev,
+                          name: nextName,
+                          slug: slugTouched ? prev.slug : toCleanSlug(nextName),
+                          tags: nextTags,
+                          popularSearchesText: popularSearchesTouched
+                            ? prev.popularSearchesText
+                            : buildDefaultPopularSearches(trimmedNext).join(', '),
+                          faqs: faqsTouched
+                            ? prev.faqs
+                            : storeTemplateService.getDefaultFaqsForBrand(
+                                trimmedNext,
+                                faqTemplatesRef.current
+                              ),
+                        };
+                      });
+                      setAutoBrandTag(trimmedNext);
                       if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
                     }}
-                    placeholder="e.g. Nilight Official"
-                    className={`${inputClass} ${errors.name ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    placeholder="e.g. Dutch Vet"
+                    className={`${inputClass} ${errors.name ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
-                  {errors.name && (
+                  {errors.name ? (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
                       <AlertCircle size={11} /> {errors.name}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-slate-400">
+                      {t('Required • Brand display name shown across the portal.')}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-1">
-                  <label className={labelClass}>URL Slug</label>
+                  <div className="flex items-center justify-between">
+                    <label className={labelClass}>{t('URL Slug')}</label>
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      {t('Auto-generated')}
+                    </span>
+                  </div>
                   <input
                     type="text"
+                    data-field="slug"
                     value={form.slug}
                     onChange={(e) => {
-                      setForm({ ...form, slug: e.target.value });
+                      const val = e.target.value;
+                      setSlugTouched(Boolean(val.trim()));
+                      setForm((prev) => ({ ...prev, slug: val }));
                       if (errors.slug) setErrors((prev) => ({ ...prev, slug: '' }));
                     }}
-                    placeholder="nilight"
-                    className={`${inputClass} font-mono ${errors.slug ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    onBlur={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        slug: toCleanSlug(prev.slug || prev.name),
+                      }));
+                    }}
+                    placeholder={toCleanSlug(form.name) || 'dutch-vet'}
+                    className={`${inputClass} font-mono ${errors.slug ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
-                  {errors.slug && (
+                  {errors.slug ? (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
                       <AlertCircle size={11} /> {errors.slug}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 font-mono truncate">
+                      URL: /store/{toCleanSlug(form.slug || form.name) || 'brand-slug'}
                     </p>
                   )}
                 </div>
               </div>
 
+              <div className="space-y-1">
+                <label className={labelClass}>
+                  {t('Affiliate Tracking URL')} <span className="text-rose-600 font-black">*</span>
+                </label>
+                <input
+                  type="url"
+                  data-field="affiliateUrl"
+                  value={form.affiliateUrl}
+                  onChange={(e) => {
+                    const sanitized = sanitizeUrlInput(e.target.value);
+                    setForm((prev) => ({
+                      ...prev,
+                      affiliateUrl: sanitized,
+                      domain:
+                        !domainTouched && sanitized
+                          ? extractCleanDomain(sanitized)
+                          : prev.domain,
+                    }));
+                    if (errors.affiliateUrl) setErrors((prev) => ({ ...prev, affiliateUrl: '' }));
+                  }}
+                  onBlur={() => {
+                    if (form.affiliateUrl.trim() && !/^https?:\/\//i.test(form.affiliateUrl.trim()) && !form.affiliateUrl.trim().startsWith('/')) {
+                      const withProto = `https://${sanitizeUrlInput(form.affiliateUrl)}`;
+                      setForm((prev) => ({
+                        ...prev,
+                        affiliateUrl: withProto,
+                        domain: !domainTouched ? extractCleanDomain(withProto) : prev.domain,
+                      }));
+                    }
+                  }}
+                  placeholder="https://dutchpetinc.pxf.io/QYQax6"
+                  className={`${inputClass} font-mono ${errors.affiliateUrl ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                />
+                {errors.affiliateUrl ? (
+                  <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
+                    <AlertCircle size={11} /> {errors.affiliateUrl}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    {t('Required • Paste your full partner tracking link (e.g. https://dutchpetinc.pxf.io/QYQax6). Duplicate https:// is automatically cleaned.')}
+                  </p>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className={labelClass}>Official Domain *</label>
+                  <div className="flex items-center justify-between">
+                    <label className={labelClass}>{t('Official Domain (Optional)')}</label>
+                    <span className="text-[10px] font-medium text-slate-500">
+                      {t('Auto-extracted')}
+                    </span>
+                  </div>
                   <input
                     type="text"
+                    data-field="domain"
                     value={form.domain}
                     onChange={(e) => {
-                      setForm({ ...form, domain: e.target.value });
+                      const rawVal = e.target.value;
+                      setDomainTouched(Boolean(rawVal.trim()));
+                      const sanitized = sanitizeUrlInput(rawVal);
+                      setForm((prev) => ({
+                        ...prev,
+                        domain: rawVal,
+                        // If admin pasted a full tracking URL here while Affiliate URL is empty, auto-fill Affiliate URL!
+                        affiliateUrl:
+                          !prev.affiliateUrl.trim() && /^https?:\/\//i.test(sanitized)
+                            ? sanitized
+                            : prev.affiliateUrl,
+                      }));
                       if (errors.domain) setErrors((prev) => ({ ...prev, domain: '' }));
+                      if (errors.affiliateUrl && /^https?:\/\//i.test(sanitized)) {
+                        setErrors((prev) => ({ ...prev, affiliateUrl: '' }));
+                      }
                     }}
-                    placeholder="nilight.com"
-                    className={`${inputClass} ${errors.domain ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    placeholder={extractCleanDomain(form.affiliateUrl) || 'dutchpet.com'}
+                    className={`${inputClass} ${errors.domain ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.domain && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -495,8 +956,14 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                 </div>
 
                 <div className="space-y-1">
-                  <label className={labelClass}>Category</label>
+                  <div className="flex items-center justify-between">
+                    <label className={labelClass}>{t('Category (Optional)')}</label>
+                    <span className="text-[10px] font-medium text-slate-500">
+                      {t('Optional')}
+                    </span>
+                  </div>
                   <select
+                    data-field="categoryId"
                     value={form.categoryId ?? (categories.find(c => c.name.toLowerCase() === form.category.toLowerCase())?.id || '')}
                     onFocus={loadCategoriesOnDemand}
                     onClick={loadCategoriesOnDemand}
@@ -507,52 +974,113 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                       setForm({
                         ...form,
                         categoryId: catId,
-                        category: matched ? matched.name : form.category,
+                        category: matched ? matched.name : '',
                       });
+                      if (errors.categoryId) setErrors((prev) => ({ ...prev, categoryId: '' }));
                     }}
-                    className={inputClass}
+                    className={`${inputClass} ${errors.categoryId ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   >
-                    <option value="">Select Category</option>
+                    <option value="">{t('-- No Category (Optional) --')}</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
                     ))}
                   </select>
+                  {errors.categoryId && (
+                    <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} /> {errors.categoryId}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className={labelClass}>Affiliate Tracking URL *</label>
-                <input
-                  type="url"
-                  value={form.affiliateUrl}
-                  onChange={(e) => {
-                    setForm({ ...form, affiliateUrl: e.target.value });
-                    if (errors.affiliateUrl) setErrors((prev) => ({ ...prev, affiliateUrl: '' }));
-                  }}
-                  placeholder={`https://www.nilight.com/?ref=${SITE_SLUG}`}
-                  className={`${inputClass} font-mono ${errors.affiliateUrl ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+              {/* Merged Store Tags inside Brand Overview */}
+              <div className="pt-3 border-t border-slate-100">
+                <TagInput
+                  tags={form.tags || []}
+                  onChange={(newTags) => setForm({ ...form, tags: newTags })}
+                  label={t('Store Tags')}
+                  placeholder="Type tag name and press Enter (e.g., tech, accessories, anker...)"
+                  helperText={t('Automatically includes the brand name tag as you type Store Name. You can also add additional topic tags.')}
                 />
-                {errors.affiliateUrl && (
-                  <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
-                    <AlertCircle size={11} /> {errors.affiliateUrl}
-                  </p>
-                )}
+              </div>
+
+              {/* Merged Short Summary inside Brand Overview (Optional or Auto-extracted from Review) */}
+              <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <label className={labelClass}>{t('Short Summary (2–3 Lines)')}</label>
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      {t('Optional • Auto-extracted from Review if blank')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const extracted = extractSummaryFromReviewHtml(form.description);
+                        if (extracted) {
+                          setForm((prev) => ({ ...prev, shortDescription: extracted }));
+                          setShortDescTouched(false);
+                          toast.success(t('Extracted summary from Review section!'));
+                        } else {
+                          toast.info(t('Write content in the Editorial Overview & Description section below first, or leave this blank.'));
+                        }
+                      }}
+                      className="text-[11px] font-bold text-brand-primary hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles size={11} />
+                      <span>{t('Extract from Review')}</span>
+                    </button>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      {(form.shortDescription || '').length} chars
+                    </span>
+                  </div>
+                </div>
+                <textarea
+                  rows={2}
+                  value={form.shortDescription || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setShortDescTouched(Boolean(val.trim()));
+                    setForm({ ...form, shortDescription: val });
+                  }}
+                  placeholder={
+                    extractSummaryFromReviewHtml(form.description) ||
+                    t('Optional: Leave blank to automatically take the opening paragraph from the Review / Description below...')
+                  }
+                  className={`${inputClass} resize-y leading-relaxed text-xs`}
+                />
+                <p className="text-[11px] text-slate-500">
+                  💡 {t('You can leave this blank — the system will automatically extract 2–3 opening sentences from the Editorial Review section below.')}
+                </p>
               </div>
             </FormSection>
 
-            <FormSection title="Visual Assets">
+            <FormSection
+              title="Visual Assets"
+              description="Step 2 (Optional): Upload brand logo and cover banner. If omitted, an automatic brand monogram badge is used."
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1" data-field="logoUrl">
                   <ImageUpload
                     value={form.logoUrl}
-                    onChange={(url) => setForm({ ...form, logoUrl: url })}
+                    onChange={(url) => {
+                      setForm({ ...form, logoUrl: url });
+                      if (errors.logoUrl) setErrors((prev) => ({ ...prev, logoUrl: '' }));
+                    }}
                     folder="store-logos"
-                    label="Store Brand Logo *"
+                    label="Store Brand Logo (Optional)"
                     description="Square logo (PNG or JPG). Recommended 200x200."
                     aspectRatio="square"
+                    defaultTags={form.name.trim() ? [form.name.trim()] : []}
                   />
+                  {errors.logoUrl && (
+                    <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} /> {errors.logoUrl}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -563,45 +1091,9 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                     label="Store Banner / Cover (Optional)"
                     description="Wide banner for store coupon landing page."
                     aspectRatio="video"
+                    defaultTags={form.name.trim() ? [form.name.trim()] : []}
                   />
                 </div>
-              </div>
-            </FormSection>
-
-            <FormSection
-              title="Store Taxonomy & Tags"
-              description="Connect this store to centralized tags (e.g. #tech, #apple, #deals) for unified discovery across editorial reviews and coupon alerts."
-            >
-              <TagInput
-                tags={form.tags || []}
-                onChange={(newTags) => setForm({ ...form, tags: newTags })}
-                label="Store Tags"
-                placeholder="Type tag name and press Enter (e.g., tech, accessories, anker...)"
-                helperText="These tags link this merchant with reviews, offers, and topic pages across the portal."
-              />
-            </FormSection>
-
-            <FormSection
-              title="Store Short Summary"
-              description="Concise summary paragraph (clamped to 2–3 lines on client) displayed right above the 'Get Coupon Alerts' button."
-            >
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className={labelClass}>Short Summary (2–3 Lines)</label>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    {(form.shortDescription || '').length} chars
-                  </span>
-                </div>
-                <textarea
-                  rows={3}
-                  value={form.shortDescription || ''}
-                  onChange={(e) => setForm({ ...form, shortDescription: e.target.value })}
-                  placeholder="e.g. Leading tech accessories and GaN charging station brand. Browse active 15% - 40% off promo codes updated daily..."
-                  className={`${inputClass} resize-y leading-relaxed text-xs`}
-                />
-                <p className="text-[11px] text-slate-500">
-                  💡 Tip: Enter 2–3 concise sentences so shoppers quickly grasp the brand highlights. Clamped to 3 lines on the client store page.
-                </p>
               </div>
             </FormSection>
           </div>
@@ -650,39 +1142,66 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
             <FormSection title="Affiliate Configuration">
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <label className={labelClass}>Max Discount Display</label>
+                  <label className={labelClass}>{t('Max Discount Display')}</label>
                   <input
                     type="text"
+                    data-field="maxDiscount"
                     value={form.maxDiscount}
-                    onChange={(e) => setForm({ ...form, maxDiscount: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, maxDiscount: e.target.value });
+                      if (errors.maxDiscount) setErrors((prev) => ({ ...prev, maxDiscount: '' }));
+                    }}
                     placeholder="e.g. 25% Off"
-                    className={inputClass}
+                    className={`${inputClass} ${errors.maxDiscount ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
+                  {errors.maxDiscount && (
+                    <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} /> {errors.maxDiscount}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">
-                  <label className={labelClass}>Rating Score (1.0 - 5.0)</label>
+                  <label className={labelClass}>{t('Rating Score (1.0 - 5.0)')}</label>
                   <input
                     type="number"
+                    data-field="rating"
                     step="0.1"
-                    min="1"
+                    min="0"
                     max="5"
                     value={form.rating}
-                    onChange={(e) => setForm({ ...form, rating: parseFloat(e.target.value) || 4.8 })}
-                    className={inputClass}
+                    onChange={(e) => {
+                      setForm({ ...form, rating: parseFloat(e.target.value) || 4.8 });
+                      if (errors.rating) setErrors((prev) => ({ ...prev, rating: '' }));
+                    }}
+                    className={`${inputClass} ${errors.rating ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
+                  {errors.rating && (
+                    <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} /> {errors.rating}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">
-                  <label className={labelClass}>Total Reviews Count</label>
+                  <label className={labelClass}>{t('Total Reviews Count')}</label>
                   <input
                     type="number"
+                    data-field="reviewsCount"
                     min="0"
                     value={form.reviewsCount ?? 0}
-                    onChange={(e) => setForm({ ...form, reviewsCount: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                    onChange={(e) => {
+                      setForm({ ...form, reviewsCount: Math.max(0, parseInt(e.target.value, 10) || 0) });
+                      if (errors.reviewsCount) setErrors((prev) => ({ ...prev, reviewsCount: '' }));
+                    }}
                     placeholder="e.g. 12540"
-                    className={inputClass}
+                    className={`${inputClass} ${errors.reviewsCount ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
+                  {errors.reviewsCount && (
+                    <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
+                      <AlertCircle size={11} /> {errors.reviewsCount}
+                    </p>
+                  )}
                 </div>
               </div>
             </FormSection>
@@ -739,7 +1258,15 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
           >
             <RichTextEditor
               value={form.description}
-              onChange={(html) => setForm({ ...form, description: html })}
+              onChange={(html) => {
+                setForm((prev) => ({
+                  ...prev,
+                  description: html,
+                  shortDescription: shortDescTouched
+                    ? prev.shortDescription
+                    : extractSummaryFromReviewHtml(html),
+                }));
+              }}
               minHeight="450px"
               initialPaperView={false}
               placeholder="Enter refund policies, shipping thresholds, and coupon stacking tips for this store..."
@@ -750,39 +1277,74 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
           <FormSection
             title="Popular Searches Pills"
             description="Quick-search keyword pills displayed above the store review section for SEO and shopper convenience."
+            headerRight={
+              <div className="flex items-center gap-2">
+                {form.name.trim() &&
+                  (form.popularSearchesText || '').trim() !==
+                    buildDefaultPopularSearches(form.name).join(', ') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPopularSearchesTouched(false);
+                        setForm((prev) => ({
+                          ...prev,
+                          popularSearchesText: buildDefaultPopularSearches(prev.name).join(', '),
+                        }));
+                      }}
+                      className="text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded-md cursor-pointer transition"
+                    >
+                      {t('Regenerate from Brand Name')}
+                    </button>
+                  )}
+                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                  {t('Auto-generated from Brand Name')}
+                </span>
+              </div>
+            }
           >
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className={labelClass}>Search Keywords (Comma- or newline-separated)</label>
+                <label className={labelClass}>{t('Search Keywords (Comma- or newline-separated)')}</label>
                 <textarea
                   rows={3}
                   value={form.popularSearchesText || ''}
-                  onChange={(e) => setForm({ ...form, popularSearchesText: e.target.value })}
-                  placeholder="e.g. Anker coupon code, Anker promo code, Anker discounts, Anker free shipping, Anker sale 20% off"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPopularSearchesTouched(Boolean(val.trim()));
+                    setForm({ ...form, popularSearchesText: val });
+                  }}
+                  onBlur={() => {
+                    if (!(form.popularSearchesText || '').trim() && form.name.trim()) {
+                      setPopularSearchesTouched(false);
+                      setForm((prev) => ({
+                        ...prev,
+                        popularSearchesText: buildDefaultPopularSearches(prev.name).join(', '),
+                      }));
+                    }
+                  }}
+                  placeholder={form.name.trim() || 'Dutch Vet'}
                   className={`${inputClass} resize-y text-xs leading-relaxed`}
                 />
                 <p className="text-[11px] text-slate-500">
-                  💡 Leave blank to automatically generate 7 standard search keywords based on the store name ({form.name || 'Store'}).
+                  {t(
+                    `💡 Defaults to the store brand name (${form.name.trim() || t('Store')}). Add more keywords separated by commas if needed.`
+                  )}
                 </p>
               </div>
 
               {/* Live Preview of Tag Pills */}
-              {form.popularSearchesText && (
+              {parsePopularSearchesText(form.popularSearchesText).length > 0 && (
                 <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-700 block">Tag Pills Preview:</span>
+                  <span className="text-[11px] font-bold text-slate-700 block">{t('Tag Pills Preview:')}</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {form.popularSearchesText
-                      .split(/[\n,]+/)
-                      .map((s) => s.trim())
-                      .filter(Boolean)
-                      .map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2.5 py-1 rounded-full text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+                    {parsePopularSearchesText(form.popularSearchesText).map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 rounded-full text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200"
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
@@ -794,19 +1356,38 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
             title="Store FAQs & Schema Q&A"
             description="Configure frequently asked questions and answers displayed at the bottom of the store page."
             headerRight={
-              <button
-                type="button"
-                onClick={handleAddFaq}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1 cursor-pointer transition"
-              >
-                <Plus size={13} />
-                <span>Add FAQ</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setFaqLibraryOpen(true)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 flex items-center gap-1 cursor-pointer transition"
+                >
+                  <BookOpen size={13} />
+                  <span>{t('FAQ Library')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetDefaultFaqs}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center gap-1 cursor-pointer transition"
+                  title={t('Reset Default FAQs')}
+                >
+                  <RotateCcw size={12} />
+                  <span>{t('Reset Default FAQs')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddFaq}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1 cursor-pointer transition"
+                >
+                  <Plus size={13} />
+                  <span>Add FAQ</span>
+                </button>
+              </div>
             }
           >
             <div className="space-y-3">
               {form.faqs.length === 0 ? (
-                <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 text-center space-y-2">
+                <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 text-center space-y-2.5">
                   <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center mx-auto">
                     <HelpCircle size={16} />
                   </div>
@@ -816,14 +1397,32 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                   <p className="text-[11px] text-slate-400">
                     The store page automatically displays 5 default FAQs (how to redeem codes, return policy, coupon stacking, free shipping). Click below to add custom questions.
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleAddFaq}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200/80 transition cursor-pointer"
-                  >
-                    <Plus size={13} />
-                    <span>Add First Question</span>
-                  </button>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleResetDefaultFaqs}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200/80 transition cursor-pointer"
+                    >
+                      <RotateCcw size={13} />
+                      <span>{t('Load 5 Default FAQs')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFaqLibraryOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition cursor-pointer"
+                    >
+                      <BookOpen size={13} />
+                      <span>{t('Browse FAQ Library')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddFaq}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>Add First Question</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -832,21 +1431,47 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                       key={idx}
                       className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5 relative group hover:border-slate-300 transition"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                           <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center">
                             Q{idx + 1}
                           </span>
                           <span>Question #{idx + 1}</span>
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFaq(idx)}
-                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition cursor-pointer"
-                          title="Remove FAQ"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!faq.question.trim() && !faq.answer.trim()) return;
+                              try {
+                                const saved = await storeTemplateService.createFaqTemplate({
+                                  category: 'custom',
+                                  title: faq.question.trim().slice(0, 48) || `FAQ #${idx + 1}`,
+                                  questionTemplate: extractBrandToken(faq.question, form.name),
+                                  answerTemplate: extractBrandToken(faq.answer, form.name),
+                                  isDefault: false,
+                                });
+                                syncFaqTemplates([saved, ...faqTemplatesRef.current]);
+                                toast.success(t('Saved to FAQ Library!'));
+                              } catch {
+                                toast.error(t('Failed to save template'));
+                              }
+                            }}
+                            className="px-2 py-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition cursor-pointer inline-flex items-center gap-1"
+                            title={t('Save to Library')}
+                          >
+                            <BookmarkPlus size={12} />
+                            <span>{t('Save to Library')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFaq(idx)}
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition cursor-pointer"
+                            title="Remove FAQ"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="space-y-1">
@@ -891,14 +1516,34 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
             title="Customer Reviews & Rating Breakdown"
             description="Customize shopper rating breakdown percentages and individual customer review cards displayed on the store page."
             headerRight={
-              <button
-                type="button"
-                onClick={handleAddReview}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1 cursor-pointer transition"
-              >
-                <Plus size={13} />
-                <span>Add Review</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setReviewLibraryState({ open: true, mode: 'append', targetIndex: null })
+                  }
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 flex items-center gap-1 cursor-pointer transition"
+                >
+                  <BookOpen size={13} />
+                  <span>{t('Review Library')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddStarterReviews}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 flex items-center gap-1 cursor-pointer transition"
+                >
+                  <Sparkles size={13} />
+                  <span>{t('Add 3 from Library')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddReview}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1 cursor-pointer transition"
+                >
+                  <Plus size={13} />
+                  <span>Add Review</span>
+                </button>
+              </div>
             }
           >
             <div className="space-y-5">
@@ -939,7 +1584,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
 
               {/* Customer Review Cards */}
               {form.customerReviews.length === 0 ? (
-                <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 text-center space-y-2">
+                <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 text-center space-y-2.5">
                   <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center mx-auto">
                     <Star size={16} />
                   </div>
@@ -949,14 +1594,34 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                   <p className="text-[11px] text-slate-400">
                     Add custom shopper reviews stored in PostgreSQL to display the &ldquo;What Shoppers Say&rdquo; section on the store page.
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleAddReview}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200/80 transition cursor-pointer"
-                  >
-                    <Plus size={13} />
-                    <span>Add First Review</span>
-                  </button>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setReviewLibraryState({ open: true, mode: 'append', targetIndex: null })
+                      }
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition cursor-pointer"
+                    >
+                      <BookOpen size={13} />
+                      <span>{t('Browse Review Library')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddStarterReviews}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer"
+                    >
+                      <Sparkles size={13} />
+                      <span>{t('Add 3 from Library')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddReview}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200/80 transition cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>{t('Add Blank Review')}</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -965,14 +1630,14 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                       key={review.id ?? idx}
                       className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 relative hover:border-slate-300 transition"
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                           <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center">
                             #{idx + 1}
                           </span>
                           <span>{review.reviewerName || `Customer Review #${idx + 1}`}</span>
                         </span>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2.5 flex-wrap">
                           <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 cursor-pointer">
                             <input
                               type="checkbox"
@@ -991,6 +1656,34 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                             />
                             <span>Active</span>
                           </label>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!review.comment.trim()) return;
+                              try {
+                                const saved = await storeTemplateService.createReviewTemplate({
+                                  category: 'custom',
+                                  title: review.reviewerName.trim()
+                                    ? `${review.reviewerName.trim()} (${review.rating || 5}★)`
+                                    : `Review #${idx + 1}`,
+                                  reviewerName: review.reviewerName.trim() || 'Verified Buyer',
+                                  rating: Number(review.rating || 5),
+                                  reviewDateLabel: review.reviewDateLabel?.trim() || '3 days ago',
+                                  isVerified: review.isVerified !== false,
+                                  commentTemplate: extractBrandToken(review.comment, form.name),
+                                });
+                                setReviewTemplates((prev) => [saved, ...prev]);
+                                toast.success(t('Saved to Review Library!'));
+                              } catch {
+                                toast.error(t('Failed to save template'));
+                              }
+                            }}
+                            className="px-2 py-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition cursor-pointer inline-flex items-center gap-1"
+                            title={t('Save to Library')}
+                          >
+                            <BookmarkPlus size={12} />
+                            <span>{t('Save to Library')}</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveReview(idx)}
@@ -1074,7 +1767,23 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                           />
                         </div>
                         <div className="md:col-span-2 space-y-1">
-                          <label className="text-[11px] font-bold text-slate-700">Review Comment *</label>
+                          <div className="flex items-center justify-between gap-2">
+                            <label className="text-[11px] font-bold text-slate-700">Review Comment *</label>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setReviewLibraryState({
+                                  open: true,
+                                  mode: 'replace-single',
+                                  targetIndex: idx,
+                                })
+                              }
+                              className="px-2 py-0.5 rounded-md text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 inline-flex items-center gap-1 cursor-pointer transition"
+                            >
+                              <BookOpen size={11} />
+                              <span>{t('Pick from Review Library')}</span>
+                            </button>
+                          </div>
                           <textarea
                             rows={3}
                             value={review.comment}
@@ -1268,16 +1977,9 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                     Popular Searches Related to {form.name || 'Store'} Coupons
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
-                    {(form.popularSearchesText
-                      ? form.popularSearchesText.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean)
-                      : [
-                          `${form.name || 'Store'} coupon code`,
-                          `${form.name || 'Store'} promo code`,
-                          `${form.name || 'Store'} discounts`,
-                          `${form.name || 'Store'} free shipping`,
-                          `${form.name || 'Store'} sale`,
-                          `${form.name || 'Store'} 20% off`,
-                        ]
+                    {(parsePopularSearchesText(form.popularSearchesText).length > 0
+                      ? parsePopularSearchesText(form.popularSearchesText)
+                      : buildDefaultPopularSearches(form.name || 'Store')
                     ).map((q, idx) => (
                       <span
                         key={idx}
@@ -1323,16 +2025,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                   <div className="space-y-2">
                     {(form.faqs.length > 0
                       ? form.faqs
-                      : [
-                          {
-                            question: `How do I apply a ${form.name || 'Store'} promo code?`,
-                            answer: `Click 'Get Code' on ${SITE_NAME} to copy the code and open the official ${form.name || 'Store'} website, then paste it into the Promo Code box at checkout.`,
-                          },
-                          {
-                            question: `Can I stack multiple promo codes at ${form.name || 'Store'}?`,
-                            answer: `Typically only one promo code can be applied per order, though it can often be combined with sitewide free shipping promotions.`,
-                          },
-                        ]
+                      : buildDefaultStoreFaqs(form.name || 'Store')
                     ).map((faq, idx) => (
                       <div key={idx} className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-1">
                         <p className="text-xs font-bold text-slate-900">❓ {faq.question}</p>
@@ -1347,6 +2040,69 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
           </div>
         </div>
       )}
+
+      <FaqLibraryModal
+        isOpen={faqLibraryOpen}
+        onClose={() => setFaqLibraryOpen(false)}
+        brandName={form.name}
+        onTemplatesChange={(list) => {
+          syncFaqTemplates(list);
+          if (!faqsTouchedRef.current) {
+            setForm((prev) => ({
+              ...prev,
+              faqs: storeTemplateService.getDefaultFaqsForBrand(prev.name, list),
+            }));
+          }
+        }}
+        onInsertFaqs={(pickedFaqs) => {
+          if (pickedFaqs.length === 0) return;
+          setFaqsTouched(true);
+          faqsTouchedRef.current = true;
+          setForm((prev) => ({
+            ...prev,
+            faqs: [...prev.faqs, ...pickedFaqs],
+          }));
+        }}
+      />
+
+      <ReviewLibraryModal
+        isOpen={reviewLibraryState.open}
+        onClose={() =>
+          setReviewLibraryState({ open: false, mode: 'append', targetIndex: null })
+        }
+        brandName={form.name}
+        mode={reviewLibraryState.mode}
+        onTemplatesChange={setReviewTemplates}
+        onInsertReviews={(pickedReviews) => {
+          if (pickedReviews.length === 0) return;
+          if (
+            reviewLibraryState.mode === 'replace-single' &&
+            reviewLibraryState.targetIndex !== null
+          ) {
+            const picked = pickedReviews[0];
+            const idx = reviewLibraryState.targetIndex;
+            setForm((prev) => {
+              const updated = [...prev.customerReviews];
+              const existingCard = updated[idx];
+              if (!existingCard) return prev;
+              updated[idx] = {
+                ...existingCard,
+                reviewerName: picked.reviewerName,
+                isVerified: picked.isVerified,
+                rating: picked.rating,
+                reviewDateLabel: picked.reviewDateLabel,
+                comment: picked.comment,
+              };
+              return { ...prev, customerReviews: updated };
+            });
+          } else {
+            setForm((prev) => ({
+              ...prev,
+              customerReviews: [...prev.customerReviews, ...pickedReviews],
+            }));
+          }
+        }}
+      />
     </AdminFormPage>
   );
 }

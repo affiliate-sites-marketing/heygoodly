@@ -92,6 +92,11 @@ export default function TagFormModal({ isOpen, onClose, tag, onSuccess }: TagFor
     setErrors({});
 
     const cleanName = name.trim();
+    if (!cleanName) {
+      setErrors({ name: t('Tag name is required') });
+      toast.error(`${t('Please check required fields')}: ${t('Tag Name')}`);
+      return;
+    }
     setSaving(true);
     try {
       const payload: TagPayload = {

@@ -8,7 +8,7 @@ import { ROUTES } from '@/constants/routes';
 import { absoluteUrl } from '@/constants/site';
 import { Article, Store, Coupon } from '@/types/deals';
 import postService from '@/services/postService';
-import storeService from '@/services/storeService';
+import storeService, { extractPlainTextExcerpt } from '@/services/storeService';
 import dealService from '@/services/dealService';
 import { useSiteSettings } from '@/lib/admin/useSiteSettings';
 import {
@@ -152,6 +152,10 @@ export default function ArticleDetailPage() {
   const publisherName = settings.siteName || 'HeyGoodly';
   const publisherLogo = settings.logoUrl || settings.faviconUrl || absoluteUrl('/favicon.ico');
 
+  const resolvedLeadExcerpt =
+    extractPlainTextExcerpt(article.excerpt, 260) ||
+    extractPlainTextExcerpt(article.content, 240);
+
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -167,7 +171,7 @@ export default function ArticleDetailPage() {
         '@type': 'NewsArticle',
         '@id': `${canonicalArticleUrl}#article`,
         headline: article.title,
-        description: article.excerpt,
+        description: resolvedLeadExcerpt,
         ...(article.imageUrl ? { image: [article.imageUrl] } : {}),
         ...(article.publishedAt ? { datePublished: article.publishedAt, dateModified: article.publishedAt } : {}),
         author: {
@@ -194,8 +198,19 @@ export default function ArticleDetailPage() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        .box-delete-btn, .box-edit-deal-btn, .box-edit-btn, [data-box-type="toc"] {
+        .box-delete-btn, .box-edit-deal-btn, .box-edit-btn, .editor-only-controls, [data-box-type="toc"] {
           display: none !important;
+        }
+        .editorial-article-body h1 {
+          font-size: 1.875rem;
+          font-weight: 900;
+          color: #0f172a;
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+          padding-bottom: 0.5rem;
+          border-bottom: 2px solid #e2e8f0;
+          letter-spacing: -0.025em;
+          scroll-margin-top: 6rem;
         }
         .editorial-article-body h2 {
           font-size: 1.5rem;
@@ -212,13 +227,28 @@ export default function ArticleDetailPage() {
           color: #1e293b;
           margin-top: 1.5rem;
           margin-bottom: 0.75rem;
+          scroll-margin-top: 6rem;
+        }
+        .editorial-article-body h4 {
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: #334155;
+          margin-top: 1.25rem;
+          margin-bottom: 0.5rem;
         }
         .editorial-article-body p {
           color: #334155;
           line-height: 1.75;
           margin-bottom: 1rem;
         }
-        .editorial-article-body ul, .editorial-article-body ol {
+        .editorial-article-body ul:not(.editorial-checklist) {
+          list-style-type: disc;
+          margin: 1rem 0;
+          padding-left: 1.5rem;
+          color: #334155;
+        }
+        .editorial-article-body ol {
+          list-style-type: decimal;
           margin: 1rem 0;
           padding-left: 1.5rem;
           color: #334155;
@@ -239,6 +269,9 @@ export default function ArticleDetailPage() {
           border: 1px solid #e2e8f0;
           max-width: 100%;
           height: auto;
+        }
+        .editorial-article-body figure img {
+          margin: 0;
         }
         html.dark .editorial-article-body h1,
         html.dark .editorial-article-body h2,
@@ -319,9 +352,9 @@ export default function ArticleDetailPage() {
             {article.title}
           </h1>
 
-          {article.excerpt && (
+          {resolvedLeadExcerpt && (
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-3xl">
-              {article.excerpt}
+              {resolvedLeadExcerpt}
             </p>
           )}
 
@@ -433,9 +466,10 @@ export default function ArticleDetailPage() {
                         <span className="font-bold text-slate-800 ml-1">{targetStoreRating.toFixed(1)}</span>
                       </div>
                     )}
-                    <p className="text-xs text-slate-500 leading-relaxed pt-1">
-                      {sidebarConfig.brandDescription ||
-                        matchedStore?.shortDescription ||
+                    <p className="text-xs text-slate-500 leading-relaxed pt-1 line-clamp-3">
+                      {extractPlainTextExcerpt(sidebarConfig.brandDescription, 220) ||
+                        extractPlainTextExcerpt(matchedStore?.shortDescription, 220) ||
+                        extractPlainTextExcerpt(matchedStore?.description, 220) ||
                         `Hand-tested promo codes and direct manufacturer offers for ${targetStoreName}.`}
                     </p>
                   </div>

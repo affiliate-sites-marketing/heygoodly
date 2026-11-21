@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ROUTES } from '@/constants/routes';
 import { Article } from '@/types/deals';
+import { extractPlainTextExcerpt } from '@/services/storeService';
 import { Clock, ArrowRight, FileText } from 'lucide-react';
 
 interface ArticleCardProps {
@@ -60,6 +61,10 @@ export default function ArticleCard({
 }: ArticleCardProps) {
   const isFeatured = featured || variant === 'featured';
   const postHref = ROUTES.PUBLIC.POST_DETAIL(article.slug);
+  const displayExcerpt =
+    extractPlainTextExcerpt(article.excerpt, 200) ||
+    extractPlainTextExcerpt(article.content, 200) ||
+    `Read our independent review, hands-on test results, and consumer verdict on ${article.title}.`;
 
   // Compact list card (for sidebars or dense lists)
   if (variant === 'compact') {
@@ -130,7 +135,7 @@ export default function ArticleCard({
               <Link href={postHref}>{article.title}</Link>
             </h3>
 
-            <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{article.excerpt}</p>
+            <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{displayExcerpt}</p>
           </div>
 
           <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
@@ -187,7 +192,7 @@ export default function ArticleCard({
             <Link href={postHref}>{article.title}</Link>
           </h3>
 
-          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{article.excerpt}</p>
+          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{displayExcerpt}</p>
         </div>
 
         <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">

@@ -2,6 +2,7 @@ import { apiClient } from '@/lib/api/axios-client';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { Article, ArticleSidebarConfig } from '@/types/deals';
 import { TtlCache } from '@/lib/utils/ttlCache';
+import { extractPlainTextExcerpt } from '@/services/storeService';
 
 export interface PostFilterParams {
   page?: number;
@@ -84,12 +85,18 @@ export function mapBackendPostToArticle(p: any): Article {
     }
   }
 
+  const rawContent = p.content !== undefined && p.content !== null ? String(p.content) : undefined;
+  const resolvedExcerpt =
+    extractPlainTextExcerpt(p.excerpt || p.metaDescription, 220) ||
+    extractPlainTextExcerpt(rawContent, 200) ||
+    '';
+
   return {
     id: String(p.id),
     slug: String(p.slug || ''),
     title: String(p.title || ''),
-    excerpt: String(p.excerpt || ''),
-    content: p.content !== undefined && p.content !== null ? String(p.content) : undefined,
+    excerpt: resolvedExcerpt,
+    content: rawContent,
     categoryId: p.categoryId ? Number(p.categoryId) : undefined,
     category: String(p.categoryName || p.category || 'Editorial'),
     categorySlug: p.categorySlug ? String(p.categorySlug) : undefined,

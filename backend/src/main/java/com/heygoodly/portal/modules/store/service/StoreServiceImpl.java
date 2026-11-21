@@ -115,6 +115,7 @@ public class StoreServiceImpl implements StoreService {
                     String cleanTag = singleTag.trim().toLowerCase().replaceAll("^#+", "");
                     if (!cleanTag.isEmpty() && !cleanTag.equalsIgnoreCase("ALL")) {
                         String tagPattern = "%" + cleanTag + "%";
+                        tagPreds.add(cb.like(cb.lower(cb.coalesce(root.get("tags"), "")), tagPattern));
                         tagPreds.add(cb.like(cb.lower(cb.coalesce(root.get("metaKeywords"), "")), tagPattern));
                         tagPreds.add(cb.like(cb.lower(root.get("slug")), tagPattern));
                         tagPreds.add(cb.like(cb.lower(root.get("name")), tagPattern));
@@ -215,6 +216,7 @@ public class StoreServiceImpl implements StoreService {
                     String cleanTag = singleTag.trim().toLowerCase().replaceAll("^#+", "");
                     if (!cleanTag.isEmpty() && !cleanTag.equalsIgnoreCase("ALL")) {
                         String tagPattern = "%" + cleanTag + "%";
+                        tagPreds.add(cb.like(cb.lower(cb.coalesce(root.get("tags"), "")), tagPattern));
                         tagPreds.add(cb.like(cb.lower(cb.coalesce(root.get("metaKeywords"), "")), tagPattern));
                         tagPreds.add(cb.like(cb.lower(root.get("slug")), tagPattern));
                         tagPreds.add(cb.like(cb.lower(root.get("name")), tagPattern));
@@ -271,7 +273,8 @@ public class StoreServiceImpl implements StoreService {
         if (request.getCategoryId() != null) {
             boolean catExists = categoryRepository.existsById(request.getCategoryId());
             if (!catExists) {
-                throw new ResourceNotFoundException(EntityFieldConstants.ENTITY_CATEGORY, EntityFieldConstants.ID, request.getCategoryId());
+                log.warn("Category id {} not found when creating store '{}'; falling back to null categoryId", request.getCategoryId(), request.getName());
+                request.setCategoryId(null);
             }
         }
 
@@ -360,7 +363,8 @@ public class StoreServiceImpl implements StoreService {
         if (request.getCategoryId() != null) {
             boolean catExists = categoryRepository.existsById(request.getCategoryId());
             if (!catExists) {
-                throw new ResourceNotFoundException(EntityFieldConstants.ENTITY_CATEGORY, EntityFieldConstants.ID, request.getCategoryId());
+                log.warn("Category id {} not found when creating store '{}'; falling back to null categoryId", request.getCategoryId(), request.getName());
+                request.setCategoryId(null);
             }
         }
 
@@ -455,6 +459,8 @@ public class StoreServiceImpl implements StoreService {
                 saved.getName(),
                 saved.getSlug(),
                 saved.getLogo(),
+                saved.getSocialDescription(),
+                saved.getAboutStore(),
                 saved.getCategoryId(),
                 catName,
                 saved.getMaxOffer(),

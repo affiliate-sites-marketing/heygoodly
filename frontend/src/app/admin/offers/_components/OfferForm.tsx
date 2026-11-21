@@ -20,6 +20,7 @@ import { apiClient } from '@/lib/api/axios-client';
 import { offerService, type AdminOfferPayload } from '@/services/offerService';
 import { type OfferItem } from '../_lib/data';
 import { useToast } from '@/context/ToastContext';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 
 interface OfferFormState {
   storeId?: number;
@@ -131,7 +132,7 @@ function OfferFormContent({ id }: { id?: string }) {
         isVerified: Boolean(offerData.isVerified),
         terms: offerData.terms || 'Valid on regular priced items.',
         imageUrl: offerData.imageUrl || '',
-        tags: offerData.tags || [],
+        tags: mergeBrandTag(offerData.tags || [], offerData.storeName),
         hasExpiration: Boolean(offerData.hasExpiration || offerData.startAt || offerData.expireAt),
         startDate: offerData.startAt ? new Date(offerData.startAt).toISOString().slice(0, 10) : '',
         expireDate: offerData.expireAt ? new Date(offerData.expireAt).toISOString().slice(0, 10) : '',
@@ -145,13 +146,13 @@ function OfferFormContent({ id }: { id?: string }) {
         couponCode: '',
         discountAmount: '15',
         discountUnit: 'percentage',
-        destinationUrl: 'https://',
+        destinationUrl: '',
         isExclusive: false,
         isActive: true,
         isVerified: false,
         terms: 'Valid on regular priced items.',
         imageUrl: '',
-        tags: [],
+        tags: storeParam ? [storeParam] : [],
         hasExpiration: false,
         startDate: '',
         expireDate: '',
@@ -161,10 +162,57 @@ function OfferFormContent({ id }: { id?: string }) {
   return <OfferFormInner key={offerData?.id ?? 'new'} id={id} existing={offerData ?? undefined} initial={initial} />;
 }
 
+function toTagKey(raw?: string | null): string {
+  return (raw || '')
+    .trim()
+    .replace(/^#+/, '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function mergeBrandTag(tags: string[], brandName?: string, previousBrandName?: string): string[] {
+  const prevKey = toTagKey(previousBrandName);
+  const nextClean = (brandName || '').trim();
+  const nextKey = toTagKey(nextClean);
+
+  const filtered = (tags || [])
+    .map((tg) => tg.trim().replace(/^#+/, ''))
+    .filter(Boolean)
+    .filter((tg) => {
+      const key = toTagKey(tg);
+      if (!key) return false;
+      if (prevKey && prevKey !== nextKey && key === prevKey) return false;
+      return true;
+    });
+
+  if (!nextClean || !nextKey) return filtered;
+  if (filtered.some((tg) => toTagKey(tg) === nextKey)) return filtered;
+  return [nextClean, ...filtered];
+}
+
+function sanitizeOfferUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  return trimmed.replace(/^(https?:\/\/)+(https?:\/\/)/i, '$2');
+}
+
+const OFFER_FIELD_LABELS: Record<string, string> = {
+  storeId: 'Merchant Store',
+  title: 'Offer Title',
+  couponCode: 'Coupon Promo Code',
+  discountAmount: 'Discount Amount',
+  destinationUrl: 'Destination URL (Tracking Link)',
+};
+
 function OfferFormInner({ id, existing, initial }: { id?: string; existing?: OfferItem; initial: OfferFormState }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useAdminI18n();
   const [form, setForm] = useState<OfferFormState>(initial);
+  const [autoBrandTag, setAutoBrandTag] = useState<string>(existing?.storeName?.trim() || initial.storeName?.trim() || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [stores, setStores] = useState<Array<{ id: number; name: string; slug: string; afWebsite?: string }>>(() => {
     if (existing?.storeName && existing?.storeId) {
@@ -177,23 +225,54 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
     setForm(initial);
   }, [initial]);
 
+  const scrollToField = (fieldKey: string) => {
+    if (typeof document === 'undefined') return;
+    const el = document.querySelector<HTMLElement>(`[data-field="${fieldKey}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        el.focus?.();
+      }, 150);
+    }
+  };
+
   const loadStoresOnDemand = async () => {
     if (stores.length > 1) return;
     try {
       const res = await apiClient.get(API_ENDPOINTS.ADMIN.STORES, { params: { size: 100 } });
       const list = res.data?.data?.content || res.data?.data;
       if (Array.isArray(list)) {
-        setStores(
-          list.map((s: any) => ({
-            id: Number(s.id),
-            name: String(s.name),
-            slug: String(s.slug),
-            afWebsite: s.afWebsite || undefined,
-          }))
-        );
+        const mappedStores = list.map((s: any) => ({
+          id: Number(s.id),
+          name: String(s.name),
+          slug: String(s.slug),
+          afWebsite: s.afWebsite || undefined,
+        }));
+        setStores(mappedStores);
+        if (!form.storeId && form.storeName) {
+          const matched = mappedStores.find(
+            (s) =>
+              s.name.toLowerCase() === form.storeName.toLowerCase() ||
+              s.slug.toLowerCase() === form.storeName.toLowerCase()
+          );
+          if (matched) {
+            setForm((prev) => ({
+              ...prev,
+              storeId: matched.id,
+              storeName: matched.name,
+              destinationUrl: !prev.destinationUrl && matched.afWebsite ? matched.afWebsite : prev.destinationUrl,
+              tags: mergeBrandTag(prev.tags || [], matched.name, autoBrandTag || prev.storeName),
+            }));
+            setAutoBrandTag(matched.name);
+          }
+        }
       }
     } catch {}
   };
+
+  useEffect(() => {
+    loadStoresOnDemand();
+  }, []);
 
   const discountFormatted =
     form.discountUnit === 'free_shipping'
@@ -206,11 +285,47 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
     e.preventDefault();
     setErrors({});
 
+    const nextErrors: Record<string, string> = {};
+    if (!form.storeId || Number(form.storeId) <= 0) {
+      nextErrors.storeId = t('Please select a Merchant Store.');
+    }
+    if (!form.title.trim()) {
+      nextErrors.title = t('Please enter the Offer Title.');
+    }
+    if (form.offerType === 'coupon' && !form.couponCode.trim()) {
+      nextErrors.couponCode = t('Please enter the Coupon Promo Code (or switch Offer Type to Direct Deal).');
+    }
+    if (form.discountUnit !== 'free_shipping' && !form.discountAmount.trim()) {
+      nextErrors.discountAmount = t('Please enter the Discount Amount.');
+    }
+
     const selectedStore = stores.find((s) => s.id === form.storeId);
     const storeSlug = selectedStore ? selectedStore.slug : form.storeName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
+    let resolvedUrl = sanitizeOfferUrl(form.destinationUrl);
+    if (!resolvedUrl || resolvedUrl === 'https://' || resolvedUrl === 'http://') {
+      resolvedUrl = selectedStore?.afWebsite || (storeSlug ? `https://${storeSlug}.com/?ref=${SITE_SLUG}` : '');
+    } else if (!/^https?:\/\//i.test(resolvedUrl) && !resolvedUrl.startsWith('/')) {
+      resolvedUrl = `https://${resolvedUrl}`;
+    }
+
+    if (!resolvedUrl) {
+      nextErrors.destinationUrl = t('Please enter the Destination URL (Tracking Link).');
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const firstKey = Object.keys(nextErrors)[0];
+      const fieldNames = Object.keys(nextErrors)
+        .map((k) => t(OFFER_FIELD_LABELS[k] || k))
+        .join(', ');
+      toast.error(`${t('Please check required fields')}: ${fieldNames}`);
+      scrollToField(firstKey);
+      return;
+    }
+
     if (form.hasExpiration && form.startDate && form.expireDate && form.expireDate < form.startDate) {
-      toast.error('End date must be on or after start date.');
+      toast.error(t('End date must be on or after start date.'));
       return;
     }
 
@@ -229,14 +344,14 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
       name: form.title.trim(),
       discountValue: discountFormatted,
       code: form.offerType === 'deal' ? null : (form.couponCode.trim().toUpperCase() || null),
-      urlRef: form.destinationUrl.trim() || (selectedStore?.afWebsite || `https://${storeSlug}.com/?ref=${SITE_SLUG}`),
+      urlRef: resolvedUrl,
       description: form.terms.trim() || null,
       isVerified: form.isVerified,
       isExclusive: form.isExclusive,
       isActive: form.isActive,
       sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 9999,
       image: form.imageUrl?.trim() || null,
-      tags: form.tags || [],
+      tags: mergeBrandTag(form.tags || [], selectedStore?.name || form.storeName),
       hasExpiration: form.hasExpiration,
       startAt: startAtIso,
       expireAt: expireAtIso,
@@ -252,11 +367,35 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
       }
       router.push(ROUTES.ADMIN.OFFERS);
     } catch (err: any) {
-      if (err?.response?.data?.errors && typeof err.response.data.errors === 'object') {
-        setErrors(err.response.data.errors);
+      const rawErrors = err?.response?.data?.errors;
+      const mappedErrors: Record<string, string> = {};
+      if (rawErrors && typeof rawErrors === 'object') {
+        const keyMap: Record<string, string> = {
+          storeId: 'storeId',
+          name: 'title',
+          title: 'title',
+          discountValue: 'discountAmount',
+          code: 'couponCode',
+          couponCode: 'couponCode',
+          urlRef: 'destinationUrl',
+          destinationUrl: 'destinationUrl',
+        };
+        for (const [k, v] of Object.entries(rawErrors)) {
+          mappedErrors[keyMap[k] || k] = String(v);
+        }
       }
-      const msg = err?.response?.data?.message || err?.message || 'Failed to save offer.';
-      toast.error(msg);
+      const msg = err?.response?.data?.message || err?.message || t('Failed to save offer.');
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(mappedErrors);
+        const firstKey = Object.keys(mappedErrors)[0];
+        const fieldNames = Object.keys(mappedErrors)
+          .map((k) => t(OFFER_FIELD_LABELS[k] || k))
+          .join(', ');
+        toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
+        scrollToField(firstKey);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -271,6 +410,41 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
       width="full"
     >
       <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+        {Object.keys(errors).length > 0 && (
+          <div
+            role="alert"
+            className="p-4 rounded-2xl border border-rose-300 bg-rose-50/90 text-rose-900 space-y-2.5 shadow-2xs animate-fadeIn"
+          >
+            <div className="flex items-center gap-2 text-xs font-extrabold text-rose-700">
+              <AlertCircle size={16} className="shrink-0 text-rose-600" />
+              <span>
+                {t('Please fix the following fields before saving')} ({Object.keys(errors).length}):
+              </span>
+            </div>
+            <ul className="space-y-1.5 pl-1">
+              {Object.entries(errors)
+                .filter(([, msg]) => Boolean(msg))
+                .map(([fieldKey, msg]) => (
+                  <li key={fieldKey} className="text-xs flex items-center justify-between gap-2 bg-white/80 border border-rose-200/80 rounded-xl px-3 py-2">
+                    <div>
+                      <strong className="font-bold text-rose-800">
+                        {t(OFFER_FIELD_LABELS[fieldKey] || fieldKey)}:
+                      </strong>{' '}
+                      <span className="text-rose-700">{msg}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => scrollToField(fieldKey)}
+                      className="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-[11px] font-bold shrink-0 cursor-pointer transition"
+                    >
+                      {t('Go to field')} →
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
           {/* Main Column (Left - 2 Cols) */}
@@ -280,22 +454,27 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                 <div className="space-y-1">
                   <label className={labelClass}>Merchant Store *</label>
                   <select
+                    data-field="storeId"
                     value={form.storeId ?? ''}
                     onFocus={loadStoresOnDemand}
                     onClick={loadStoresOnDemand}
                     onChange={(e) => {
                       const sId = Number(e.target.value);
                       const foundStore = stores.find((s) => s.id === sId);
-                      setForm({
-                        ...form,
-                        storeId: sId,
-                        storeName: foundStore ? foundStore.name : form.storeName,
-                        destinationUrl: form.destinationUrl === 'https://' && foundStore?.afWebsite
-                          ? foundStore.afWebsite
-                          : form.destinationUrl,
-                      });
+                      setForm((prev) => ({
+                        ...prev,
+                        storeId: sId || undefined,
+                        storeName: foundStore ? foundStore.name : '',
+                        destinationUrl:
+                          (!prev.destinationUrl.trim() || prev.destinationUrl === 'https://') && foundStore?.afWebsite
+                            ? foundStore.afWebsite
+                            : prev.destinationUrl,
+                        tags: mergeBrandTag(prev.tags || [], foundStore?.name, autoBrandTag || prev.storeName),
+                      }));
+                      setAutoBrandTag(foundStore?.name || '');
+                      if (errors.storeId) setErrors((prev) => ({ ...prev, storeId: '' }));
                     }}
-                    className={`${inputClass} ${errors.storeId ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    className={`${inputClass} ${errors.storeId ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   >
                     <option value="">Select a Merchant Store</option>
                     {stores.map((st) => (
@@ -331,13 +510,14 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                 <label className={labelClass}>Offer Title *</label>
                 <input
                   type="text"
+                  data-field="title"
                   value={form.title}
                   onChange={(e) => {
                     setForm({ ...form, title: e.target.value });
                     if (errors.title) setErrors((prev) => ({ ...prev, title: '' }));
                   }}
                   placeholder="e.g. 15% Off Sitewide On All LED Light Bars"
-                  className={`${inputClass} ${errors.title ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                  className={`${inputClass} ${errors.title ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                 />
                 {errors.title && (
                   <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -351,13 +531,14 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                   <label className={labelClass}>Coupon Promo Code *</label>
                   <input
                     type="text"
+                    data-field="couponCode"
                     value={form.couponCode}
                     onChange={(e) => {
                       setForm({ ...form, couponCode: e.target.value.toUpperCase() });
                       if (errors.couponCode) setErrors((prev) => ({ ...prev, couponCode: '' }));
                     }}
                     placeholder="e.g. SAVE15NOW"
-                    className={`${inputClass} font-mono font-bold tracking-wider ${errors.couponCode ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    className={`${inputClass} font-mono font-bold tracking-wider ${errors.couponCode ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.couponCode && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -376,6 +557,7 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                   </label>
                   <input
                     type="text"
+                    data-field="discountAmount"
                     disabled={form.discountUnit === 'free_shipping'}
                     value={form.discountUnit === 'free_shipping' ? 'FREE SHIPPING' : form.discountAmount}
                     onChange={(e) => {
@@ -383,7 +565,7 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                       if (errors.discountAmount) setErrors((prev) => ({ ...prev, discountAmount: '' }));
                     }}
                     placeholder="e.g. 15 or 50"
-                    className={`${inputClass} ${form.discountUnit === 'free_shipping' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''} ${errors.discountAmount ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    className={`${inputClass} ${form.discountUnit === 'free_shipping' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''} ${errors.discountAmount ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.discountAmount && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -415,13 +597,14 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
                 <label className={labelClass}>Destination URL (Tracking Link) *</label>
                 <input
                   type="url"
+                  data-field="destinationUrl"
                   value={form.destinationUrl}
                   onChange={(e) => {
-                    setForm({ ...form, destinationUrl: e.target.value });
+                    setForm({ ...form, destinationUrl: sanitizeOfferUrl(e.target.value) });
                     if (errors.destinationUrl) setErrors((prev) => ({ ...prev, destinationUrl: '' }));
                   }}
                   placeholder={`https://www.nilight.com/?pb_ref=${SITE_SLUG}`}
-                  className={`${inputClass} font-mono ${errors.destinationUrl ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                  className={`${inputClass} font-mono ${errors.destinationUrl ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                 />
                 {errors.destinationUrl && (
                   <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -543,13 +726,18 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
             <FormSection
               title="Offer Taxonomy & Tags"
               description="Attach centralized tags (e.g. #deals, #black-friday, #tech) for unified discovery across review articles and store pages."
+              headerRight={
+                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                  {t('Auto-generated from Brand Name')}
+                </span>
+              }
             >
               <TagInput
                 tags={form.tags || []}
                 onChange={(newTags) => setForm({ ...form, tags: newTags })}
                 label="Offer Tags"
                 placeholder="Type tag name and press Enter (e.g., deals, tech, apple, free-shipping...)"
-                helperText="These tags connect this coupon with related articles, stores, and topic archives."
+                helperText="Automatically includes the selected Merchant Store brand name tag. You can also add extra promo tags."
               />
             </FormSection>
           </div>

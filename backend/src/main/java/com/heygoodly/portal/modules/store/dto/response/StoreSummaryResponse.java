@@ -8,6 +8,8 @@ public record StoreSummaryResponse(
         String name,
         String slug,
         String logo,
+        String socialDescription,
+        String aboutStore,
         Long categoryId,
         String categoryName,
         Integer maxOffer,

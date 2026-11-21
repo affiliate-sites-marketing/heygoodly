@@ -3,17 +3,22 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminFormPage, {
+  FormErrorBanner,
   FormLoading,
   FormNotFound,
+  FormQuickGuide,
   FormSection,
   inputClass,
   labelClass,
+  scrollToFormField,
+  toValidSlug,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
 import { SITE_DOMAIN } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { useToast } from '@/context/ToastContext';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 import { type StaticPageData } from '../_lib/data';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import { Eye, Edit2, Monitor, Tablet, Smartphone, AlertCircle } from 'lucide-react';
@@ -105,10 +110,18 @@ export default function PageForm({ id }: { id?: string }) {
   return <PageFormInner key={id ?? 'new'} existing={existing} initial={initial} />;
 }
 
+const PAGE_FIELD_LABELS: Record<string, string> = {
+  title: 'Page Title',
+  slug: 'URL Slug',
+  content: 'Document Content (Microsoft Word Studio)',
+};
+
 function PageFormInner({ existing, initial }: { existing?: StaticPageData; initial: PageFormState }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useAdminI18n();
   const [form, setForm] = useState<PageFormState>(initial);
+  const [slugTouched, setSlugTouched] = useState<boolean>(Boolean(existing?.slug));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -116,7 +129,30 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    const cleanSlug = form.slug.trim() || form.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    const nextErrors: Record<string, string> = {};
+    if (!form.title.trim()) {
+      nextErrors.title = t('Please enter the Page Title.');
+    }
+    const cleanSlug = toValidSlug(form.slug.trim() || form.title);
+    if (form.title.trim() && !cleanSlug) {
+      nextErrors.slug = t('URL Slug must contain letters or numbers.');
+    }
+    const strippedContent = (form.content || '').replace(/<[^>]*>/g, '').trim();
+    if (!strippedContent) {
+      nextErrors.content = t('Please write the page content.');
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const firstKey = Object.keys(nextErrors)[0];
+      const fieldNames = Object.keys(nextErrors)
+        .map((k) => t(PAGE_FIELD_LABELS[k] || k))
+        .join(', ');
+      toast.error(`${t('Please check required fields')}: ${fieldNames}`);
+      scrollToFormField(firstKey);
+      return;
+    }
+
     const payload = {
       title: form.title.trim(),
       slug: cleanSlug,
@@ -137,11 +173,25 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
       }
       router.push(ROUTES.ADMIN.PAGES);
     } catch (err: any) {
+      const mappedErrors: Record<string, string> = {};
       if (err?.response?.data?.errors && typeof err.response.data.errors === 'object') {
-        setErrors(err.response.data.errors);
+        Object.assign(mappedErrors, err.response.data.errors);
       }
       const msg = err?.response?.data?.message || err?.message || 'Failed to save page.';
-      toast.error(msg);
+      if (err?.response?.data?.code === 'DUPLICATE_RESOURCE' || /slug/i.test(msg)) {
+        mappedErrors.slug = msg;
+      }
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(mappedErrors);
+        const firstKey = Object.keys(mappedErrors)[0];
+        const fieldNames = Object.keys(mappedErrors)
+          .map((k) => t(PAGE_FIELD_LABELS[k] || k))
+          .join(', ');
+        toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
+        scrollToFormField(firstKey);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -187,6 +237,11 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
     >
       {activeTab === 'edit' ? (
         <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+          <FormQuickGuide
+            title="Quick Static Page Setup"
+            description="Only Page Title (*) and Document Content (*) are required. URL Slug and SEO Meta Title are generated automatically from the Page Title."
+          />
+          <FormErrorBanner errors={errors} fieldLabels={PAGE_FIELD_LABELS} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
           {/* Main Column (Left - 2 Cols) */}
@@ -197,18 +252,20 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
                   <label className={labelClass}>Page Title *</label>
                   <input
                     type="text"
+                    data-field="title"
                     value={form.title}
                     onChange={(e) => {
                       const val = e.target.value;
                       setForm({
                         ...form,
                         title: val,
+                        slug: slugTouched ? form.slug : toValidSlug(val),
                         metaTitle: form.metaTitle || `${val} - HeyGoodly`,
                       });
                       if (errors.title) setErrors((prev) => ({ ...prev, title: '' }));
                     }}
                     placeholder="e.g. Editorial Guidelines & Policy"
-                    className={`${inputClass} ${errors.title ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    className={`${inputClass} ${errors.title ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.title && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -218,16 +275,30 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
                 </div>
 
                 <div className="space-y-1">
-                  <label className={labelClass}>URL Slug *</label>
+                  <div className="flex items-center justify-between">
+                    <label className={labelClass}>{t('URL Slug')}</label>
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      {t('Auto-generated')}
+                    </span>
+                  </div>
                   <input
                     type="text"
+                    data-field="slug"
                     value={form.slug}
                     onChange={(e) => {
-                      setForm({ ...form, slug: e.target.value });
+                      const val = e.target.value;
+                      setSlugTouched(Boolean(val.trim()));
+                      setForm({ ...form, slug: val });
                       if (errors.slug) setErrors((prev) => ({ ...prev, slug: '' }));
                     }}
-                    placeholder="e.g. editorial-guidelines"
-                    className={`${inputClass} font-mono ${errors.slug ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    onBlur={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        slug: toValidSlug(prev.slug || prev.title),
+                      }));
+                    }}
+                    placeholder={toValidSlug(form.title) || 'e.g. editorial-guidelines'}
+                    className={`${inputClass} font-mono ${errors.slug ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.slug && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -313,7 +384,7 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
         </div>
 
         {/* FULL-WIDTH DEDICATED WORD STUDIO DOCUMENT CANVAS */}
-        <div className="w-full">
+        <div className="w-full" data-field="content">
           <FormSection
             title="Document Content (Microsoft Word Studio)"
             description="Word-style document editor • Full support for Font Family, Font Size, Data Tables, Alignment & A4 Paper View"
@@ -326,10 +397,18 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
           >
             <RichTextEditor
               value={form.content}
-              onChange={(html) => setForm({ ...form, content: html })}
+              onChange={(html) => {
+                setForm({ ...form, content: html });
+                if (errors.content) setErrors((prev) => ({ ...prev, content: '' }));
+              }}
               minHeight="560px"
               placeholder="Draft terms of service, privacy policy, or editorial about page content here..."
             />
+            {errors.content && (
+              <p className="text-[11px] font-semibold text-rose-600 mt-2 flex items-center gap-1">
+                <AlertCircle size={11} /> {errors.content}
+              </p>
+            )}
           </FormSection>
         </div>
       </form>

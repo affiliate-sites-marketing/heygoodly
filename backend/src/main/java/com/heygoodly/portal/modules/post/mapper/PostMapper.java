@@ -78,12 +78,14 @@ public class PostMapper implements BaseMapper<PostEntity, PostDetailResponse, Po
         List<String> resolvedTags = extractTags(p.getTags(), p.getMetaKeywords());
         Map<String, Object> sidebarConfig = parseSidebarJson(p.getSidebarConfig());
 
+        String resolvedExcerpt = resolveExcerpt(p.getExcerpt(), p.getContent());
+
         return new PostDetailResponse(
                 p.getId(),
                 p.getTitle(),
                 p.getSlug(),
                 p.getImage(),
-                p.getExcerpt(),
+                resolvedExcerpt,
                 p.getContent(),
                 Objects.nonNull(cat) ? cat.getId() : p.getCategoryId(),
                 Objects.nonNull(cat) ? cat.getName() : null,
@@ -100,6 +102,7 @@ public class PostMapper implements BaseMapper<PostEntity, PostDetailResponse, Po
                 resolvedTags,
                 sidebarConfig,
                 NullSafeUtils.safeBoolean(p.getIsFeatured()),
+                NullSafeUtils.safeBoolean(p.getIsHero()),
                 NullSafeUtils.safeBoolean(p.getIsActive()),
                 p.getPublishedAt(),
                 NullSafeUtils.safeLong(p.getViewCount(), 0L),
@@ -140,13 +143,14 @@ public class PostMapper implements BaseMapper<PostEntity, PostDetailResponse, Po
                 : estimateReadTime(p.getContent());
 
         List<String> resolvedTags = extractTags(p.getTags(), p.getMetaKeywords());
+        String resolvedExcerpt = resolveExcerpt(p.getExcerpt(), p.getContent());
 
         return new PostSummaryResponse(
                 p.getId(),
                 p.getTitle(),
                 p.getSlug(),
                 p.getImage(),
-                p.getExcerpt(),
+                resolvedExcerpt,
                 Objects.nonNull(cat) ? cat.getId() : p.getCategoryId(),
                 Objects.nonNull(cat) ? cat.getName() : null,
                 Objects.nonNull(cat) ? cat.getSlug() : null,
@@ -160,12 +164,37 @@ public class PostMapper implements BaseMapper<PostEntity, PostDetailResponse, Po
                 p.getRating(),
                 resolvedTags,
                 NullSafeUtils.safeBoolean(p.getIsFeatured()),
+                NullSafeUtils.safeBoolean(p.getIsHero()),
                 NullSafeUtils.safeBoolean(p.getIsActive()),
                 p.getPublishedAt(),
                 NullSafeUtils.safeLong(p.getViewCount(), 0L),
                 computeStatus(p),
                 NullSafeUtils.safeInt(p.getSortOrder(), AppConstants.DEFAULT_SORT_ORDER)
         );
+    }
+
+    public String resolveExcerpt(String excerpt, String content) {
+        if (StringUtils.hasText(excerpt)) {
+            return excerpt.trim();
+        }
+        if (!StringUtils.hasText(content)) {
+            return "";
+        }
+        String plain = content
+                .replaceAll("(?is)<h[1-6][^>]*>.*?</h[1-6]>", " ")
+                .replaceAll("(?i)</(p|div|li|br|tr)>", " ")
+                .replaceAll("<[^>]+>", " ")
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (plain.length() <= 220) {
+            return plain;
+        }
+        int lastSpace = plain.lastIndexOf(' ', 217);
+        return (lastSpace > 80 ? plain.substring(0, lastSpace) : plain.substring(0, 217)) + "...";
     }
 
     public String computeStatus(PostEntity p) {

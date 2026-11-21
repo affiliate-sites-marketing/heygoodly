@@ -28,13 +28,31 @@ export function mapBackendOfferToCoupon(o: any): Coupon {
   const formattedStart = hasExpiration ? formatOfferDate(o.startAt) : undefined;
   const formattedExpiry = hasExpiration ? formatOfferDate(o.expireAt) : undefined;
 
+  let parsedTags: string[] = [];
+  if (Array.isArray(o.tags)) {
+    parsedTags = o.tags.map((t: unknown) => String(t).trim()).filter(Boolean);
+  } else if (typeof o.tags === 'string' && o.tags.trim()) {
+    try {
+      const parsed = JSON.parse(o.tags);
+      if (Array.isArray(parsed)) {
+        parsedTags = parsed.map((t: unknown) => String(t).trim()).filter(Boolean);
+      }
+    } catch {
+      parsedTags = o.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
+  }
+  const storeName = String(o.storeName || '').trim();
+  if (parsedTags.length === 0 && storeName) {
+    parsedTags = [storeName];
+  }
+
   return {
     id: String(o.id),
     code: isCode ? String(o.code).trim() : undefined,
     discount: String(o.discountValue || 'Special Offer'),
     title: String(o.name || ''),
     description: String(o.description || ''),
-    storeName: String(o.storeName || ''),
+    storeName,
     storeSlug,
     successRate: isVerified ? 100 : 0,
     isVerified,
@@ -47,6 +65,7 @@ export function mapBackendOfferToCoupon(o: any): Coupon {
     expiryDate: formattedExpiry,
     imageUrl: resolvedImage,
     affiliateUrl: `/out/${o.id}`,
+    tags: parsedTags,
   };
 }
 

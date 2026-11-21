@@ -232,6 +232,178 @@ html.dark .article-content strong {
   max-width: 100%;
 }
 
+/* Word Studio & Rendered Article Real Typography (since @tailwindcss/typography is not bundled) */
+.word-studio-canvas::after,
+.word-studio-preview::after,
+.article-content::after,
+.editorial-article-body::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.word-studio-canvas h1,
+.word-studio-preview h1,
+.article-content h1,
+.editorial-article-body h1 {
+  font-size: 1.875rem;
+  line-height: 1.25;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  color: #0f172a;
+  margin: 1.6rem 0 0.8rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.word-studio-canvas h2,
+.word-studio-preview h2,
+.article-content h2,
+.editorial-article-body h2 {
+  font-size: 1.5rem;
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  margin: 1.4rem 0 0.65rem;
+}
+
+.word-studio-canvas h3,
+.word-studio-preview h3,
+.article-content h3,
+.editorial-article-body h3 {
+  font-size: 1.2rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 1.15rem 0 0.5rem;
+}
+
+.word-studio-canvas h4,
+.word-studio-preview h4,
+.article-content h4,
+.editorial-article-body h4 {
+  font-size: 1.025rem;
+  line-height: 1.4;
+  font-weight: 700;
+  color: #334155;
+  margin: 0.95rem 0 0.4rem;
+}
+
+.word-studio-canvas p,
+.word-studio-preview p,
+.article-content p,
+.editorial-article-body p {
+  margin: 0.65rem 0;
+  line-height: 1.7;
+}
+
+.word-studio-canvas ul:not(.editorial-checklist),
+.word-studio-preview ul:not(.editorial-checklist),
+.article-content ul:not(.editorial-checklist),
+.editorial-article-body ul:not(.editorial-checklist) {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.word-studio-canvas ol,
+.word-studio-preview ol,
+.article-content ol,
+.editorial-article-body ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.word-studio-canvas li,
+.word-studio-preview li,
+.article-content li,
+.editorial-article-body li {
+  margin: 0.3rem 0;
+  line-height: 1.65;
+}
+
+.word-studio-canvas blockquote,
+.word-studio-preview blockquote,
+.article-content blockquote,
+.editorial-article-body blockquote {
+  border-left: 4px solid #2b579a;
+  background-color: #f8fafc;
+  color: #334155;
+  font-style: italic;
+  padding: 0.85rem 1.25rem;
+  margin: 1.25rem 0;
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.article-content blockquote,
+.editorial-article-body blockquote {
+  border-left-color: var(--brand-primary);
+}
+
+.word-studio-canvas hr,
+.word-studio-preview hr,
+.article-content hr,
+.editorial-article-body hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.5rem 0;
+}
+
+.word-studio-canvas a:not(.deal-button):not(.cta-button),
+.word-studio-preview a:not(.deal-button):not(.cta-button),
+.article-content a:not(.deal-button):not(.cta-button),
+.editorial-article-body a:not(.deal-button):not(.cta-button) {
+  color: #2b579a;
+  text-decoration: underline;
+}
+
+.word-studio-canvas code:not(pre code),
+.word-studio-preview code:not(pre code),
+.article-content code:not(pre code),
+.editorial-article-body code:not(pre code) {
+  background-color: #f1f5f9;
+  color: #c62828;
+  padding: 0.125rem 0.4rem;
+  border-radius: 0.375rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+}
+
+.word-studio-canvas pre,
+.word-studio-preview pre,
+.article-content pre,
+.editorial-article-body pre {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  padding: 0.9rem 1.1rem;
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+/* Hide editor-only action buttons on live client views and Live Preview */
+.article-content .box-delete-btn,
+.article-content .box-edit-deal-btn,
+.article-content .box-edit-btn,
+.article-content .editor-only-controls,
+.word-studio-preview .box-delete-btn,
+.word-studio-preview .box-edit-deal-btn,
+.word-studio-preview .box-edit-btn,
+.word-studio-preview .editor-only-controls,
+.editorial-article-body .box-delete-btn,
+.editorial-article-body .box-edit-deal-btn,
+.editorial-article-body .box-edit-btn,
+.editorial-article-body .editor-only-controls,
+[data-box-type="toc"] {
+  display: none !important;
+}
+
 @media (max-width: 639px) {
   .editorial-box {
     padding: 1rem !important;
@@ -240,6 +412,13 @@ html.dark .article-content strong {
   .editorial-box[data-box-type="deal"] > div {
     flex-wrap: wrap;
     gap: 0.5rem;
+  }
+
+  figure[data-box-type="image"] {
+    float: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 16px auto !important;
   }
 }
 
@@ -535,7 +714,12 @@ html.dark .editorial-article-body ol,
 html.dark .editorial-article-body li,
 html.dark .article-content,
 html.dark .article-content p,
-html.dark .article-content li {
+html.dark .article-content li,
+html.dark .word-studio-canvas,
+html.dark .word-studio-canvas p,
+html.dark .word-studio-canvas ul,
+html.dark .word-studio-canvas ol,
+html.dark .word-studio-canvas li {
   color: #cbd5e1 !important;
 }
 
@@ -548,8 +732,22 @@ html.dark .article-content h1,
 html.dark .article-content h2,
 html.dark .article-content h3,
 html.dark .article-content h4,
-html.dark .article-content strong:not([data-custom-color="true"] *) {
+html.dark .article-content strong:not([data-custom-color="true"] *),
+html.dark .word-studio-canvas h1,
+html.dark .word-studio-canvas h2,
+html.dark .word-studio-canvas h3,
+html.dark .word-studio-canvas h4,
+html.dark .word-studio-canvas strong:not([data-custom-color="true"] *) {
   color: #f8fafc !important;
+}
+
+html.dark .editorial-article-body h1,
+html.dark .article-content h1,
+html.dark .word-studio-canvas h1,
+html.dark .editorial-article-body hr,
+html.dark .article-content hr,
+html.dark .word-studio-canvas hr {
+  border-color: #242d42 !important;
 }
 
 /* Preserve inline custom text colors & marker highlights on selected words */
@@ -563,12 +761,21 @@ html.dark span[data-inline-styled="true"][data-custom-highlight="true"]:not([dat
 }
 
 html.dark .editorial-article-body blockquote,
-html.dark .article-content blockquote {
+html.dark .article-content blockquote,
+html.dark .word-studio-canvas blockquote {
   color: #e2e8f0 !important;
   background-color: #161d2b !important;
   border-left: 4px solid var(--brand-primary) !important;
   padding: 1rem 1.25rem !important;
   border-radius: 0.75rem !important;
+}
+
+html.dark .editorial-article-body code:not(pre code),
+html.dark .article-content code:not(pre code),
+html.dark .word-studio-canvas code:not(pre code) {
+  background-color: #1a2234 !important;
+  color: #fca5a5 !important;
+  border-color: #2c364f !important;
 }
 
 html.dark .editorial-article-body img,

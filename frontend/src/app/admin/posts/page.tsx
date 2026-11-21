@@ -201,6 +201,7 @@ function AdminPostsContent() {
         views: Number(p.viewCount || 0),
         rating: p.rating ? String(p.rating) : '',
         featured: Boolean(p.isFeatured),
+        isHero: Boolean(p.isHero),
         tags: Array.isArray(p.tags) ? p.tags : [],
         storeSlug: p.storeSlug || undefined,
         storeName: p.storeName || undefined,
@@ -503,8 +504,11 @@ function AdminPostsContent() {
                     <span className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-brand-primary transition-colors">
                       {art.title}
                     </span>
+                    {art.isHero && (
+                      <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Hero</span>
+                    )}
                     {art.featured && (
-                      <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded shrink-0">Hero</span>
+                      <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Editor&apos;s Pick</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">

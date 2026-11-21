@@ -18,6 +18,7 @@ export interface AdminArticle {
   readTime: string;
   imageUrl: string;
   featured: boolean;
+  isHero?: boolean;
   tags: string[];
   rating: string;
   status: 'PUBLISHED' | 'DRAFT' | 'SCHEDULED';

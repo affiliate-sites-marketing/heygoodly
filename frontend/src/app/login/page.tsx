@@ -45,7 +45,7 @@ export default function LoginPage() {
 
   // Step 1: Pre-filled credentials (auto fill by default)
   const [email, setEmail] = useState(`admin@${SITE_DOMAIN}`);
-  const [password, setPassword] = useState('Admin@123456');
+  const [password, setPassword] = useState('MySecret99#Hg@Admin');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [capsLockActive, setCapsLockActive] = useState(false);

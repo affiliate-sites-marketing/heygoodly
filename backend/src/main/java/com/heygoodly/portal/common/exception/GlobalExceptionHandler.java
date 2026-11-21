@@ -79,16 +79,19 @@ public class GlobalExceptionHandler {
             errors.put(field, localized != null ? localized : rawMessage);
         }
 
-        String message = i18nService.getMessage(
+        String baseMessage = i18nService.getMessage(
                 ErrorCode.VALIDATION_FAILED.getI18nKey(),
                 locale,
                 ErrorCode.VALIDATION_FAILED.getDefaultMessage()
         );
+        String detailMessage = errors.isEmpty()
+                ? baseMessage
+                : baseMessage + " (" + String.join("; ", errors.values()) + ")";
 
         log.warn("Validation failed at [{}]: {}", request.getRequestURI(), errors);
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(ErrorCode.VALIDATION_FAILED.name(), message, errors));
+                .body(ApiResponse.error(ErrorCode.VALIDATION_FAILED.name(), detailMessage, errors));
     }
 
     @ExceptionHandler(BadCredentialsException.class)

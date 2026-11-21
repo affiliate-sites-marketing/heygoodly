@@ -29,11 +29,14 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import AdminFormPage, {
+  FormErrorBanner,
   FormLoading,
   FormNotFound,
+  FormQuickGuide,
   FormSection,
   inputClass,
   labelClass,
+  scrollToFormField,
 } from '@/components/admin/AdminFormPage';
 import ImageUpload from '@/components/admin/ImageUpload';
 import Pagination from '@/components/admin/Pagination';
@@ -43,6 +46,7 @@ import { SITE_DOMAIN } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { useToast } from '@/context/ToastContext';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 import {
   DEFAULT_USER_PASSWORD,
   formatLoginTime,
@@ -225,6 +229,13 @@ export default function UserForm({ id }: { id?: string }) {
   return <UserFormInner key={id ?? 'new'} existing={existing} initial={initial} roles={roles} />;
 }
 
+const USER_FIELD_LABELS: Record<string, string> = {
+  fullName: 'Full Name',
+  email: 'Email Address',
+  phone: 'Phone Number',
+  roleId: 'Role',
+};
+
 function UserFormInner({
   existing,
   initial,
@@ -236,6 +247,7 @@ function UserFormInner({
 }) {
   const router = useRouter();
   const { toast, confirm } = useToast();
+  const { t } = useAdminI18n();
   const [form, setForm] = useState<UserFormState>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -492,9 +504,27 @@ function UserFormInner({
     e.preventDefault();
     setErrors({});
 
+    const nextErrors: Record<string, string> = {};
+    if (!form.fullName.trim()) {
+      nextErrors.fullName = t('Please enter the staff Full Name.');
+    }
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      nextErrors.email = t('Please enter a valid Email Address.');
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const firstKey = Object.keys(nextErrors)[0];
+      const fieldNames = Object.keys(nextErrors)
+        .map((k) => t(USER_FIELD_LABELS[k] || k))
+        .join(', ');
+      toast.error(`${t('Please check required fields')}: ${fieldNames}`);
+      scrollToFormField(firstKey);
+      return;
+    }
+
     // Resolve matching roleId if available
     const matchedRole = roles.find((r) => r.name.toLowerCase() === form.role.toLowerCase() || r.slug === form.role.toLowerCase());
-    const roleId = matchedRole ? matchedRole.id : form.roleId;
+    const roleId = matchedRole ? matchedRole.id : (form.roleId || roles[0]?.id);
 
     const payload = {
       fullName: form.fullName.trim(),
@@ -526,11 +556,25 @@ function UserFormInner({
       }
       router.push(ROUTES.ADMIN.USERS);
     } catch (err: any) {
+      const mappedErrors: Record<string, string> = {};
       if (err?.response?.data?.errors && typeof err.response.data.errors === 'object') {
-        setErrors(err.response.data.errors);
+        Object.assign(mappedErrors, err.response.data.errors);
       }
       const msg = err?.response?.data?.message || err?.message || 'Failed to save staff account.';
-      toast.error(msg);
+      if (err?.response?.data?.code === 'DUPLICATE_RESOURCE' || /email/i.test(msg)) {
+        mappedErrors.email = msg;
+      }
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(mappedErrors);
+        const firstKey = Object.keys(mappedErrors)[0];
+        const fieldNames = Object.keys(mappedErrors)
+          .map((k) => t(USER_FIELD_LABELS[k] || k))
+          .join(', ');
+        toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
+        scrollToFormField(firstKey);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -545,6 +589,7 @@ function UserFormInner({
       width="wide"
     >
       <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+        <FormErrorBanner errors={errors} fieldLabels={USER_FIELD_LABELS} />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Main Column (Left - 2 Cols) */}
           <div className="lg:col-span-2 space-y-6">
@@ -558,13 +603,14 @@ function UserFormInner({
                   <label className={labelClass}>Full Name *</label>
                   <input
                     type="text"
+                    data-field="fullName"
                     value={form.fullName}
                     onChange={(e) => {
                       setForm({ ...form, fullName: e.target.value });
                       if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: '' }));
                     }}
                     placeholder="e.g. Elena Croft"
-                    className={`${inputClass} ${errors.fullName ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    className={`${inputClass} ${errors.fullName ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.fullName && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -577,13 +623,14 @@ function UserFormInner({
                   <label className={labelClass}>Email Address *</label>
                   <input
                     type="email"
+                    data-field="email"
                     value={form.email}
                     onChange={(e) => {
                       setForm({ ...form, email: e.target.value });
                       if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
                     }}
                     placeholder={`elena@${SITE_DOMAIN}`}
-                    className={`${inputClass} ${errors.email ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                    className={`${inputClass} ${errors.email ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                   />
                   {errors.email && (
                     <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">

@@ -7,11 +7,15 @@ import { BookOpen, Plus, ExternalLink, Edit2, Eye, Monitor, Tablet, Smartphone, 
 import ImageUpload from '@/components/admin/ImageUpload';
 import DisplayPositionPicker from '@/components/admin/DisplayPositionPicker';
 import AdminFormPage, {
+  FormErrorBanner,
   FormLoading,
   FormNotFound,
+  FormQuickGuide,
   FormSection,
   inputClass,
   labelClass,
+  scrollToFormField,
+  toValidSlug,
 } from '@/components/admin/AdminFormPage';
 import { ROUTES } from '@/constants/routes';
 import { SITE_DOMAIN } from '@/constants/site';
@@ -94,11 +98,17 @@ export default function CategoryForm({ id }: { id?: string }) {
   return <CategoryFormInner key={id ?? 'new'} existing={existing} initial={initial} />;
 }
 
+const CATEGORY_FIELD_LABELS: Record<string, string> = {
+  name: 'Category Name',
+  slug: 'URL Slug',
+};
+
 function CategoryFormInner({ existing, initial }: { existing?: CategoryData; initial: CategoryFormState }) {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useAdminI18n();
   const [form, setForm] = useState<CategoryFormState>(initial);
+  const [slugTouched, setSlugTouched] = useState<boolean>(Boolean(existing?.slug));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -158,13 +168,21 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
     if (!form.name.trim()) {
       fieldErrors.name = t('Category name is required');
     }
+    const cleanSlug = toValidSlug(form.slug.trim() || form.name);
+    if (form.name.trim() && !cleanSlug) {
+      fieldErrors.slug = t('URL Slug must contain letters or numbers (e.g. tech).');
+    }
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors);
-      toast.error(fieldErrors.name || t('Please review highlighted form errors.'));
+      const firstKey = Object.keys(fieldErrors)[0];
+      const fieldNames = Object.keys(fieldErrors)
+        .map((k) => t(CATEGORY_FIELD_LABELS[k] || k))
+        .join(', ');
+      toast.error(`${t('Please check required fields')}: ${fieldNames}`);
+      scrollToFormField(firstKey);
       return;
     }
 
-    const cleanSlug = form.slug.trim() || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const payload = {
       name: form.name.trim(),
       slug: cleanSlug,
@@ -184,11 +202,25 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
       }
       router.push(ROUTES.ADMIN.CATEGORIES);
     } catch (err: any) {
+      const mappedErrors: Record<string, string> = {};
       if (err?.response?.data?.errors && typeof err.response.data.errors === 'object') {
-        setErrors(err.response.data.errors);
+        Object.assign(mappedErrors, err.response.data.errors);
       }
       const msg = err?.response?.data?.message || err?.message || 'Failed to save category.';
-      toast.error(msg);
+      if (err?.response?.data?.code === 'DUPLICATE_RESOURCE' || /slug/i.test(msg)) {
+        mappedErrors.slug = msg;
+      }
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(mappedErrors);
+        const firstKey = Object.keys(mappedErrors)[0];
+        const fieldNames = Object.keys(mappedErrors)
+          .map((k) => t(CATEGORY_FIELD_LABELS[k] || k))
+          .join(', ');
+        toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
+        scrollToFormField(firstKey);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -237,6 +269,12 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
     >
       {activeTab === 'edit' ? (
         <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+          <FormQuickGuide
+            title="Quick Category Setup"
+            description="Only Category Name (*) is required. URL Slug is generated automatically from the category name; Banner Image and Editorial Description are optional."
+          />
+          <FormErrorBanner errors={errors} fieldLabels={CATEGORY_FIELD_LABELS} />
+
           {/* TOP ROW: CATEGORY IDENTITY & MEDIA + DISPLAY & PREVIEW */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             
@@ -245,16 +283,24 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
               <FormSection title="Category Information">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className={labelClass}>Category Name *</label>
+                    <label className={labelClass}>
+                      {t('Category Name')} <span className="text-rose-600 font-black">*</span>
+                    </label>
                     <input
                       type="text"
+                      data-field="name"
                       value={form.name}
                       onChange={(e) => {
-                        setForm({ ...form, name: e.target.value });
+                        const nextName = e.target.value;
+                        setForm((prev) => ({
+                          ...prev,
+                          name: nextName,
+                          slug: slugTouched ? prev.slug : toValidSlug(nextName),
+                        }));
                         if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
                       }}
                       placeholder="e.g. Technology & Computing"
-                      className={`${inputClass} ${errors.name ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                      className={`${inputClass} ${errors.name ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                     />
                     {errors.name && (
                       <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">
@@ -264,16 +310,30 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
                   </div>
 
                   <div className="space-y-1">
-                    <label className={labelClass}>URL Slug *</label>
+                    <div className="flex items-center justify-between">
+                      <label className={labelClass}>{t('URL Slug')}</label>
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                        {t('Auto-generated')}
+                      </span>
+                    </div>
                     <input
                       type="text"
+                      data-field="slug"
                       value={form.slug}
                       onChange={(e) => {
-                        setForm({ ...form, slug: e.target.value });
+                        const val = e.target.value;
+                        setSlugTouched(Boolean(val.trim()));
+                        setForm({ ...form, slug: val });
                         if (errors.slug) setErrors((prev) => ({ ...prev, slug: '' }));
                       }}
-                      placeholder="e.g. tech"
-                      className={`${inputClass} font-mono ${errors.slug ? 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
+                      onBlur={() => {
+                        setForm((prev) => ({
+                          ...prev,
+                          slug: toValidSlug(prev.slug || prev.name),
+                        }));
+                      }}
+                      placeholder={toValidSlug(form.name) || 'e.g. tech'}
+                      className={`${inputClass} font-mono ${errors.slug ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-500/20 focus:border-rose-500' : ''}`}
                     />
                     {errors.slug && (
                       <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1">

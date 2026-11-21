@@ -74,6 +74,13 @@ public class PostEntity extends BaseEntity {
     @Column(name = "is_featured", nullable = false)
     private Boolean isFeatured = false;
 
+    @Column(name = "featured_at")
+    private Instant featuredAt;
+
+    @Builder.Default
+    @Column(name = "is_hero", nullable = false)
+    private Boolean isHero = false;
+
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

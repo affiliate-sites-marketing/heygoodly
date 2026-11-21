@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Save, SearchX } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Loader2, Save, SearchX, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useAdminI18n } from '@/context/AdminI18nContext';
 
@@ -74,6 +74,29 @@ export default function AdminFormPage({
       </div>
 
       {children}
+
+      {/* Bottom Sticky Action Bar so Admin never has to scroll back to top to save */}
+      <div className="sticky bottom-3 z-20 flex items-center justify-between gap-3 bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-lg rounded-2xl px-4 sm:px-5 py-3">
+        <span className="text-[11px] font-medium text-slate-500 hidden sm:inline">
+          {t('Fields marked with * are required.')}
+        </span>
+        <div className="flex items-center gap-2.5 ml-auto">
+          <Link
+            href={backHref}
+            className="h-9 px-4 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer inline-flex items-center justify-center whitespace-nowrap shrink-0 shadow-2xs"
+          >
+            {t('Cancel')}
+          </Link>
+          <button
+            type="submit"
+            form={formId}
+            formNoValidate
+            className="h-9 px-5 inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <Save size={14} /> {t(submitLabel)}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -136,3 +159,85 @@ export const inputClass =
   'w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition';
 
 export const labelClass = 'text-xs font-bold text-slate-700';
+
+export function toValidSlug(raw: string): string {
+  return (raw || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function scrollToFormField(fieldKey: string) {
+  if (typeof document === 'undefined') return;
+  const el = document.querySelector<HTMLElement>(`[data-field="${fieldKey}"]`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      el.focus?.();
+    }, 150);
+  }
+}
+
+export function FormQuickGuide({ title, description }: { title: string; description: string }) {
+  const { t } = useAdminI18n();
+  return (
+    <div className="p-3.5 sm:p-4 rounded-2xl border border-blue-200/80 bg-blue-50/70 flex items-start gap-3 text-xs text-slate-700">
+      <Sparkles size={16} className="text-blue-600 shrink-0 mt-0.5" />
+      <div className="space-y-0.5">
+        <p className="font-bold text-slate-900">{t(title)}</p>
+        <p className="text-[11px] text-slate-600 leading-relaxed">{t(description)}</p>
+      </div>
+    </div>
+  );
+}
+
+export function FormErrorBanner({
+  errors,
+  fieldLabels = {},
+}: {
+  errors: Record<string, string>;
+  fieldLabels?: Record<string, string>;
+}) {
+  const { t } = useAdminI18n();
+  const activeEntries = Object.entries(errors).filter(([, msg]) => Boolean(msg));
+  if (activeEntries.length === 0) return null;
+
+  return (
+    <div
+      role="alert"
+      className="p-4 rounded-2xl border border-rose-300 bg-rose-50/90 text-rose-900 space-y-2.5 shadow-2xs animate-fadeIn"
+    >
+      <div className="flex items-center gap-2 text-xs font-extrabold text-rose-700">
+        <AlertCircle size={16} className="shrink-0 text-rose-600" />
+        <span>
+          {t('Please fix the following fields before saving')} ({activeEntries.length}):
+        </span>
+      </div>
+      <ul className="space-y-1.5 pl-1">
+        {activeEntries.map(([fieldKey, msg]) => (
+          <li
+            key={fieldKey}
+            className="text-xs flex items-center justify-between gap-2 bg-white/80 border border-rose-200/80 rounded-xl px-3 py-2"
+          >
+            <div>
+              <strong className="font-bold text-rose-800">
+                {t(fieldLabels[fieldKey] || fieldKey)}:
+              </strong>{' '}
+              <span className="text-rose-700">{msg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => scrollToFormField(fieldKey)}
+              className="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-[11px] font-bold shrink-0 cursor-pointer transition"
+            >
+              {t('Go to field')} →
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
