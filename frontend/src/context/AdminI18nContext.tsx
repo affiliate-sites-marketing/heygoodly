@@ -1993,6 +1993,7 @@ const EXACT_VI_MAP: Record<string, string> = {
   'All system settings reset to factory defaults!': 'Đã khôi phục toàn bộ cấu hình hệ thống về mặc định gốc!',
   'All-time clicks': 'Tổng lượt nhấp từ trước tới nay',
   'Allows automated test suites and local development environments to authenticate using the static dev test code.': 'Cho phép bộ kiểm thử tự động và môi trường phát triển cục bộ đăng nhập bằng mã OTP thử nghiệm cố định.',
+  'Arrange Order': 'Sắp xếp Thứ tự',
   'Arrange Articles by Category': 'Sắp xếp Bài viết theo Chuyên mục',
   'Arrange Category Order Matrix': 'Sắp xếp Thứ tự Chuyên mục',
   'Arrange Navigation Menu Order': 'Sắp xếp Thứ tự Menu Điều hướng',
