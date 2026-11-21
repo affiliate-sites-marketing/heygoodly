@@ -93,6 +93,8 @@ export default function StoreCustomerReviewsSection({
     ? (reviewCount > 0 ? reviewCount : activeReviews.length)
     : activeReviews.length;
   const reviewWord = displayTotalReviews === 1 ? 'review' : 'reviews';
+  const actualReviewsCount = activeReviews.length;
+  const actualReviewWord = actualReviewsCount === 1 ? 'review' : 'reviews';
 
   const breakdown = hasCustomBreakdown ? ratingBreakdown! : computeFallbackBreakdown(activeReviews);
 
@@ -177,7 +179,7 @@ export default function StoreCustomerReviewsSection({
             onClick={() => setAllModalOpen(true)}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 transition cursor-pointer"
           >
-            <span>See all {displayTotalReviews.toLocaleString()} {reviewWord}</span>
+            <span>See all {actualReviewsCount.toLocaleString()} {actualReviewWord}</span>
             <ArrowRight size={13} />
           </button>
         </div>
@@ -309,7 +311,7 @@ export default function StoreCustomerReviewsSection({
                   All Shopper Reviews for {storeName}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  {displayRating.toFixed(1)} average rating based on {displayTotalReviews.toLocaleString()} {reviewWord}
+                  {actualReviewsCount.toLocaleString()} {actualReviewWord} • {displayRating.toFixed(1)} average rating
                 </p>
               </div>
               <button
