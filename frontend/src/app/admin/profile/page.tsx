@@ -125,14 +125,14 @@ function PaginationBar({
           <span className="font-bold text-slate-800">{totalItems}</span> {itemLabel}
         </span>
         {onPageSizeChange && (
-          <div className="flex items-center gap-1.5 ml-3">
-            <span className="text-[11px] text-slate-400">Rows per page:</span>
+          <div className="flex items-center gap-2 ml-3 shrink-0">
+            <span className="text-[11px] text-slate-400 whitespace-nowrap shrink-0">Rows per page:</span>
             <AdminSearchableSelect
               value={String(pageSize)}
               placement="top"
               searchable={false}
-              className="w-auto min-w-[70px]"
-              triggerClassName="py-1 px-2 text-xs"
+              className="!w-auto min-w-[74px] shrink-0"
+              triggerClassName="py-1 px-2 text-xs whitespace-nowrap"
               onChange={(val) => onPageSizeChange(Number(val))}
               options={pageSizeOptions.map((opt) => ({ value: String(opt), label: String(opt) }))}
             />

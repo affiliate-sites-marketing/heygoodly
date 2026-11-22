@@ -73,14 +73,14 @@ export default function Pagination({
         </div>
 
         {showPageSizeSelector && onPageSizeChange && (
-          <div className="flex items-center gap-1.5 pl-2 sm:border-l sm:border-slate-200">
-            <span className="text-[11px] text-slate-400">{t('Rows per page:')}</span>
+          <div className="flex items-center gap-2 pl-2.5 sm:border-l sm:border-slate-200 shrink-0">
+            <span className="text-[11px] text-slate-400 whitespace-nowrap shrink-0">{t('Rows per page:')}</span>
             <AdminSearchableSelect
               value={String(pageSize)}
               placement="top"
               searchable={false}
-              className="w-auto min-w-[105px]"
-              triggerClassName="py-1 px-2.5 text-xs"
+              className="!w-auto min-w-[108px] shrink-0"
+              triggerClassName="py-1 px-2.5 text-xs whitespace-nowrap"
               onChange={(val) => {
                 const newSize = Number(val);
                 onPageSizeChange(newSize);
