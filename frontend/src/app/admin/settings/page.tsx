@@ -20,6 +20,9 @@ import {
   Sparkles,
   Palette,
   Check,
+  ExternalLink,
+  Copy,
+  FileCode2,
 } from 'lucide-react';
 import {
   validateCustomHeadHtml,
@@ -746,6 +749,71 @@ export default function AdminSettingsPage() {
                   />
                   <span>{t('Block search engines (noindex)')}</span>
                 </label>
+              </div>
+
+              {/* Dynamic Sitemap XML & Robots.txt Quick Endpoints */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  {
+                    label: t('Dynamic Sitemap XML'),
+                    badge: t('Real-time Auto-Sync'),
+                    path: '/sitemap.xml',
+                    desc: t('Automatically updates whenever Stores, Articles, Categories, Tags, or Static Pages change.'),
+                  },
+                  {
+                    label: t('Dynamic Robots.txt'),
+                    badge: settings.no_index === 'true' ? 'noindex' : t('Crawler Ready'),
+                    path: '/robots.txt',
+                    desc: t('Automatically synced with your Search Engine Indexing toggle and Canonical URL.'),
+                  },
+                ].map((item) => {
+                  const baseOrigin = (settings.canonical_url?.trim() || `https://${SITE_DOMAIN}`).replace(/\/+$/, '');
+                  const fullUrl = `${baseOrigin}${item.path}`;
+                  return (
+                    <div
+                      key={item.path}
+                      className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between gap-2.5"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                            <FileCode2 size={14} className="text-brand-primary shrink-0" />
+                            <span>{item.label}</span>
+                          </span>
+                          <Badge variant={item.path === '/robots.txt' && settings.no_index === 'true' ? 'destructive' : 'success'} className="text-[10px]">
+                            {item.badge}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">{item.desc}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[11px] font-mono text-slate-700 truncate">{fullUrl}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(fullUrl);
+                              toast.success(t('Copied URL to clipboard!'));
+                            }}
+                            className="p-1 rounded-md text-slate-500 hover:text-brand-primary hover:bg-slate-100 transition cursor-pointer"
+                            title={t('Copy URL')}
+                          >
+                            <Copy size={13} />
+                          </button>
+                          <a
+                            href={item.path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded-md text-slate-500 hover:text-brand-primary hover:bg-slate-100 transition"
+                            title={t('Open in new tab')}
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
