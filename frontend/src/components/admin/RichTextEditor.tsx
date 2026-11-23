@@ -5,6 +5,13 @@ import { SITE_DOMAIN, SITE_NAME, SITE_SLUG } from '@/constants/site';
 import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { convertClipboardToCleanHtml, looksLikeMarkdown, markdownToCleanHtml } from '@/lib/editor/smartPaste';
 import { buildVideoEmbedHtml, parseVideoEmbed } from '@/lib/editor/videoEmbed';
+import EditorSlashMenu, {
+  filterSlashCommands,
+  type SlashCommandItem,
+} from '@/components/admin/editor/EditorSlashMenu';
+import EditorBubbleToolbar from '@/components/admin/editor/EditorBubbleToolbar';
+import EditorTableToolbar from '@/components/admin/editor/EditorTableToolbar';
+import EditorFindReplaceBar from '@/components/admin/editor/EditorFindReplaceBar';
 import {
   Bold,
   Italic,
@@ -999,6 +1006,504 @@ export default function RichTextEditor({
   const [videoUrlInput, setVideoUrlInput] = useState('');
   const [videoCaptionInput, setVideoCaptionInput] = useState('');
   const [videoWidthInput, setVideoWidthInput] = useState<'100%' | '80%' | '60%'>('100%');
+  const [editingVideoEl, setEditingVideoEl] = useState<HTMLElement | null>(null);
+
+  // Slash Command Menu (/) state
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState('');
+  const [slashPos, setSlashPos] = useState<{ top: number; left: number } | null>(null);
+  const [slashSelectedIndex, setSlashSelectedIndex] = useState(0);
+
+  // Floating Text Selection Bubble Toolbar state
+  const [bubblePos, setBubblePos] = useState<{ top: number; left: number } | null>(null);
+  const lastMouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Floating Interactive Table Toolbar state
+  const [activeTableCell, setActiveTableCell] = useState<HTMLTableCellElement | null>(null);
+  const [tableToolbarPos, setTableToolbarPos] = useState<{ top: number; left: number } | null>(null);
+
+  // Find & Replace Bar state
+  const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+
+  const slashItems = filterSlashCommands(slashQuery);
+
+  const closeSlashMenu = () => {
+    setSlashOpen(false);
+    setSlashQuery('');
+    setSlashPos(null);
+    setSlashSelectedIndex(0);
+  };
+
+  // Dismiss floating Bubble / Table / Slash toolbars when clicking outside editor
+  useEffect(() => {
+    if (!bubblePos && !tableToolbarPos && !slashOpen) return;
+    const onOutsideDown = (ev: MouseEvent) => {
+      const target = ev.target as Node | null;
+      if (!target) return;
+      if (editorRef.current?.contains(target)) return;
+      if ((target as HTMLElement).closest?.('[data-editor-floating-ui="true"]')) return;
+      setBubblePos(null);
+      setActiveTableCell(null);
+      setTableToolbarPos(null);
+      if (slashOpen) closeSlashMenu();
+    };
+    const onScrollHide = () => {
+      setBubblePos(null);
+      if (slashOpen) closeSlashMenu();
+      if (activeTableCell && editorRef.current?.contains(activeTableCell)) {
+        const tbl = activeTableCell.closest('table');
+        if (tbl) {
+          const rect = tbl.getBoundingClientRect();
+          setTableToolbarPos({
+            top: rect.top > 52 ? rect.top - 44 : Math.min(rect.bottom + 8, window.innerHeight - 52),
+            left: Math.max(12, Math.min(rect.left, window.innerWidth - 460)),
+          });
+        }
+      }
+    };
+    document.addEventListener('mousedown', onOutsideDown);
+    window.addEventListener('scroll', onScrollHide, true);
+    return () => {
+      document.removeEventListener('mousedown', onOutsideDown);
+      window.removeEventListener('scroll', onScrollHide, true);
+    };
+  }, [bubblePos, tableToolbarPos, slashOpen, activeTableCell]);
+
+  // Always track text selection (drag-select releasing anywhere, Cmd+A, double/triple-click, Shift+Arrows)
+  useEffect(() => {
+    if (isSourceMode) {
+      setBubblePos(null);
+      return;
+    }
+    const syncBubble = () => {
+      window.requestAnimationFrame(() => {
+        updateBubbleToolbarPosition();
+      });
+    };
+    document.addEventListener('selectionchange', syncBubble);
+    window.addEventListener('mouseup', syncBubble);
+    return () => {
+      document.removeEventListener('selectionchange', syncBubble);
+      window.removeEventListener('mouseup', syncBubble);
+    };
+  }, [isSourceMode]);
+
+  const detectSlashCommand = () => {
+    if (isSourceMode || !editorRef.current) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.isCollapsed || sel.rangeCount === 0) {
+      if (slashOpen) closeSlashMenu();
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!editorRef.current.contains(range.startContainer) || range.startContainer.nodeType !== Node.TEXT_NODE) {
+      if (slashOpen) closeSlashMenu();
+      return;
+    }
+    const textBefore = (range.startContainer.textContent || '').slice(0, range.startOffset);
+    const match = textBefore.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
+    if (!match) {
+      if (slashOpen) closeSlashMenu();
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    const top = Math.min(rect.bottom + 6, window.innerHeight - 360);
+    const left = Math.max(12, Math.min(rect.left, window.innerWidth - 316));
+    setSlashQuery(match[1] || '');
+    setSlashPos({ top: Math.max(12, top), left });
+    setSlashSelectedIndex(0);
+    setSlashOpen(true);
+  };
+
+  const updateBubbleToolbarPosition = () => {
+    if (isSourceMode || !editorRef.current) {
+      setBubblePos(null);
+      return;
+    }
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !sel.toString().trim()) {
+      setBubblePos(null);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const insideEditor =
+      editorRef.current.contains(range.startContainer) &&
+      editorRef.current.contains(range.endContainer);
+    if (!insideEditor) {
+      setBubblePos(null);
+      return;
+    }
+    let rect = range.getBoundingClientRect();
+    if (!rect || (rect.width === 0 && rect.height === 0)) {
+      const clientRects = range.getClientRects();
+      if (clientRects.length > 0) {
+        rect = clientRects[0];
+      } else {
+        setBubblePos(null);
+        return;
+      }
+    }
+    const centerX = Math.max(185, Math.min(rect.left + rect.width / 2, window.innerWidth - 185));
+    const top =
+      rect.top > 72
+        ? rect.top - 48
+        : Math.min(rect.bottom + 8, window.innerHeight - 54);
+    setBubblePos({ top, left: centerX });
+  };
+
+  const inspectTableAtNode = (node: Node | null) => {
+    if (!node || !editorRef.current) {
+      setActiveTableCell(null);
+      setTableToolbarPos(null);
+      return;
+    }
+    const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as HTMLElement);
+    const cell = el?.closest('td, th') as HTMLTableCellElement | null;
+    const table = cell?.closest('table') as HTMLTableElement | null;
+    if (!cell || !table || !editorRef.current.contains(table)) {
+      setActiveTableCell(null);
+      setTableToolbarPos(null);
+      return;
+    }
+    const rect = table.getBoundingClientRect();
+    const top = rect.top > 52 ? rect.top - 44 : Math.min(rect.bottom + 8, window.innerHeight - 52);
+    const left = Math.max(12, Math.min(rect.left, window.innerWidth - 460));
+    setActiveTableCell(cell);
+    setTableToolbarPos({ top, left });
+  };
+
+  // Interactive Table Manipulation Helpers
+  const mutateActiveTable = (action: 'rowAbove' | 'rowBelow' | 'delRow' | 'colLeft' | 'colRight' | 'delCol' | 'toggleHeader' | 'delTable') => {
+    if (!activeTableCell || !editorRef.current?.contains(activeTableCell)) return;
+    const row = activeTableCell.closest('tr') as HTMLTableRowElement | null;
+    const table = activeTableCell.closest('table') as HTMLTableElement | null;
+    if (!row || !table) return;
+
+    const colIdx = activeTableCell.cellIndex;
+    const cellStyle = 'border: 1px solid #e2e8f0; padding: 10px 12px; vertical-align: top;';
+    const headerStyle = 'border: 1px solid #e2e8f0; padding: 10px 12px; background: #f8fafc; font-weight: 700; text-align: left;';
+
+    if (action === 'delTable') {
+      table.remove();
+      setActiveTableCell(null);
+      setTableToolbarPos(null);
+      handleInput();
+      return;
+    }
+
+    if (action === 'rowAbove' || action === 'rowBelow') {
+      const colCount = row.cells.length || 2;
+      const newRow = document.createElement('tr');
+      for (let c = 0; c < colCount; c++) {
+        const td = document.createElement('td');
+        td.setAttribute('style', cellStyle);
+        td.innerHTML = '<br />';
+        newRow.appendChild(td);
+      }
+      if (action === 'rowAbove') row.before(newRow);
+      else row.after(newRow);
+      handleInput();
+      inspectTableAtNode(newRow.cells[0]);
+      return;
+    }
+
+    if (action === 'delRow') {
+      if (table.rows.length <= 1) {
+        table.remove();
+        setActiveTableCell(null);
+        setTableToolbarPos(null);
+      } else {
+        row.remove();
+        setActiveTableCell(null);
+        setTableToolbarPos(null);
+      }
+      handleInput();
+      return;
+    }
+
+    if (action === 'colLeft' || action === 'colRight') {
+      const insertAt = action === 'colLeft' ? colIdx : colIdx + 1;
+      Array.from(table.rows).forEach((r) => {
+        const isHeaderRow = r.cells[0]?.tagName.toLowerCase() === 'th';
+        const newCell = document.createElement(isHeaderRow ? 'th' : 'td');
+        newCell.setAttribute('style', isHeaderRow ? headerStyle : cellStyle);
+        newCell.innerHTML = isHeaderRow ? 'Column' : '<br />';
+        const refCell = r.cells[insertAt] || null;
+        r.insertBefore(newCell, refCell);
+      });
+      handleInput();
+      return;
+    }
+
+    if (action === 'delCol') {
+      if (row.cells.length <= 1) {
+        table.remove();
+        setActiveTableCell(null);
+        setTableToolbarPos(null);
+      } else {
+        Array.from(table.rows).forEach((r) => {
+          if (r.cells[colIdx]) r.deleteCell(colIdx);
+        });
+        setActiveTableCell(null);
+        setTableToolbarPos(null);
+      }
+      handleInput();
+      return;
+    }
+
+    if (action === 'toggleHeader') {
+      const firstRow = table.rows[0];
+      if (!firstRow) return;
+      const currentlyHeader = firstRow.cells[0]?.tagName.toLowerCase() === 'th';
+      Array.from(firstRow.cells).forEach((cell) => {
+        const replacement = document.createElement(currentlyHeader ? 'td' : 'th');
+        replacement.setAttribute('style', currentlyHeader ? cellStyle : headerStyle);
+        replacement.innerHTML = cell.innerHTML;
+        cell.replaceWith(replacement);
+      });
+      handleInput();
+    }
+  };
+
+  // Auto-generate or refresh Table of Contents from all H2 / H3 headings
+  const insertAutoToc = () => {
+    if (!editorRef.current) return;
+    const headings = Array.from(editorRef.current.querySelectorAll('h2, h3')).filter(
+      (h) => !h.closest('[data-box-type="toc"]') && (h.textContent || '').trim().length > 0
+    );
+    if (headings.length === 0) {
+      toastCtx?.toast.error('Add at least one H2 or H3 heading first to generate a Table of Contents.');
+      return;
+    }
+    const tocItemsHtml = headings
+      .map((h, idx) => {
+        const text = (h.textContent || '').trim();
+        const slugId =
+          h.id ||
+          text
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') ||
+          `section-${idx + 1}`;
+        h.id = slugId;
+        const isSub = h.tagName.toLowerCase() === 'h3';
+        return `<li style="margin: 4px 0; ${isSub ? 'margin-left: 18px; font-size: 13px;' : 'font-weight: 600; font-size: 14px;'}"><a href="#${slugId}" style="color: #2b579a; text-decoration: none;">${text}</a></li>`;
+      })
+      .join('');
+
+    const tocHtml = `<nav class="editorial-box group/box relative" data-box-type="toc" style="margin: 20px 0; padding: 18px 22px; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc;">
+  <div contenteditable="false" class="editor-only-controls" style="position: absolute; top: 8px; right: 8px; display: flex; gap: 4px;">
+    <button type="button" class="toc-refresh-btn" style="background: rgba(37,99,235,0.88); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: none; cursor: pointer;">↻ Refresh TOC</button>
+    <button type="button" class="box-delete-btn" style="background: rgba(220,38,38,0.85); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: none; cursor: pointer;">✕ Delete</button>
+  </div>
+  <p style="margin: 0 0 10px 0; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #334155;">Table of Contents</p>
+  <ul style="margin: 0; padding-left: 18px; list-style: disc;">${tocItemsHtml}</ul>
+</nav><p><br /></p>`;
+
+    const existingToc = editorRef.current.querySelector('[data-box-type="toc"]');
+    if (existingToc) {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = tocHtml;
+      const newNav = wrapper.firstElementChild;
+      if (newNav) {
+        existingToc.replaceWith(newNav);
+        handleInput();
+        toastCtx?.toast.success(`Refreshed Table of Contents (${headings.length} headings)!`);
+        return;
+      }
+    }
+    insertCustomHTML(tocHtml);
+    toastCtx?.toast.success(`Generated Table of Contents (${headings.length} headings)!`);
+  };
+
+  // Expandable FAQ Accordion block for SEO rich snippets
+  const insertFaqBlock = () => {
+    const faqHtml = `<section class="editorial-box group/box relative" data-box-type="faq" style="margin: 24px 0; padding: 20px 22px; border-radius: 14px; border: 1px solid #e2e8f0; background: #ffffff;">
+  <div contenteditable="false" class="editor-only-controls" style="position: absolute; top: 8px; right: 8px; display: flex; gap: 4px;">
+    <button type="button" class="box-delete-btn" style="background: rgba(220,38,38,0.85); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: none; cursor: pointer;">✕ Delete FAQ</button>
+  </div>
+  <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 800; color: #0f172a;">Frequently Asked Questions</h3>
+  <details open style="border-top: 1px solid #e2e8f0; padding: 10px 0;">
+    <summary style="font-weight: 700; cursor: pointer; color: #0f172a;">Is this product worth buying in 2026?</summary>
+    <p style="margin: 8px 0 0 0; color: #475569;">Yes — after hands-on testing, it delivers strong value, reliable build quality, and frequent promo codes.</p>
+  </details>
+  <details open style="border-top: 1px solid #e2e8f0; padding: 10px 0;">
+    <summary style="font-weight: 700; cursor: pointer; color: #0f172a;">Where can I get the best discount or coupon code?</summary>
+    <p style="margin: 8px 0 0 0; color: #475569;">Check our verified coupon cards in the sidebar or click the official store link above for the latest savings.</p>
+  </details>
+</section><p><br /></p>`;
+    insertCustomHTML(faqHtml);
+  };
+
+  // Safe TextNode-only Find & Replace helpers (never corrupts HTML tags/attributes)
+  const getEditorTextNodes = (): Text[] => {
+    if (!editorRef.current) return [];
+    const walker = document.createTreeWalker(editorRef.current, NodeFilter.SHOW_TEXT);
+    const nodes: Text[] = [];
+    let curr: Node | null;
+    while ((curr = walker.nextNode())) {
+      if (curr.parentElement?.closest('.editor-only-controls')) continue;
+      nodes.push(curr as Text);
+    }
+    return nodes;
+  };
+
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const countEditorMatches = (query: string, caseSensitive: boolean): number => {
+    if (!query) return 0;
+    const re = new RegExp(escapeRegex(query), caseSensitive ? 'g' : 'gi');
+    if (isSourceMode) {
+      return (sourceCode.match(re) || []).length;
+    }
+    let count = 0;
+    for (const node of getEditorTextNodes()) {
+      const m = (node.nodeValue || '').match(re);
+      if (m) count += m.length;
+    }
+    return count;
+  };
+
+  const replaceNextInEditor = (find: string, replaceWith: string, caseSensitive: boolean): boolean => {
+    if (!find) return false;
+    const re = new RegExp(escapeRegex(find), caseSensitive ? '' : 'i');
+    if (isSourceMode) {
+      if (!re.test(sourceCode)) return false;
+      const next = sourceCode.replace(re, replaceWith);
+      setSourceCode(next);
+      onChange(next);
+      toastCtx?.toast.success('Replaced 1 occurrence.');
+      return true;
+    }
+    for (const node of getEditorTextNodes()) {
+      const text = node.nodeValue || '';
+      if (re.test(text)) {
+        node.nodeValue = text.replace(re, replaceWith);
+        handleInput();
+        toastCtx?.toast.success('Replaced 1 occurrence.');
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const replaceAllInEditor = (find: string, replaceWith: string, caseSensitive: boolean): number => {
+    if (!find) return 0;
+    const re = new RegExp(escapeRegex(find), caseSensitive ? 'g' : 'gi');
+    if (isSourceMode) {
+      const count = (sourceCode.match(re) || []).length;
+      if (count > 0) {
+        const next = sourceCode.replace(re, replaceWith);
+        setSourceCode(next);
+        onChange(next);
+        toastCtx?.toast.success(`Replaced ${count} occurrence(s).`);
+      }
+      return count;
+    }
+    let total = 0;
+    for (const node of getEditorTextNodes()) {
+      const text = node.nodeValue || '';
+      const matches = text.match(re);
+      if (matches && matches.length > 0) {
+        total += matches.length;
+        node.nodeValue = text.replace(re, replaceWith);
+      }
+    }
+    if (total > 0) {
+      handleInput();
+      toastCtx?.toast.success(`Replaced ${total} occurrence(s).`);
+    }
+    return total;
+  };
+
+  const executeSlashCommand = (item: SlashCommandItem) => {
+    // Delete the typed "/query" trigger text cleanly before inserting
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
+      const range = sel.getRangeAt(0);
+      if (range.startContainer.nodeType === Node.TEXT_NODE) {
+        const txt = range.startContainer.textContent || '';
+        const before = txt.slice(0, range.startOffset);
+        const match = before.match(/(?:^|\s)(\/[a-zA-Z0-9_-]*)$/);
+        if (match) {
+          const delStart = range.startOffset - match[1].length;
+          const delRange = document.createRange();
+          delRange.setStart(range.startContainer, delStart);
+          delRange.setEnd(range.startContainer, range.startOffset);
+          delRange.deleteContents();
+          savedRangeRef.current = delRange.cloneRange();
+        }
+      }
+    }
+    closeSlashMenu();
+
+    switch (item.id) {
+      case 'h2':
+        applyFormatBlock('h2');
+        break;
+      case 'h3':
+        applyFormatBlock('h3');
+        break;
+      case 'bullet':
+        exec('insertUnorderedList');
+        break;
+      case 'numbered':
+        exec('insertOrderedList');
+        break;
+      case 'quote':
+        applyFormatBlock('blockquote');
+        break;
+      case 'code':
+        insertCustomHTML('<pre><code>// Paste or write code here...</code></pre><p><br /></p>');
+        break;
+      case 'divider':
+        exec('insertHorizontalRule');
+        break;
+      case 'image':
+        openImageModal();
+        break;
+      case 'video':
+        setEditingVideoEl(null);
+        setVideoUrlInput('');
+        setVideoCaptionInput('');
+        setVideoWidthInput('100%');
+        setVideoModalOpen(true);
+        break;
+      case 'table':
+        setTableModalOpen(true);
+        break;
+      case 'markdown':
+        setMarkdownModalOpen(true);
+        break;
+      case 'deal':
+        setDealModalOpen(true);
+        break;
+      case 'cta':
+        setButtonModalOpen(true);
+        break;
+      case 'proscons':
+        insertProsCons();
+        break;
+      case 'tip':
+        insertCallout('tip');
+        break;
+      case 'warning':
+        insertCallout('warning');
+        break;
+      case 'verdict':
+        insertCallout('verdict');
+        break;
+      case 'toc':
+        insertAutoToc();
+        break;
+      case 'faq':
+        insertFaqBlock();
+        break;
+    }
+  };
   
   // Modals state
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -1743,6 +2248,46 @@ export default function RichTextEditor({
 
   const applyFormatBlock = (tag: string) => {
     const normalized = tag.replace(/[<>]/g, '').toLowerCase();
+
+    // If the user highlighted ONLY a partial substring inside a block (not the whole paragraph),
+    // apply the visual style strictly to the highlighted selection so the rest of the line is untouched.
+    const activeRange = getActiveHighlightRange();
+    if (activeRange && !activeRange.collapsed && editorRef.current) {
+      const selectedStr = activeRange.toString().trim();
+      const startTop = getTopLevelEditorChild(activeRange.startContainer);
+      const endTop = getTopLevelEditorChild(activeRange.endContainer) || startTop;
+      const enclosingBlock =
+        (activeRange.startContainer.nodeType === Node.TEXT_NODE
+          ? activeRange.startContainer.parentElement
+          : (activeRange.startContainer as HTMLElement)
+        )?.closest('p, h1, h2, h3, h4, li, blockquote, td, th, div') as HTMLElement | null;
+      const scopeEl =
+        enclosingBlock && editorRef.current.contains(enclosingBlock) && enclosingBlock !== editorRef.current
+          ? enclosingBlock
+          : startTop;
+      const scopeText = (scopeEl?.textContent || '').trim();
+      const isPartialInlineSelection =
+        Boolean(selectedStr) &&
+        Boolean(scopeEl) &&
+        startTop === endTop &&
+        selectedStr.length < scopeText.length;
+
+      if (isPartialInlineSelection) {
+        const inlineHeadingStyles: Record<string, Record<string, string>> = {
+          h1: { fontSize: '28px', fontWeight: '800', lineHeight: '1.25' },
+          h2: { fontSize: '22px', fontWeight: '800', lineHeight: '1.3' },
+          h3: { fontSize: '18px', fontWeight: '700', lineHeight: '1.35' },
+          h4: { fontSize: '16px', fontWeight: '700', lineHeight: '1.4' },
+          p: { fontSize: '15px', fontWeight: '400', lineHeight: '1.6' },
+        };
+        const targetStyles = inlineHeadingStyles[normalized];
+        if (targetStyles) {
+          applyInlineStylesToSelection(targetStyles);
+          return;
+        }
+      }
+    }
+
     if (normalized === 'p') {
       const selCheck = window.getSelection();
       const anchorNode = selCheck?.anchorNode || savedRangeRef.current?.startContainer;
@@ -1821,12 +2366,11 @@ export default function RichTextEditor({
     const endTop = getTopLevelEditorChild(range.endContainer) || startTop;
     if (!startTop) return;
 
-    // Subcase 2a: Partial inline highlight inside a single plain paragraph
+    // Subcase 2a: Partial inline highlight inside any single text block (only clear the highlighted substring)
     if (
       !range.collapsed &&
       startTop === endTop &&
-      startTop.tagName.toLowerCase() === 'p' &&
-      !hasCustomParagraphStyle(startTop) &&
+      ['p', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'div', 'li'].includes(startTop.tagName.toLowerCase()) &&
       range.toString().trim().length < (startTop.textContent || '').trim().length
     ) {
       if (sel) {
@@ -2806,7 +3350,11 @@ export default function RichTextEditor({
 
   const handleCanvasBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
-    // Never hijack selection or jump caret to bottom when user drags to highlight text
+    // Never hijack selection or jump caret to bottom after a drag-select gesture
+    const downPos = lastMouseDownPosRef.current;
+    if (downPos && (Math.abs(e.clientX - downPos.x) > 4 || Math.abs(e.clientY - downPos.y) > 4)) {
+      return;
+    }
     const sel = window.getSelection();
     if (sel && !sel.isCollapsed && sel.toString().length > 0) {
       return;
@@ -2818,7 +3366,7 @@ export default function RichTextEditor({
     }
     // Only focus the bottom line when clicking genuinely BELOW the last block in the editor
     const lastEl = editorRef.current?.lastElementChild as HTMLElement | null;
-    if (lastEl && e.clientY < lastEl.getBoundingClientRect().bottom) {
+    if (lastEl && e.clientY < lastEl.getBoundingClientRect().bottom + 12) {
       return;
     }
     focusBottomCanvasLine();
@@ -2840,6 +3388,38 @@ export default function RichTextEditor({
         setActiveComp(null);
         handleInput();
       }
+      return;
+    }
+
+    // Handle Edit Video button inside embedded video figure
+    const videoEditBtn = target.closest('.video-edit-btn');
+    if (videoEditBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const fig = videoEditBtn.closest('figure[data-box-type="video"]') as HTMLElement | null;
+      if (fig && editorRef.current?.contains(fig)) {
+        const existingSrc =
+          fig.getAttribute('data-video-src') ||
+          fig.querySelector('iframe')?.getAttribute('src') ||
+          fig.querySelector('video')?.getAttribute('src') ||
+          '';
+        const existingCaption = fig.querySelector('figcaption')?.textContent || '';
+        const existingWidth = (fig.getAttribute('data-video-width') as '100%' | '80%' | '60%') || '100%';
+        setEditingVideoEl(fig);
+        setVideoUrlInput(existingSrc);
+        setVideoCaptionInput(existingCaption);
+        setVideoWidthInput(['100%', '80%', '60%'].includes(existingWidth) ? existingWidth : '100%');
+        setVideoModalOpen(true);
+      }
+      return;
+    }
+
+    // Handle Refresh TOC button inside Table of Contents block
+    const tocRefreshBtn = target.closest('.toc-refresh-btn');
+    if (tocRefreshBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      insertAutoToc();
       return;
     }
 
@@ -2921,10 +3501,89 @@ export default function RichTextEditor({
   const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (isSourceMode || !editorRef.current) return;
 
+    // Keyboard navigation for Slash Command Menu (/)
+    if (slashOpen) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSlashSelectedIndex((prev) => (slashItems.length > 0 ? (prev + 1) % slashItems.length : 0));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashSelectedIndex((prev) =>
+          slashItems.length > 0 ? (prev - 1 + slashItems.length) % slashItems.length : 0
+        );
+        return;
+      }
+      if (e.key === 'Enter' && slashItems.length > 0) {
+        e.preventDefault();
+        executeSlashCommand(slashItems[Math.min(slashSelectedIndex, slashItems.length - 1)]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeSlashMenu();
+        return;
+      }
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      setFindReplaceOpen(true);
+      return;
+    }
+
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       openLinkModal();
       return;
+    }
+
+    // Tab / Shift+Tab navigation inside table cells (like Word / Notion)
+    if (e.key === 'Tab') {
+      const selTab = window.getSelection();
+      const nodeTab = selTab?.anchorNode;
+      const elTab = nodeTab ? (nodeTab.nodeType === Node.TEXT_NODE ? nodeTab.parentElement : (nodeTab as HTMLElement)) : null;
+      const td = elTab?.closest('td, th') as HTMLTableCellElement | null;
+      const tbl = td?.closest('table') as HTMLTableElement | null;
+      if (td && tbl && editorRef.current.contains(tbl)) {
+        e.preventDefault();
+        const allCells = Array.from(tbl.querySelectorAll('th, td')) as HTMLTableCellElement[];
+        const idx = allCells.indexOf(td);
+        const nextIdx = e.shiftKey ? idx - 1 : idx + 1;
+        if (nextIdx >= 0 && nextIdx < allCells.length) {
+          const targetCell = allCells[nextIdx];
+          const r = document.createRange();
+          r.selectNodeContents(targetCell);
+          r.collapse(false);
+          selTab?.removeAllRanges();
+          selTab?.addRange(r);
+          inspectTableAtNode(targetCell);
+        } else if (!e.shiftKey && idx === allCells.length - 1) {
+          // Add new row on Tab from last cell
+          setActiveTableCell(td);
+          const lastRow = tbl.rows[tbl.rows.length - 1];
+          const newRow = document.createElement('tr');
+          for (let c = 0; c < (lastRow?.cells.length || 2); c++) {
+            const newTd = document.createElement('td');
+            newTd.setAttribute('style', 'border: 1px solid #e2e8f0; padding: 10px 12px; vertical-align: top;');
+            newTd.innerHTML = '<br />';
+            newRow.appendChild(newTd);
+          }
+          lastRow.after(newRow);
+          handleInput();
+          const firstNew = newRow.cells[0];
+          if (firstNew) {
+            const r = document.createRange();
+            r.selectNodeContents(firstNew);
+            r.collapse(true);
+            selTab?.removeAllRanges();
+            selTab?.addRange(r);
+            inspectTableAtNode(firstNew);
+          }
+        }
+        return;
+      }
     }
 
     if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
@@ -4242,7 +4901,25 @@ export default function RichTextEditor({
 
           <button
             type="button"
-            onClick={() => setVideoModalOpen(true)}
+            onClick={() => setFindReplaceOpen((v) => !v)}
+            className={`px-2 py-1 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+              findReplaceOpen ? 'bg-amber-400 text-slate-950 font-black' : 'bg-white/15 text-white hover:bg-white/25'
+            }`}
+            title="Find & Replace (Ctrl+F)"
+          >
+            <Search size={13} />
+            <span className="hidden md:inline">Find</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEditingVideoEl(null);
+              setVideoUrlInput('');
+              setVideoCaptionInput('');
+              setVideoWidthInput('100%');
+              setVideoModalOpen(true);
+            }}
             className="px-2 py-1 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer bg-white/15 text-white hover:bg-white/25"
             title="Embed Video (YouTube, TikTok, Vimeo, Facebook, Instagram, Loom, MP4, or <iframe>)"
           >
@@ -6335,7 +7012,15 @@ export default function RichTextEditor({
           </div>
         )}
         {isSourceMode ? (
-          <textarea
+          <>
+            <EditorFindReplaceBar
+              open={findReplaceOpen}
+              onClose={() => setFindReplaceOpen(false)}
+              onCountMatches={countEditorMatches}
+              onReplaceNext={replaceNextInEditor}
+              onReplaceAll={replaceAllInEditor}
+            />
+            <textarea
             value={sourceCode}
             onChange={handleSourceChange}
             onPaste={(e) => {
@@ -6358,8 +7043,17 @@ export default function RichTextEditor({
             style={{ minHeight }}
             placeholder="Edit raw HTML markup (or paste Markdown to auto-convert to HTML)..."
           />
+          </>
         ) : (
-          <div
+          <>
+            <EditorFindReplaceBar
+              open={findReplaceOpen}
+              onClose={() => setFindReplaceOpen(false)}
+              onCountMatches={countEditorMatches}
+              onReplaceNext={replaceNextInEditor}
+              onReplaceAll={replaceAllInEditor}
+            />
+            <div
             onClick={handleCanvasBackgroundClick}
             className={`w-full transition-all duration-200 ${
             isPaperView
@@ -6383,7 +7077,10 @@ export default function RichTextEditor({
                 contentEditable
                 onInput={handleInput}
                 onBlur={handleInput}
-                onMouseDown={handleEditorMouseDown}
+                onMouseDown={(e) => {
+                  lastMouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+                  handleEditorMouseDown(e);
+                }}
                 onClick={handleEditorClick}
                 onDragStart={(e) => {
                   if ((e.target as HTMLElement)?.tagName?.toLowerCase() === 'img') {
@@ -6396,16 +7093,21 @@ export default function RichTextEditor({
                 }}
                 onKeyUp={() => {
                   captureEditorSelection(true);
+                  detectSlashCommand();
+                  updateBubbleToolbarPosition();
                   const sel = window.getSelection();
                   if (sel?.anchorNode) {
                     const comp = findEnclosingComponent(sel.anchorNode);
                     selectComponent(comp);
                     inspectLinkAtNode(sel.anchorNode);
+                    inspectTableAtNode(sel.anchorNode);
                   }
                 }}
                 onMouseUp={(e) => {
                   captureEditorSelection(true);
+                  updateBubbleToolbarPosition();
                   inspectLinkAtNode(e.target as Node);
+                  inspectTableAtNode(e.target as Node);
                   const clickedComp = findEnclosingComponent(e.target as Node);
                   if (clickedComp) {
                     selectComponent(clickedComp);
@@ -6427,7 +7129,62 @@ export default function RichTextEditor({
               />
             </div>
           </div>
+          </>
         )}
+
+        {/* Notion-style Slash Command Menu (/) */}
+        <EditorSlashMenu
+          open={slashOpen && !isSourceMode}
+          position={slashPos}
+          query={slashQuery}
+          selectedIndex={slashSelectedIndex}
+          items={slashItems}
+          onSelect={executeSlashCommand}
+          onHoverIndex={setSlashSelectedIndex}
+        />
+
+        {/* Floating Text Selection Bubble Toolbar */}
+        <EditorBubbleToolbar
+          position={!slashOpen && !isSourceMode ? bubblePos : null}
+          onBold={() => exec('bold')}
+          onItalic={() => exec('italic')}
+          onUnderline={() => exec('underline')}
+          onStrike={() => exec('strikeThrough')}
+          onInlineCode={() => {
+            const sel = window.getSelection();
+            const txt = sel?.toString() || '';
+            if (txt) {
+              exec('insertHTML', `<code>${txt.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>`);
+            }
+          }}
+          onHighlight={() =>
+            applyInlineStylesToSelection({
+              backgroundColor: '#fef08a',
+              color: '#0f172a',
+              padding: '1px 4px',
+              borderRadius: '4px',
+            })
+          }
+          onHeading={(tag) => applyFormatBlock(tag)}
+          onLink={() => {
+            setBubblePos(null);
+            openLinkModal();
+          }}
+          onClearFormat={() => handleClearFormatting()}
+        />
+
+        {/* Floating Interactive Table Toolbar */}
+        <EditorTableToolbar
+          position={!isSourceMode ? tableToolbarPos : null}
+          onAddRowAbove={() => mutateActiveTable('rowAbove')}
+          onAddRowBelow={() => mutateActiveTable('rowBelow')}
+          onDeleteRow={() => mutateActiveTable('delRow')}
+          onAddColLeft={() => mutateActiveTable('colLeft')}
+          onAddColRight={() => mutateActiveTable('colRight')}
+          onDeleteCol={() => mutateActiveTable('delCol')}
+          onToggleHeaderRow={() => mutateActiveTable('toggleHeader')}
+          onDeleteTable={() => mutateActiveTable('delTable')}
+        />
 
         {/* Floating Link Inspector / Inline Editor Popover */}
         {activeLinkEl && activeLinkPos && !isSourceMode && (
@@ -6860,15 +7617,28 @@ export default function RichTextEditor({
                     disabled={!parsedVideo}
                     onClick={() => {
                       if (!parsedVideo) return;
-                      insertCustomHTML(buildVideoEmbedHtml(parsedVideo, videoCaptionInput, videoWidthInput));
+                      const html = buildVideoEmbedHtml(parsedVideo, videoCaptionInput, videoWidthInput);
+                      if (editingVideoEl && editorRef.current?.contains(editingVideoEl)) {
+                        const tmp = document.createElement('div');
+                        tmp.innerHTML = html;
+                        const newFig = tmp.querySelector('figure[data-box-type="video"]');
+                        if (newFig) {
+                          editingVideoEl.replaceWith(newFig);
+                          handleInput();
+                        }
+                        setEditingVideoEl(null);
+                        toastCtx?.toast.success(`Updated ${parsedVideo.platform} video!`);
+                      } else {
+                        insertCustomHTML(html);
+                        toastCtx?.toast.success(`Embedded ${parsedVideo.platform} video!`);
+                      }
                       setVideoModalOpen(false);
                       setVideoUrlInput('');
                       setVideoCaptionInput('');
-                      toastCtx?.toast.success(`Embedded ${parsedVideo.platform} video!`);
                     }}
                     className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold disabled:opacity-40 cursor-pointer"
                   >
-                    Insert Video
+                    {editingVideoEl ? 'Save Video' : 'Insert Video'}
                   </button>
                 </div>
               </div>

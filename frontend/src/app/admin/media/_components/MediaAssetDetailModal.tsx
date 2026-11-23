@@ -12,6 +12,8 @@ import {
   Trash2,
   Check,
   Copy,
+  RefreshCw,
+  Link2,
 } from 'lucide-react';
 import type { MediaItem } from '../_lib/data';
 import { useAdminI18n } from '@/context/AdminI18nContext';
@@ -20,13 +22,18 @@ import { tagService, type TagItem } from '@/services/tagService';
 
 interface MediaAssetDetailModalProps {
   asset: MediaItem | null;
+  cacheBuster?: number;
   copiedId: string | number | null;
   newTagInput: string;
   allUniqueTags: string[];
   suggestedTags: readonly string[];
+  isReplacing?: boolean;
+  isDeletedView?: boolean;
   onClose: () => void;
   onCopyUrl: (url: string, id: string | number) => void;
   onDelete: (id: string | number) => void;
+  onReplace?: (id: string | number) => void;
+  onInspectUsage?: (asset: MediaItem) => void;
   onNewTagInputChange: (val: string) => void;
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
@@ -38,13 +45,18 @@ interface MediaAssetDetailModalProps {
  */
 export default function MediaAssetDetailModal({
   asset,
+  cacheBuster,
   copiedId,
   newTagInput,
   allUniqueTags,
   suggestedTags,
+  isReplacing,
+  isDeletedView,
   onClose,
   onCopyUrl,
   onDelete,
+  onReplace,
+  onInspectUsage,
   onNewTagInputChange,
   onAddTag,
   onRemoveTag,
@@ -94,7 +106,11 @@ export default function MediaAssetDetailModal({
         <div className="relative rounded-2xl bg-zinc-950 border border-zinc-200/80 overflow-hidden flex items-center justify-center max-h-[380px] p-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={asset.url}
+            src={
+              cacheBuster && !asset.url.includes('v=')
+                ? `${asset.url}${asset.url.includes('?') ? '&' : '?'}v=${cacheBuster}`
+                : asset.url
+            }
             alt={asset.name}
             className="max-h-[360px] w-auto max-w-full object-contain rounded-lg shadow-sm"
           />
@@ -255,28 +271,60 @@ export default function MediaAssetDetailModal({
         </div>
 
         {/* Bottom Actions */}
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-          <a
-            href={asset.url}
-            target="_blank"
-            rel="noreferrer"
-            className="h-9 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-700 hover:bg-zinc-100 border border-zinc-200 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
-          >
-            <ExternalLink size={14} /> {t('Open Original')}
-          </a>
-
+        <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
+            <a
+              href={asset.url}
+              target="_blank"
+              rel="noreferrer"
+              className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-700 hover:bg-zinc-100 border border-zinc-200 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <ExternalLink size={14} /> {t('Open Original')}
+            </a>
+            {onInspectUsage && (
+              <button
+                type="button"
+                onClick={() => onInspectUsage(asset)}
+                className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-amber-700 hover:bg-amber-50 border border-amber-200 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
+              >
+                <Link2 size={14} /> Nơi đang dùng
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {onReplace && (
+              <button
+                type="button"
+                disabled={isReplacing}
+                onClick={() => onReplace(asset.id)}
+                className={`h-9 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-white rounded-xl transition cursor-pointer whitespace-nowrap shrink-0 shadow-xs disabled:opacity-60 ${
+                  isDeletedView
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                <RefreshCw size={14} className={isReplacing ? 'animate-spin' : ''} />
+                <span>
+                  {isReplacing
+                    ? 'Đang thay ảnh...'
+                    : isDeletedView
+                    ? 'Upload lại ảnh (Khôi phục URL)'
+                    : 'Thay ảnh (Giữ nguyên URL)'}
+                </span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onDelete(asset.id)}
-              className="h-9 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
+              className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
             >
-              <Trash2 size={14} /> {t('Delete Image')}
+              <Trash2 size={14} /> {isDeletedView ? 'Xóa vĩnh viễn' : t('Delete Image')}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="h-9 px-4 inline-flex items-center justify-center text-xs font-bold text-zinc-600 hover:bg-zinc-100 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
+              className="h-9 px-3.5 inline-flex items-center justify-center text-xs font-bold text-zinc-600 hover:bg-zinc-100 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
             >
               {t('Close')}
             </button>

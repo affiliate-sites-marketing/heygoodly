@@ -296,6 +296,13 @@ public class PostServiceImpl implements PostService {
 
             if (targetStoreId != null) {
                 predicates.add(cb.equal(root.get(PostConstants.FIELD_STORE_ID), targetStoreId));
+            } else {
+                String normalizedPostType = NullSafeUtils.safeLowerTrim(criteria.postType());
+                if ("review".equals(normalizedPostType) || "reviews".equals(normalizedPostType)) {
+                    predicates.add(cb.isNotNull(root.get(PostConstants.FIELD_STORE_ID)));
+                } else if ("news".equals(normalizedPostType) || "article".equals(normalizedPostType)) {
+                    predicates.add(cb.isNull(root.get(PostConstants.FIELD_STORE_ID)));
+                }
             }
 
             if (featuredFilter != null) {

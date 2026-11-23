@@ -1448,10 +1448,10 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                       <AdminSearchableSelect
                         value={form.storeSlug}
                         onOpen={loadStoresOnDemand}
-                        placeholder="✨ Auto-detect from title / slug"
+                        placeholder="📰 None — Publish as News (No Store Linked)"
                         searchPlaceholder="Search partner store..."
                         options={[
-                          { value: '', label: '✨ Auto-detect from title / slug' },
+                          { value: '', label: '📰 None — Publish as News (No Store Linked)' },
                           ...stores.map((s) => ({
                             value: s.slug,
                             label: s.name,
@@ -1463,10 +1463,15 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           setForm((prev) => ({
                             ...prev,
                             storeSlug: chosenSlug,
-                            storeName: matched ? matched.name : prev.storeName,
+                            storeName: chosenSlug ? (matched ? matched.name : prev.storeName) : '',
                           }));
                         }}
                       />
+                      <p className={`text-[11px] font-medium pt-1 ${form.storeSlug ? 'text-emerald-700' : 'text-indigo-700'}`}>
+                        {form.storeSlug
+                          ? '★ Linked to Store → Auto-routed to Product Reviews (/reviews) with Store Card & Coupons.'
+                          : '📰 No Store linked → Auto-routed to News (/news) with News layout & Left/Right Side Banners.'}
+                      </p>
                     </div>
 
                     <div className="space-y-1">

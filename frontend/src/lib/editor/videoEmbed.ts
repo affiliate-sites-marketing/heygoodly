@@ -235,9 +235,10 @@ export function buildVideoEmbedHtml(
     ? `<figcaption style="text-align: center; font-size: 12px; color: #64748b; margin-top: 8px; font-style: italic;">${escapeHtml(cleanCaption)}</figcaption>`
     : '';
 
-  return `<figure class="editorial-box group/box relative" data-box-type="video" data-platform="${escapeAttr(embed.platform)}" style="margin: 24px auto; width: 100%; max-width: ${maxWidth};">
+  return `<figure class="editorial-box group/box relative" data-box-type="video" data-platform="${escapeAttr(embed.platform)}" data-video-src="${escapeAttr(embed.src)}" data-video-width="${widthPct}" style="margin: 24px auto; width: 100%; max-width: ${maxWidth};">
   <div contenteditable="false" class="editor-only-controls" style="position: absolute; top: 8px; right: 8px; z-index: 10; display: flex; gap: 4px; user-select: none;">
     <span style="background: rgba(15,23,42,0.8); color: #e2e8f0; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; backdrop-filter: blur(4px);">${escapeHtml(embed.platform)}</span>
+    <button type="button" class="video-edit-btn" style="background: rgba(37,99,235,0.88); color: #ffffff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: none; cursor: pointer; backdrop-filter: blur(4px);">✎ Edit</button>
     <button type="button" class="box-delete-btn" style="background: rgba(220,38,38,0.85); color: #ffffff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: none; cursor: pointer; backdrop-filter: blur(4px);">✕ Delete Video</button>
   </div>
   <div style="position: relative; width: 100%; padding-bottom: ${paddingBottom}; height: 0; overflow: hidden; border-radius: 12px; background: #0f172a; box-shadow: 0 6px 20px rgba(15,23,42,0.12);">${mediaElement}</div>

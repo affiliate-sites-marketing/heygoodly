@@ -72,6 +72,7 @@ public class MinioStorageServiceImpl implements StorageService {
                             .object(objectKey)
                             .stream(inputStream, file.getSize(), -1)
                             .contentType(contentType)
+                            .headers(java.util.Map.of("Cache-Control", "no-cache, must-revalidate"))
                             .build()
             );
 
@@ -85,6 +86,44 @@ public class MinioStorageServiceImpl implements StorageService {
             return fileUrl;
         } catch (Exception e) {
             log.error("Failed to upload image to MinIO S3 storage: ", e);
+            throw new BadRequestException(
+                    new StringBuilder("Failed to upload image to MinIO object storage: ").append(e.getMessage()).toString(),
+                    ErrorCodes.FILE_UPLOAD_FAILED);
+        }
+    }
+
+    @Override
+    public String uploadImageAtKey(MultipartFile file, String objectKey) {
+        FileUtils.validateImageFile(file);
+        ensureBucketExists();
+
+        String cleanKey = objectKey != null ? objectKey.trim().replaceAll("^/+", "") : "";
+        if (cleanKey.isEmpty()) {
+            return uploadImage(file, "articles");
+        }
+        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+
+        try (InputStream inputStream = file.getInputStream()) {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(this.bucketName)
+                            .object(cleanKey)
+                            .stream(inputStream, file.getSize(), -1)
+                            .contentType(contentType)
+                            .headers(java.util.Map.of("Cache-Control", "no-cache, must-revalidate"))
+                            .build()
+            );
+
+            String fileUrl = new StringBuilder(this.publicUrl)
+                    .append(AppConstants.SLASH)
+                    .append(this.bucketName)
+                    .append(AppConstants.SLASH)
+                    .append(cleanKey)
+                    .toString();
+            log.info("Overwrote/restored file in MinIO at exact key: bucket={}, objectKey={}, url={}", this.bucketName, cleanKey, fileUrl);
+            return fileUrl;
+        } catch (Exception e) {
+            log.error("Failed to overwrite image in MinIO S3 storage at key {}: ", cleanKey, e);
             throw new BadRequestException(
                     new StringBuilder("Failed to upload image to MinIO object storage: ").append(e.getMessage()).toString(),
                     ErrorCodes.FILE_UPLOAD_FAILED);
@@ -167,13 +206,22 @@ public class MinioStorageServiceImpl implements StorageService {
     }
 
     private String extractObjectKey(String fileUrl) {
+        String cleanUrl = fileUrl;
+        int queryIdx = cleanUrl.indexOf('?');
+        if (queryIdx != -1) {
+            cleanUrl = cleanUrl.substring(0, queryIdx);
+        }
+        int hashIdx = cleanUrl.indexOf('#');
+        if (hashIdx != -1) {
+            cleanUrl = cleanUrl.substring(0, hashIdx);
+        }
         String marker = new StringBuilder(AppConstants.SLASH)
                 .append(this.bucketName)
                 .append(AppConstants.SLASH)
                 .toString();
-        int index = fileUrl.indexOf(marker);
+        int index = cleanUrl.indexOf(marker);
         if (index != -1) {
-            return fileUrl.substring(index + marker.length());
+            return cleanUrl.substring(index + marker.length());
         }
         return null;
     }

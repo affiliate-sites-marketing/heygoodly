@@ -245,12 +245,20 @@ export default function AdminStoresPage() {
     const confirmed = await confirmModal({
       title: 'Delete store permanently',
       message: (
-        <span>
-          Are you sure you want to delete{' '}
-          <strong className="text-rose-600 font-bold">{store.name}</strong>?
-        </span>
+        <div className="space-y-2">
+          <p>
+            Are you sure you want to delete{' '}
+            <strong className="text-rose-600 font-bold">{store.name}</strong>?
+          </p>
+          <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+            Warning: All offers &amp; promo codes belonging to{' '}
+            <strong>{store.name}</strong>
+            {store.activeCoupons > 0 ? ` (${store.activeCoupons} active offer${store.activeCoupons > 1 ? 's' : ''})` : ''}{' '}
+            will also be permanently removed.
+          </p>
+        </div>
       ),
-      confirmText: 'Delete',
+      confirmText: 'Delete Store & Offers',
       cancelText: 'Cancel',
       variant: 'danger',
     });
@@ -258,7 +266,7 @@ export default function AdminStoresPage() {
     try {
       await storeService.deleteStore(store.id);
       await refreshStores();
-      toast.success(`Store "${store.name}" deleted successfully`);
+      toast.success(`Store "${store.name}" and its offers deleted successfully`);
     } catch {
       toast.error('Failed to delete store.');
     }

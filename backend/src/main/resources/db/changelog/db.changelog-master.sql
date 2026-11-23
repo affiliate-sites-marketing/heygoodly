@@ -1147,3 +1147,9 @@ WHERE category_id IS NULL AND is_deleted = FALSE;
 
 --changeset heygoodly:008-store-display-domain splitStatements:true endDelimiter:;
 ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS display_domain VARCHAR(255);
+
+
+--changeset heygoodly:009-media-soft-delete-and-replace splitStatements:true endDelimiter:;
+ALTER TABLE public.media_items ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.media_items ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_media_items_is_deleted ON public.media_items (is_deleted, created_at DESC);

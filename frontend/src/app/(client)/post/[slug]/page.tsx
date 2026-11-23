@@ -23,10 +23,12 @@ import {
   BookOpen,
   CheckCircle2,
   ArrowLeft,
+  Newspaper,
 } from 'lucide-react';
 import JsonLd from '@/components/seo/JsonLd';
 import CouponModal from '@/components/deals/CouponModal';
 import StoreLogoFrame from '@/components/store/StoreLogoFrame';
+import NewsSideBannersFrame from '@/components/posts/NewsSideBannersFrame';
 import { triggerDualActionCoupon } from '@/lib/deals/affiliateAction';
 
 export default function ArticleDetailPage() {
@@ -70,11 +72,13 @@ export default function ArticleDetailPage() {
       setArticle(post);
 
       const linkedStoreSlug = post.storeSlug ? post.storeSlug.trim() : '';
+      const postIsReview = Boolean(linkedStoreSlug || post.storeId);
 
       const [storeRes, couponsRes, relRes] = await Promise.all([
         linkedStoreSlug ? storeService.getStoreBySlug(linkedStoreSlug) : Promise.resolve(null),
         linkedStoreSlug ? dealService.getCouponsByStoreSlug(linkedStoreSlug) : Promise.resolve([]),
         postService.getPosts({
+          postType: postIsReview ? 'review' : 'news',
           categorySlug: post.categorySlug || undefined,
           page: 1,
           size: 6,
@@ -133,6 +137,7 @@ export default function ArticleDetailPage() {
     );
   }
 
+  const isReviewPost = Boolean(article.storeSlug || article.storeId);
   const sidebarConfig = article.sidebarConfig || {};
   const targetStoreSlug = matchedStore?.slug || article.storeSlug || '';
   const targetStoreName = sidebarConfig.storeName?.trim() || matchedStore?.name || article.storeName || '';
@@ -145,10 +150,10 @@ export default function ArticleDetailPage() {
       : `Up to ${rawMaxDiscount}`
     : null;
 
-  const showBrandCard = sidebarConfig.showBrandCard !== false && Boolean(targetStoreSlug && targetStoreName);
-  const showStoreCoupons = sidebarConfig.showStoreCoupons !== false && Boolean(targetStoreSlug) && storeCoupons.length > 0;
+  const showBrandCard = isReviewPost && sidebarConfig.showBrandCard !== false && Boolean(targetStoreSlug && targetStoreName);
+  const showStoreCoupons = isReviewPost && sidebarConfig.showStoreCoupons !== false && Boolean(targetStoreSlug) && storeCoupons.length > 0;
   const showRelatedReviews = sidebarConfig.showRelatedReviews !== false && relatedArticles.length > 0;
-  const showGuaranteeCard = sidebarConfig.showGuaranteeCard !== false;
+  const showGuaranteeCard = isReviewPost && sidebarConfig.showGuaranteeCard !== false;
 
   const categorySlug =
     article.categorySlug || article.category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -301,13 +306,19 @@ export default function ArticleDetailPage() {
         }}
       />
 
+      <NewsSideBannersFrame enabled={!isReviewPost}>
       <div className="max-w-7xl mx-auto px-4 space-y-10">
 
         {/* Breadcrumb Navigation */}
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-500">
           <Link href={ROUTES.PUBLIC.HOME} className="hover:text-brand-primary transition">Home</Link>
           <ChevronRight size={12} className="shrink-0" />
-          <Link href={ROUTES.PUBLIC.POSTS} className="hover:text-brand-primary transition">Reviews &amp; Editorial</Link>
+          <Link
+            href={isReviewPost ? ROUTES.PUBLIC.REVIEWS : ROUTES.PUBLIC.NEWS}
+            className="hover:text-brand-primary transition"
+          >
+            {isReviewPost ? 'Product Reviews' : 'News & Insights'}
+          </Link>
           {categorySlug && (
             <>
               <ChevronRight size={12} className="shrink-0" />
@@ -323,6 +334,11 @@ export default function ArticleDetailPage() {
         {/* Article Header Card */}
         <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-xs space-y-5 sm:space-y-6">
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
+            {!isReviewPost && (
+              <span className="bg-indigo-600 text-white font-black text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm shadow-xs inline-flex items-center gap-1">
+                <Newspaper size={12} /> News
+              </span>
+            )}
             <span className="bg-brand-primary text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs">
               {article.category}
             </span>
@@ -342,7 +358,7 @@ export default function ArticleDetailPage() {
                 </span>
               </>
             )}
-            {article.rating && (
+            {isReviewPost && article.rating && (
               <>
                 <span className="text-slate-300">•</span>
                 <span className="text-amber-600 font-bold inline-flex items-center gap-1">
@@ -382,15 +398,22 @@ export default function ArticleDetailPage() {
                   {article.author.name}
                 </div>
                 <div className="text-xs text-slate-500">
-                  {article.author.role} • {publisherName} Test Lab
+                  {article.author.role} • {publisherName} {isReviewPost ? 'Test Lab' : 'Newsroom'}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-lg w-fit">
-              <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
-              <span>Independently Purchased &amp; Laboratory Tested</span>
-            </div>
+            {isReviewPost ? (
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-lg w-fit">
+                <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                <span>Independently Purchased &amp; Laboratory Tested</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 rounded-lg w-fit">
+                <Newspaper size={14} className="text-indigo-600 shrink-0" />
+                <span>Editorial News &amp; Consumer Desk</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -408,13 +431,21 @@ export default function ArticleDetailPage() {
           </div>
         )}
 
-        {/* Article Body: 8 Columns Dynamic Editorial Content + 4 Columns Sidebar */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Article Body: Review uses 8/4 Sidebar Grid; News uses Full-Width Magazine Layout */}
+        <div className={isReviewPost ? 'grid grid-cols-1 lg:grid-cols-12 gap-8' : 'space-y-6 sm:space-y-8'}>
 
-          <div className="lg:col-span-8 min-w-0 space-y-6 sm:space-y-8 text-slate-800 leading-relaxed text-sm sm:text-base">
+          <div
+            className={`${
+              isReviewPost
+                ? 'lg:col-span-8 text-sm sm:text-base'
+                : 'w-full text-[15px] sm:text-[17px]'
+            } min-w-0 space-y-6 sm:space-y-8 text-slate-800 leading-relaxed`}
+          >
             {hasRichContent ? (
               <div
-                className="editorial-article-body bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 md:p-8 shadow-xs space-y-6"
+                className={`editorial-article-body bg-white border border-slate-200/80 rounded-2xl shadow-xs space-y-6 ${
+                  isReviewPost ? 'p-4 sm:p-6 md:p-8' : 'p-5 sm:p-8 md:p-11'
+                }`}
                 dangerouslySetInnerHTML={{ __html: article.content || '' }}
               />
             ) : (
@@ -425,6 +456,25 @@ export default function ArticleDetailPage() {
               </div>
             )}
 
+            {/* Inline Topics Bar for Full-Width News Articles */}
+            {!isReviewPost && article.tags && article.tags.length > 0 && (
+              <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-4 shadow-xs flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-black text-slate-900 mr-1">
+                  <Tag size={14} className="text-indigo-600" />
+                  <span>Topics:</span>
+                </span>
+                {article.tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    href={ROUTES.PUBLIC.TAG_DETAIL(tag.toLowerCase().replace(/\s+/g, '-'))}
+                    className="text-xs font-semibold bg-slate-100 hover:bg-indigo-600 text-slate-700 hover:text-white px-3 py-1 rounded-lg transition"
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
+
             <div className="bg-white border border-slate-200 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
               <strong className="text-slate-700">Editorial Disclosure:</strong>{' '}
               {settings.affiliateDisclosure ||
@@ -432,6 +482,7 @@ export default function ArticleDetailPage() {
             </div>
           </div>
 
+          {isReviewPost && (
           <aside className="lg:col-span-4 min-w-0 relative self-stretch">
             <div className="sticky top-24 z-20 space-y-6">
 
@@ -550,15 +601,22 @@ export default function ArticleDetailPage() {
                 </div>
               )}
 
-              {/* 3. Related Editorial Reviews in Sidebar */}
+              {/* 3. Related Editorial Reviews / News in Sidebar */}
               {showRelatedReviews && (
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
-                      <BookOpen size={15} className="text-brand-primary" />
-                      <span>Related Lab Reviews</span>
+                      {isReviewPost ? (
+                        <BookOpen size={15} className="text-brand-primary" />
+                      ) : (
+                        <Newspaper size={15} className="text-indigo-600" />
+                      )}
+                      <span>{isReviewPost ? 'Related Lab Reviews' : 'Related News'}</span>
                     </h3>
-                    <Link href={ROUTES.PUBLIC.POSTS} className="text-[11px] font-bold text-brand-primary hover:underline">
+                    <Link
+                      href={isReviewPost ? ROUTES.PUBLIC.REVIEWS : ROUTES.PUBLIC.NEWS}
+                      className="text-[11px] font-bold text-brand-primary hover:underline"
+                    >
                       See all
                     </Link>
                   </div>
@@ -626,50 +684,125 @@ export default function ArticleDetailPage() {
 
             </div>
           </aside>
+          )}
 
         </div>
 
-        {/* Related Articles - Below main article grid */}
+        {/* Related Articles - Full-Width Magazine Grid for News, Compact Strip for Reviews */}
         {relatedArticles.length > 0 && (
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 max-w-full lg:max-w-4xl">
-            <h3 className="font-black text-slate-900 text-sm border-b border-slate-100 pb-3">
-              Related Editorial Reviews
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {relatedArticles.map((rel) => (
-                <Link
-                  key={rel.id}
-                  href={ROUTES.PUBLIC.POST_DETAIL(rel.slug)}
-                  className="flex items-start gap-3 group min-w-0"
-                >
-                  <div className="relative w-16 h-14 rounded-lg overflow-hidden shrink-0 bg-slate-100 border border-slate-200 flex items-center justify-center">
-                    {rel.imageUrl ? (
-                      <Image
-                        src={rel.imageUrl}
-                        alt={rel.title}
-                        fill
-                        sizes="70px"
-                        className="object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <BookOpen size={16} className="text-slate-400" />
-                    )}
-                  </div>
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <h4 className="font-bold text-xs text-slate-900 group-hover:text-brand-primary transition line-clamp-2 leading-snug">
-                      {rel.title}
-                    </h4>
-                    <span className="text-[10px] text-slate-400 block">
-                      {rel.publishedAt}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+          isReviewPost ? (
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 max-w-full lg:max-w-4xl">
+              <h3 className="font-black text-slate-900 text-sm border-b border-slate-100 pb-3">
+                Related Editorial Reviews
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {relatedArticles.map((rel) => (
+                  <Link
+                    key={rel.id}
+                    href={ROUTES.PUBLIC.POST_DETAIL(rel.slug)}
+                    className="flex items-start gap-3 group min-w-0"
+                  >
+                    <div className="relative w-16 h-14 rounded-lg overflow-hidden shrink-0 bg-slate-100 border border-slate-200 flex items-center justify-center">
+                      {rel.imageUrl ? (
+                        <Image
+                          src={rel.imageUrl}
+                          alt={rel.title}
+                          fill
+                          sizes="70px"
+                          className="object-cover group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <BookOpen size={16} className="text-slate-400" />
+                      )}
+                    </div>
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <h4 className="font-bold text-xs text-slate-900 group-hover:text-brand-primary transition line-clamp-2 leading-snug">
+                        {rel.title}
+                      </h4>
+                      <span className="text-[10px] text-slate-400 block">
+                        {rel.publishedAt}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <section className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs space-y-5">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+                <h3 className="font-black text-slate-950 text-base sm:text-lg flex items-center gap-2">
+                  <Newspaper size={18} className="text-indigo-600 shrink-0" />
+                  <span>Related News &amp; Insights</span>
+                </h3>
+                <Link
+                  href={ROUTES.PUBLIC.NEWS}
+                  className="text-xs font-bold text-brand-primary hover:underline shrink-0"
+                >
+                  See all news →
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {relatedArticles.slice(0, 3).map((rel) => (
+                  <Link
+                    key={rel.id}
+                    href={ROUTES.PUBLIC.POST_DETAIL(rel.slug)}
+                    className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 hover:border-brand-primary-border bg-slate-50/40 hover:bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all"
+                  >
+                    <div>
+                      <div className="relative h-44 bg-slate-100 overflow-hidden">
+                        {rel.imageUrl ? (
+                          <Image
+                            src={rel.imageUrl}
+                            alt={rel.title}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center">
+                            <Newspaper size={28} className="text-white/25" />
+                          </div>
+                        )}
+                        <span className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-slate-800 text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-slate-200">
+                          {rel.category}
+                        </span>
+                      </div>
+
+                      <div className="p-4 space-y-2">
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                          {rel.readTime && (
+                            <span className="inline-flex items-center gap-1">
+                              <Clock size={11} /> {rel.readTime}
+                            </span>
+                          )}
+                          {rel.readTime && rel.publishedAt && <span>•</span>}
+                          {rel.publishedAt && <span>{rel.publishedAt}</span>}
+                        </div>
+                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-brand-primary transition line-clamp-2 leading-snug">
+                          {rel.title}
+                        </h4>
+                        {rel.excerpt && (
+                          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                            {rel.excerpt}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="px-4 py-3 border-t border-slate-100 text-xs font-bold text-brand-primary group-hover:text-brand-primary-hover flex items-center justify-between">
+                      <span>Read Article</span>
+                      <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )
         )}
 
       </div>
+      </NewsSideBannersFrame>
 
       {/* Coupon Reveal Modal for Sidebar Offers */}
       {selectedCoupon && (

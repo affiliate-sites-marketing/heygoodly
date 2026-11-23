@@ -16,6 +16,8 @@ import {
   Tag,
   Hash,
   X,
+  RefreshCw,
+  Link2,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { Card } from '@/components/ui/Card';
@@ -50,6 +52,10 @@ export default function AdminMediaPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadFolder, setUploadFolder] = useState<'stores' | 'articles' | 'banners' | 'icons'>('articles');
   const [showUploadZone, setShowUploadZone] = useState(false);
+  const [showDeletedTab, setShowDeletedTab] = useState(false);
+  const [replaceTargetId, setReplaceTargetId] = useState<string | number | null>(null);
+  const [replacingId, setReplacingId] = useState<string | number | null>(null);
+  const [imgCacheBuster, setImgCacheBuster] = useState<number>(0);
 
   const {
     items: displayedMedia,
@@ -65,6 +71,7 @@ export default function AdminMediaPage() {
     defaultPageSize: 12,
     search,
     filters: {
+      deleted: showDeletedTab ? true : false,
       category: selectedCategory !== 'all' ? selectedCategory : undefined,
       tag: selectedTag || undefined,
       format: formatFilter !== 'all' ? formatFilter : undefined,
@@ -95,6 +102,7 @@ export default function AdminMediaPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropzoneInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
 
   // Dynamic tag counts from backend API
   const [tagCounts, setTagCounts] = useState<Record<string, number>>({});
@@ -126,11 +134,189 @@ export default function AdminMediaPage() {
     toast.success(t('Copied image URL to clipboard'));
   };
 
-  const handleDelete = async (id: string | number) => {
+  const handleTriggerReplace = (id: string | number) => {
+    setReplaceTargetId(id);
+    if (replaceInputRef.current) {
+      replaceInputRef.current.value = '';
+      replaceInputRef.current.click();
+    }
+  };
+
+  const handleReplaceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const targetId = replaceTargetId;
+    if (replaceInputRef.current) replaceInputRef.current.value = '';
+    if (!file || targetId === null) return;
+
+    setReplacingId(targetId);
+    try {
+      let dimensions = 'Optimized';
+      try {
+        const objUrl = URL.createObjectURL(file);
+        const img = new Image();
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            dimensions = `${img.naturalWidth} x ${img.naturalHeight} px`;
+            URL.revokeObjectURL(objUrl);
+            resolve();
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(objUrl);
+            resolve();
+          };
+          img.src = objUrl;
+        });
+      } catch {}
+
+      const updated = await mediaService.replaceMedia(targetId, file, dimensions);
+      setImgCacheBuster(Date.now());
+      if (selectedAsset && String(selectedAsset.id) === String(targetId) && updated) {
+        setSelectedAsset((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: updated.name || prev.name,
+                url: updated.url || prev.url,
+                size: updated.size || prev.size,
+                dimensions: updated.dimensions || prev.dimensions,
+                format: updated.format || prev.format,
+              }
+            : null
+        );
+      }
+      toast.success(
+        showDeletedTab
+          ? 'Đã upload lại ảnh thành công! Tất cả bài viết, Store & Banner gắn link ảnh này đã tự động hiện lại ảnh.'
+          : 'Đã thay thế ảnh tại đúng URL cũ! Mọi nơi đang dùng ảnh này sẽ tự động cập nhật.'
+      );
+      loadTagCounts();
+      refresh();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to replace image.';
+      toast.error(msg);
+    } finally {
+      setReplacingId(null);
+      setReplaceTargetId(null);
+    }
+  };
+
+  const handleInspectUsage = async (item: MediaItem) => {
+    const usage = await mediaService.getMediaUsage(item.id);
+    await confirmModal({
+      title: `Nơi đang dùng ảnh (${usage.totalUsages})`,
+      message: usage.totalUsages > 0 ? (
+        <div className="space-y-2.5 text-left">
+          <p className="text-xs text-slate-600">
+            Đường dẫn <code className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded break-all">{item.url}</code> hiện đang được gắn tại <strong>{usage.totalUsages}</strong> vị trí:
+          </p>
+          <ul className="max-h-52 overflow-y-auto space-y-1.5 rounded-lg border border-indigo-200 bg-indigo-50/60 p-2.5 text-xs text-slate-800">
+            {usage.usages.map((u, idx) => (
+              <li key={`${u.module}-${u.resourceId}-${idx}`} className="flex items-center justify-between gap-2">
+                <span className="truncate">
+                  <strong className="text-indigo-700">[{u.module}]</strong> {u.title || `#${u.resourceId}`}
+                </span>
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 bg-white border border-indigo-200 px-1.5 py-0.5 rounded">
+                  {u.field}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-emerald-700 font-medium">
+            Mẹo: Bấm nút <strong>{showDeletedTab ? 'Upload lại' : 'Thay'}</strong> để cập nhật ảnh mới cho toàn bộ {usage.totalUsages} vị trí này cùng lúc!
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-600">
+          Hiện không có bài viết, Store, Offer, Page hay Banner nào đang gắn link ảnh này.
+        </p>
+      ),
+      confirmText: 'Đóng',
+      cancelText: '',
+      variant: 'info',
+    });
+  };
+
+  const handlePurge = async (id: string | number) => {
+    const usage = await mediaService.getMediaUsage(id);
+    const hasUsages = usage.totalUsages > 0;
     const confirmed = await confirmModal({
-      title: t('Delete Media Asset'),
-      message: t('Are you sure you want to delete this image permanently? This action cannot be undone.'),
-      confirmText: t('Delete Image'),
+      title: hasUsages
+        ? `Cảnh báo: Còn ${usage.totalUsages} nơi đang gắn link ảnh này!`
+        : 'Xóa vĩnh viễn khỏi Thùng rác?',
+      message: hasUsages ? (
+        <div className="space-y-2 text-left">
+          <p className="text-xs text-rose-700 font-semibold">
+            Nếu xóa vĩnh viễn, bạn sẽ mất hẳn dấu vết đường dẫn URL gốc và không thể bấm &quot;Upload lại&quot; để khôi phục đồng loạt cho {usage.totalUsages} vị trí sau:
+          </p>
+          <ul className="max-h-36 overflow-y-auto space-y-1 rounded-lg border border-rose-200 bg-rose-50/80 p-2.5 text-xs text-rose-900">
+            {usage.usages.slice(0, 8).map((u, idx) => (
+              <li key={`${u.module}-${u.resourceId}-${idx}`} className="flex items-center justify-between gap-2">
+                <span className="truncate">
+                  <strong>[{u.module}]</strong> {u.title || `#${u.resourceId}`}
+                </span>
+                <span className="shrink-0 text-[10px] font-semibold uppercase text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded">
+                  {u.field}
+                </span>
+              </li>
+            ))}
+            {usage.totalUsages > 8 && (
+              <li className="text-[11px] font-semibold text-rose-700">+ {usage.totalUsages - 8} vị trí khác...</li>
+            )}
+          </ul>
+        </div>
+      ) : (
+        'Sau khi xóa vĩnh viễn, bạn sẽ không thể upload đè lại vào đường dẫn URL cũ của ảnh này nữa.'
+      ),
+      confirmText: 'Vẫn xóa vĩnh viễn',
+      cancelText: t('Cancel'),
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    try {
+      await mediaService.purgeMedia(id);
+      toast.success('Đã xóa vĩnh viễn bản ghi ảnh.');
+      loadTagCounts();
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể xóa vĩnh viễn ảnh.');
+    }
+  };
+
+  const handleDelete = async (id: string | number) => {
+    const usage = await mediaService.getMediaUsage(id);
+    const hasUsages = usage.totalUsages > 0;
+    const confirmed = await confirmModal({
+      title: hasUsages ? t('Image Is Currently In Use') : t('Delete Media Asset'),
+      message: hasUsages ? (
+        <div className="space-y-2.5 text-left">
+          <p className="text-xs sm:text-sm">
+            {t('This image is currently referenced in')} <strong>{usage.totalUsages}</strong> {t('place(s)')}:
+          </p>
+          <ul className="max-h-40 overflow-y-auto space-y-1 rounded-lg border border-amber-200 bg-amber-50/80 p-2.5 text-xs text-amber-900">
+            {usage.usages.slice(0, 8).map((u, idx) => (
+              <li key={`${u.module}-${u.resourceId}-${idx}`} className="flex items-center justify-between gap-2">
+                <span className="truncate">
+                  <strong className="font-bold">[{u.module}]</strong> {u.title || `#${u.resourceId}`}
+                </span>
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                  {u.field}
+                </span>
+              </li>
+            ))}
+            {usage.totalUsages > 8 && (
+              <li className="text-[11px] font-semibold text-amber-700 pt-1">
+                + {usage.totalUsages - 8} more reference(s)...
+              </li>
+            )}
+          </ul>
+          <p className="text-xs text-slate-500">
+            {t('If you delete it, those places will show a broken image until updated. You can re-upload the same image anytime.')}
+          </p>
+        </div>
+      ) : (
+        t('Are you sure you want to delete this image permanently? You can re-upload the same image anytime.')
+      ),
+      confirmText: hasUsages ? t('Delete Anyway') : t('Delete Image'),
       cancelText: t('Cancel'),
       variant: 'danger',
     });
@@ -383,26 +569,63 @@ export default function AdminMediaPage() {
 
       {/* 3. Filter Toolbar & Folder Tabs */}
       <div className="bg-white border border-zinc-200/80 rounded-2xl p-4 shadow-2xs space-y-3.5">
-        {/* Category Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl overflow-x-auto">
-          {categories.map((cat) => (
-            <button
-              type="button"
-              key={cat.id}
-              onClick={() => {
-                setSelectedCategory(cat.id);
-                setCurrentPage(1);
-              }}
-              className={`h-8 px-3.5 inline-flex items-center justify-center text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
-                selectedCategory === cat.id
-                  ? 'bg-white text-zinc-900 shadow-2xs font-bold'
-                  : 'text-zinc-600 hover:text-zinc-900'
-              }`}
-            >
-              {t(cat.label)} {cat.count !== undefined ? `(${cat.count})` : ''}
-            </button>
-          ))}
+        {/* Hidden input for Replace / Re-upload at exact same URL */}
+        <input
+          type="file"
+          ref={replaceInputRef}
+          onChange={handleReplaceFileChange}
+          accept="image/*"
+          className="hidden"
+        />
+
+        {/* Category Tabs + Active/Deleted Switcher */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl overflow-x-auto">
+            {categories.map((cat) => (
+              <button
+                type="button"
+                key={cat.id}
+                onClick={() => {
+                  setShowDeletedTab(false);
+                  setSelectedCategory(cat.id);
+                  setCurrentPage(1);
+                }}
+                className={`h-8 px-3.5 inline-flex items-center justify-center text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                  !showDeletedTab && selectedCategory === cat.id
+                    ? 'bg-white text-zinc-900 shadow-2xs font-bold'
+                    : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                {t(cat.label)} {cat.count !== undefined ? `(${cat.count})` : ''}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowDeletedTab((prev) => !prev);
+              setCurrentPage(1);
+            }}
+            className={`h-9 px-3.5 inline-flex items-center gap-1.5 text-xs font-bold rounded-xl border transition cursor-pointer shrink-0 ${
+              showDeletedTab
+                ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                : 'bg-rose-50/70 text-rose-700 border-rose-200 hover:bg-rose-100'
+            }`}
+          >
+            <Trash2 size={13} />
+            <span>{showDeletedTab ? 'Đang xem: Ảnh đã xóa (Upload lại)' : 'Ảnh đã xóa (Upload lại)'}</span>
+          </button>
         </div>
+
+        {showDeletedTab && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3.5 py-2.5 text-xs text-amber-900 flex items-center justify-between gap-3">
+            <span>
+              <strong>Chế độ khôi phục URL ảnh:</strong> File trên máy chủ đã bị xóa, nhưng đường dẫn URL gốc vẫn được giữ lại. Bấm{' '}
+              <strong>Upload lại</strong> để tải ảnh mới vào đúng URL cũ — tất cả bài viết, Store và Banner dùng ảnh này sẽ tự động hiện lại ảnh ngay!
+            </span>
+          </div>
+        )}
 
         {/* Search, Tag Filter, Format Filter, Sort & View Mode Switcher */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2 border-t border-zinc-100">
@@ -557,11 +780,20 @@ export default function AdminMediaPage() {
                     onClick={() => setSelectedAsset(item)}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.url}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    {showDeletedTab ? (
+                      <div className="w-full h-full bg-zinc-100 flex flex-col items-center justify-center gap-1.5 p-3 text-center">
+                        <ImageIcon size={24} className="text-zinc-400" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
+                          File đã xóa
+                        </span>
+                      </div>
+                    ) : (
+                      <img
+                        src={imgCacheBuster ? `${item.url}${item.url.includes('?') ? '&' : '?'}v=${imgCacheBuster}` : item.url}
+                        alt={item.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
 
                     {/* Format Badge Overlay */}
                     <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase bg-black/60 backdrop-blur-xs text-white px-1.5 py-0.5 rounded shadow-2xs">
@@ -638,18 +870,55 @@ export default function AdminMediaPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100 text-[10px] text-zinc-500">
-                      <span className="font-semibold text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded">
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100 text-[10px] text-zinc-500 gap-1.5">
+                      <span className="font-semibold text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded truncate">
                         {getCategoryDisplayName(item.category)}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item.id)}
-                        className="text-zinc-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
-                        title={t('Delete image')}
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInspectUsage(item);
+                          }}
+                          className="p-1 rounded-md bg-zinc-100 hover:bg-amber-50 text-zinc-500 hover:text-amber-700 transition cursor-pointer"
+                          title="Kiểm tra các nơi đang dùng ảnh này"
+                        >
+                          <Link2 size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={replacingId === item.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTriggerReplace(item.id);
+                          }}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-md font-bold transition cursor-pointer ${
+                            showDeletedTab
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              : 'bg-zinc-100 hover:bg-indigo-50 text-zinc-600 hover:text-indigo-700'
+                          }`}
+                          title={showDeletedTab ? 'Upload lại ảnh vào đúng URL cũ' : 'Thay thế ảnh (giữ nguyên URL cũ)'}
+                        >
+                          <RefreshCw size={11} className={replacingId === item.id ? 'animate-spin' : ''} />
+                          <span>{showDeletedTab ? 'Upload lại' : 'Thay'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (showDeletedTab) {
+                              handlePurge(item.id);
+                            } else {
+                              handleDelete(item.id);
+                            }
+                          }}
+                          className="text-zinc-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
+                          title={showDeletedTab ? 'Xóa vĩnh viễn' : t('Delete image')}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -689,10 +958,18 @@ export default function AdminMediaPage() {
                       <td className="py-2.5 px-4">
                         <div
                           onClick={() => setSelectedAsset(item)}
-                          className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200 overflow-hidden cursor-pointer shrink-0"
+                          className="w-12 h-12 rounded-lg bg-zinc-100 border border-zinc-200 overflow-hidden cursor-pointer shrink-0 flex items-center justify-center"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                          {showDeletedTab ? (
+                            <ImageIcon size={18} className="text-rose-400" />
+                          ) : (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={imgCacheBuster ? `${item.url}${item.url.includes('?') ? '&' : '?'}v=${imgCacheBuster}` : item.url}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
                         </div>
                       </td>
                       <td className="py-2.5 px-4">
@@ -750,6 +1027,28 @@ export default function AdminMediaPage() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
+                            onClick={() => handleInspectUsage(item)}
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-amber-50 text-zinc-600 hover:text-amber-700 hover:border-amber-300 transition shrink-0 shadow-2xs cursor-pointer"
+                            title="Kiểm tra các nơi đang dùng ảnh này"
+                          >
+                            <Link2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={replacingId === item.id}
+                            onClick={() => handleTriggerReplace(item.id)}
+                            className={`h-8 px-2.5 inline-flex items-center justify-center gap-1 rounded-lg border text-[11px] font-bold transition shrink-0 shadow-2xs cursor-pointer ${
+                              showDeletedTab
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
+                                : 'border-zinc-200 bg-white hover:bg-indigo-50 text-zinc-700 hover:text-indigo-700 hover:border-indigo-300'
+                            }`}
+                            title={showDeletedTab ? 'Upload lại ảnh vào đúng URL cũ' : 'Thay thế ảnh (giữ nguyên URL cũ)'}
+                          >
+                            <RefreshCw size={12} className={replacingId === item.id ? 'animate-spin' : ''} />
+                            <span>{showDeletedTab ? 'Upload lại' : 'Thay'}</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleCopyUrl(item.url, item.id)}
                             className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-indigo-50/50 text-zinc-600 hover:text-indigo-600 hover:border-indigo-300 transition shrink-0 shadow-2xs cursor-pointer"
                             title={t('Copy URL')}
@@ -758,17 +1057,9 @@ export default function AdminMediaPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSelectedAsset(item)}
-                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-rose-50/60 text-zinc-600 hover:text-brand-primary hover:border-brand-primary/40 transition shrink-0 shadow-2xs cursor-pointer"
-                            title={t('View Details & Manage Tags')}
-                          >
-                            <Maximize2 size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => (showDeletedTab ? handlePurge(item.id) : handleDelete(item.id))}
                             className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-rose-50/60 text-zinc-400 hover:text-rose-600 hover:border-rose-300 transition shrink-0 shadow-2xs cursor-pointer"
-                            title={t('Delete file')}
+                            title={showDeletedTab ? 'Xóa vĩnh viễn' : t('Delete file')}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -817,13 +1108,18 @@ export default function AdminMediaPage() {
       {/* Modal 2: Asset Inspector & Tag Editor */}
       <MediaAssetDetailModal
         asset={selectedAsset}
+        cacheBuster={imgCacheBuster}
         copiedId={copiedId}
         newTagInput={newTagInput}
         allUniqueTags={allUniqueTags}
         suggestedTags={SUGGESTED_TAGS}
+        isReplacing={selectedAsset !== null && replacingId === selectedAsset.id}
+        isDeletedView={showDeletedTab}
         onClose={() => setSelectedAsset(null)}
         onCopyUrl={handleCopyUrl}
-        onDelete={handleDelete}
+        onDelete={showDeletedTab ? handlePurge : handleDelete}
+        onReplace={handleTriggerReplace}
+        onInspectUsage={handleInspectUsage}
         onNewTagInputChange={setNewTagInput}
         onAddTag={handleAddTagToSelectedAsset}
         onRemoveTag={handleRemoveTagFromSelectedAsset}

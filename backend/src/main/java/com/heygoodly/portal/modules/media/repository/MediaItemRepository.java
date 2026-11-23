@@ -21,13 +21,14 @@ public interface MediaItemRepository extends JpaRepository<MediaItemEntity, Long
 
     @Query(value = "SELECT LOWER(TRIM(tag_val)) AS tag, COUNT(*) AS cnt " +
             "FROM media_items m, LATERAL jsonb_array_elements_text(m.tags) AS tag_val " +
-            "WHERE m.tags IS NOT NULL AND jsonb_typeof(m.tags) = 'array' AND TRIM(tag_val) <> '' " +
+            "WHERE m.is_deleted = false AND m.tags IS NOT NULL AND jsonb_typeof(m.tags) = 'array' AND TRIM(tag_val) <> '' " +
             "GROUP BY LOWER(TRIM(tag_val)) " +
             "ORDER BY LOWER(TRIM(tag_val)) ASC",
             nativeQuery = true)
     List<Object[]> findTagCountsRaw();
 
     @Query(value = "SELECT * FROM media_items m WHERE " +
+            "m.is_deleted = :deleted AND " +
             "(:category IS NULL OR :category = '' OR :category = 'all' " +
             "  OR LOWER(m.category) = LOWER(:category) " +
             "  OR (:category = 'stores' AND (LOWER(m.category) LIKE 'store%' OR LOWER(m.object_key) LIKE 'store%' OR LOWER(CAST(m.tags AS TEXT)) LIKE '%\"store\"%' OR LOWER(CAST(m.tags AS TEXT)) LIKE '%\"stores\"%')) " +
@@ -45,6 +46,7 @@ public interface MediaItemRepository extends JpaRepository<MediaItemEntity, Long
             "(:tag IS NULL OR :tag = '' OR :tag = 'all' OR LOWER(CAST(m.tags AS TEXT)) LIKE LOWER(CONCAT('%\"', REPLACE(:tag, '#', ''), '\"%'))) AND " +
             "(:format IS NULL OR :format = '' OR :format = 'all' OR LOWER(m.name) LIKE LOWER(CONCAT('%.', :format)) OR LOWER(m.mime_type) LIKE LOWER(CONCAT('%', :format, '%')))",
             countQuery = "SELECT count(*) FROM media_items m WHERE " +
+            "m.is_deleted = :deleted AND " +
             "(:category IS NULL OR :category = '' OR :category = 'all' " +
             "  OR LOWER(m.category) = LOWER(:category) " +
             "  OR (:category = 'stores' AND (LOWER(m.category) LIKE 'store%' OR LOWER(m.object_key) LIKE 'store%' OR LOWER(CAST(m.tags AS TEXT)) LIKE '%\"store\"%' OR LOWER(CAST(m.tags AS TEXT)) LIKE '%\"stores\"%')) " +
@@ -63,6 +65,7 @@ public interface MediaItemRepository extends JpaRepository<MediaItemEntity, Long
             "(:format IS NULL OR :format = '' OR :format = 'all' OR LOWER(m.name) LIKE LOWER(CONCAT('%.', :format)) OR LOWER(m.mime_type) LIKE LOWER(CONCAT('%', :format, '%')))",
             nativeQuery = true)
     Page<MediaItemEntity> findMediaByFilters(
+            @Param("deleted") boolean deleted,
             @Param("category") String category,
             @Param("search") String search,
             @Param("tag") String tag,

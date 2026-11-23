@@ -1156,6 +1156,96 @@ export default function AdminSettingsPage() {
                 </div>
               </Card>
 
+              {/* Card 1B: News Article Side Banners (Left & Right Sticky Skyscrapers) */}
+              <Card className="p-6 sm:p-7 space-y-6 rounded-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                  <div>
+                    <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+                      <Sparkles className="text-indigo-500" size={20} />
+                      {t('News Article Side Banners (Left & Right)')}
+                    </CardTitle>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {t('Automatically shown on the left & right sides of News articles (posts without a linked Store) on Desktop.')}
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2.5 cursor-pointer bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={settings.news_side_banners_active === 'true'}
+                      onChange={(e) => updateField('news_side_banners_active', e.target.checked ? 'true' : 'false')}
+                      className="w-4 h-4 text-brand-primary rounded focus:ring-brand-primary/30"
+                    />
+                    <span className="text-xs font-bold text-slate-800">{t('Enable News Side Banners')}</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Side Banner */}
+                  <div className="space-y-4 p-4 rounded-2xl border border-slate-200/80 bg-slate-50/40">
+                    <div className="text-xs font-black uppercase tracking-wider text-slate-700">
+                      {t('Left Side Banner (Recommended 160×600 or 300×600 px)')}
+                    </div>
+                    <ImageUpload
+                      label={t('Left Banner Image')}
+                      value={settings.news_left_banner_img ?? ''}
+                      onChange={(url) => updateField('news_left_banner_img', url)}
+                      aspectRatio="square"
+                      folder="stores"
+                      description={t('Upload, paste (Cmd+V), or select a vertical banner image for the left side of News pages.')}
+                    />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t('Left Banner Destination URL')}</label>
+                      <Input
+                        value={settings.news_left_banner_url ?? ''}
+                        onChange={(e) => updateField('news_left_banner_url', e.target.value)}
+                        placeholder={`https://partner-offer.com/?ref=${SITE_SLUG}`}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t('Left Banner Alt / Title')}</label>
+                      <Input
+                        value={settings.news_left_banner_alt ?? ''}
+                        onChange={(e) => updateField('news_left_banner_alt', e.target.value)}
+                        placeholder="Exclusive Partner Deal"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Side Banner */}
+                  <div className="space-y-4 p-4 rounded-2xl border border-slate-200/80 bg-slate-50/40">
+                    <div className="text-xs font-black uppercase tracking-wider text-slate-700">
+                      {t('Right Side Banner (Recommended 160×600 or 300×600 px)')}
+                    </div>
+                    <ImageUpload
+                      label={t('Right Banner Image')}
+                      value={settings.news_right_banner_img ?? ''}
+                      onChange={(url) => updateField('news_right_banner_img', url)}
+                      aspectRatio="square"
+                      folder="stores"
+                      description={t('Upload, paste (Cmd+V), or select a vertical banner image for the right side of News pages.')}
+                    />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t('Right Banner Destination URL')}</label>
+                      <Input
+                        value={settings.news_right_banner_url ?? ''}
+                        onChange={(e) => updateField('news_right_banner_url', e.target.value)}
+                        placeholder={`https://partner-offer.com/?ref=${SITE_SLUG}`}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t('Right Banner Alt / Title')}</label>
+                      <Input
+                        value={settings.news_right_banner_alt ?? ''}
+                        onChange={(e) => updateField('news_right_banner_alt', e.target.value)}
+                        placeholder="Featured Promo"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
               {/* Card 2: FTC Compliance & Affiliate Disclosure */}
               <Card className="p-6 sm:p-7 space-y-6 rounded-2xl">
                 <div className="border-b border-slate-100 pb-4">

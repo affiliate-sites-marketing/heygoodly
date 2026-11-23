@@ -119,13 +119,23 @@ export default function AdminCategoriesPage() {
 
   const handleDelete = async (id: number) => {
     const cat = paginatedCategories.find((c) => c.id === id);
+    if (cat?.slug?.toLowerCase() === 'other') {
+      toast.error('Cannot delete the default "Other" category.');
+      return;
+    }
     const confirmed = await confirmModal({
       title: 'Confirm Category Deletion',
       message: (
-        <span>
-          Are you sure you want to delete the category{' '}
-          <strong className="text-rose-600 font-bold">{cat?.name}</strong>?
-        </span>
+        <div className="space-y-2">
+          <p>
+            Are you sure you want to delete the category{' '}
+            <strong className="text-rose-600 font-bold">{cat?.name}</strong>?
+          </p>
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            All posts and stores currently assigned to this category will be automatically moved to the{' '}
+            <strong>Other</strong> category.
+          </p>
+        </div>
       ),
       confirmText: 'Delete Category',
       cancelText: 'Cancel',
@@ -135,9 +145,10 @@ export default function AdminCategoriesPage() {
       try {
         await apiClient.delete(`${API_ENDPOINTS.ADMIN.CATEGORIES}/${id}`);
         refreshCategories();
-        toast.success(`Category "${cat?.name || ''}" deleted successfully!`);
-      } catch {
-        toast.error('Failed to delete category');
+        toast.success(`Category "${cat?.name || ''}" deleted. Posts moved to "Other".`);
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || 'Failed to delete category';
+        toast.error(msg);
       }
     }
   };

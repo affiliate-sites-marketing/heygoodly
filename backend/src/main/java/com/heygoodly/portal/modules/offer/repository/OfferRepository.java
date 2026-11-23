@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -49,4 +50,8 @@ public interface OfferRepository extends JpaRepository<OfferEntity, Long>, JpaSp
     Page<OfferEntity> findByIsActiveTrueAndIsDeletedFalse(Pageable pageable);
 
     Page<OfferEntity> findByStoreIdAndIsDeletedFalse(Long storeId, Pageable pageable);
+
+    @Modifying
+    @Query("UPDATE OfferEntity o SET o.isDeleted = true, o.isActive = false WHERE o.storeId = :storeId AND o.isDeleted = false")
+    int softDeleteByStoreId(@Param("storeId") Long storeId);
 }

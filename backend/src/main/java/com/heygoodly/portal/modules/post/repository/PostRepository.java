@@ -62,6 +62,10 @@ public interface PostRepository extends JpaRepository<PostEntity, Long>, JpaSpec
     @Query("UPDATE PostEntity p SET p.isHero = false WHERE p.isHero = true AND (:excludeId IS NULL OR p.id <> :excludeId)")
     void clearOtherHeroes(@Param("excludeId") Long excludeId);
 
+    @Modifying
+    @Query("UPDATE PostEntity p SET p.categoryId = :targetCategoryId WHERE p.categoryId = :sourceCategoryId AND p.isDeleted = false")
+    int reassignCategory(@Param("sourceCategoryId") Long sourceCategoryId, @Param("targetCategoryId") Long targetCategoryId);
+
     @Query("SELECT p FROM PostEntity p WHERE p.isActive = true AND p.isDeleted = false AND p.publishedAt <= CURRENT_TIMESTAMP AND p.isHero = true AND (p.categoryId IS NULL OR EXISTS (SELECT c.id FROM com.heygoodly.portal.modules.category.entity.CategoryEntity c WHERE c.id = p.categoryId AND c.isActive = true AND c.isDeleted = false)) ORDER BY p.updatedAt DESC, p.id DESC")
     List<PostEntity> findHeroPosts(Pageable pageable);
 

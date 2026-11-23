@@ -49,6 +49,8 @@ public class MediaMapper implements BaseMapper<MediaItemEntity, MediaItemRespons
                 .format(format)
                 .tags(tagList)
                 .uploadedBy(entity.getUploadedBy())
+                .isDeleted(Boolean.TRUE.equals(entity.getIsDeleted()))
+                .deletedAt(Objects.nonNull(entity.getDeletedAt()) ? entity.getDeletedAt().toString() : null)
                 .createdAt(Objects.nonNull(entity.getCreatedAt()) ? entity.getCreatedAt().toString() : Instant.now().toString())
                 .build();
     }

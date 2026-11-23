@@ -978,6 +978,22 @@ const EXACT_VI_MAP: Record<string, string> = {
   'Banner Supporting Description': 'Mô tả Chi tiết dưới Tiêu đề',
   'Upload a 728x90 banner background image, choose from Media Library, or paste an image URL.':
     'Tải ảnh nền banner 728x90 từ máy tính, chọn từ Thư viện Media hoặc dán liên kết URL ảnh.',
+  'News Article Side Banners (Left & Right)': 'Banner 2 Bên Bài Tin Tức (Trái & Phải)',
+  'Display sticky vertical promotional banners flanking News articles (posts without a linked Store) on wide desktop screens':
+    'Hiển thị banner dọc bám theo trang ở 2 bên trái/phải cho toàn bộ bài Tin tức (bài không gắn Store) trên màn hình máy tính rộng',
+  'Enable on News pages': 'Bật trên trang Tin tức',
+  'Left Side Banner': 'Banner Cạnh Trái',
+  'Right Side Banner': 'Banner Cạnh Phải',
+  'Left Banner Image (160x600 or 200x600 px)': 'Ảnh Banner Trái (160x600 hoặc 200x600 px)',
+  'Right Banner Image (160x600 or 200x600 px)': 'Ảnh Banner Phải (160x600 hoặc 200x600 px)',
+  'Upload a vertical banner image (recommended 160x600 or 200x600 px) for the left rail of News articles.':
+    'Tải ảnh banner dọc (khuyên dùng 160x600 hoặc 200x600 px) cho cạnh trái bài Tin tức.',
+  'Upload a vertical banner image (recommended 160x600 or 200x600 px) for the right rail of News articles.':
+    'Tải ảnh banner dọc (khuyên dùng 160x600 hoặc 200x600 px) cho cạnh phải bài Tin tức.',
+  'Destination URL (Click Link)': 'Đường dẫn Đích (Link khi bấm)',
+  'Alt Text / Accessibility Label': 'Văn bản mô tả (Alt Text)',
+  'Side banners only appear on News articles (posts with no linked Store). Posts linked to a Store automatically render in the Reviews layout with brand deals & coupons.':
+    'Banner 2 bên chỉ hiển thị trên bài Tin tức (bài không gắn Store). Bài có gắn Store sẽ tự động hiển thị theo bố cục Review kèm thẻ thương hiệu & mã giảm giá.',
 
   // Extended System Configuration & Settings
   'Corporate Office Address': 'Địa chỉ Văn phòng Doanh nghiệp',

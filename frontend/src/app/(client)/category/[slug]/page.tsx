@@ -212,7 +212,7 @@ export default function NewsCategoryArchivePage({ params }: PageProps) {
                 </h1>
                 {meta?.descriptionHtml && /<[a-z][\s\S]*>/i.test(meta.descriptionHtml) ? (
                   <div
-                    className="text-xs sm:text-sm text-slate-600 leading-relaxed prose prose-sm max-w-none"
+                    className="article-content text-xs sm:text-sm text-slate-600 leading-relaxed max-w-none"
                     dangerouslySetInnerHTML={{ __html: meta.descriptionHtml }}
                   />
                 ) : meta?.description ? (

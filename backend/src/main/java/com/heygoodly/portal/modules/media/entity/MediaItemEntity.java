@@ -67,6 +67,13 @@ public class MediaItemEntity {
     @Column(name = "uploaded_by")
     private Long uploadedBy;
 
+    @Builder.Default
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

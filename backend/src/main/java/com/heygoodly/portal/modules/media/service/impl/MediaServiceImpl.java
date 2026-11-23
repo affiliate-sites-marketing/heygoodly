@@ -10,10 +10,12 @@ import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.file.service.StorageService;
 import com.heygoodly.portal.modules.media.dto.request.MediaQueryCriteria;
 import com.heygoodly.portal.modules.media.dto.response.MediaItemResponse;
+import com.heygoodly.portal.modules.media.dto.response.MediaUsageResponse;
 import com.heygoodly.portal.modules.media.entity.MediaItemEntity;
 import com.heygoodly.portal.modules.media.mapper.MediaMapper;
 import com.heygoodly.portal.modules.media.repository.MediaItemRepository;
 import com.heygoodly.portal.modules.media.service.MediaService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -42,7 +44,9 @@ public class MediaServiceImpl implements MediaService {
     private final StorageService storageService;
     private final AuditLogService auditLogService;
     private final com.heygoodly.portal.modules.tag.service.TagService tagService;
+    private final com.heygoodly.portal.common.cache.RedisCacheService redisCacheService;
     private final MediaMapper mediaMapper;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -69,7 +73,9 @@ public class MediaServiceImpl implements MediaService {
         int pageSize = criteria.getSize() > 0 ? Math.min(criteria.getSize(), AppConstants.MAX_PAGE_SIZE) : AppConstants.DEFAULT_MEDIA_PAGE_SIZE;
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
 
+        boolean showDeleted = Boolean.TRUE.equals(criteria.getDeleted());
         Page<MediaItemEntity> entityPage = mediaItemRepository.findMediaByFilters(
+                showDeleted,
                 cleanCategory.isEmpty() || "all".equalsIgnoreCase(cleanCategory) ? null : cleanCategory,
                 cleanSearch.isEmpty() ? null : cleanSearch,
                 cleanTag.isEmpty() || "all".equalsIgnoreCase(cleanTag) ? null : cleanTag,
@@ -120,6 +126,10 @@ public class MediaServiceImpl implements MediaService {
                     .append(System.currentTimeMillis()).append(AppConstants.HYPHEN)
                     .append(originalName);
             objectKey = keyBuilder.toString();
+        }
+
+        if (mediaItemRepository.findByObjectKey(objectKey).isPresent()) {
+            objectKey = objectKey + "-" + java.util.UUID.randomUUID().toString().substring(0, 8);
         }
 
         long sizeBytes = file.getSize();
@@ -250,20 +260,231 @@ public class MediaServiceImpl implements MediaService {
     }
 
     @Override
-    @Transactional
-    public void deleteMedia(Long id) {
-        log.info("Deleting media item id={}", id);
+    @Transactional(readOnly = true)
+    public MediaUsageResponse getMediaUsage(Long id) {
         MediaItemEntity item = mediaItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format("Media item not found with %s: %d", EntityFieldConstants.ID, id)));
 
-        // Delete physical file from storage
+        String needle = StringUtils.hasText(item.getObjectKey()) ? item.getObjectKey().trim() : NullSafeUtils.safeTrim(item.getUrl());
+        List<MediaUsageResponse.UsageItem> usages = new ArrayList<>();
+
+        if (StringUtils.hasText(needle)) {
+            String likePattern = "%" + needle + "%";
+
+            appendUsageQuery(usages, "Post",
+                    "SELECT id, title, CASE WHEN image LIKE :pat THEN 'Featured Image' ELSE 'Article Content' END " +
+                            "FROM posts WHERE is_deleted = false AND (image LIKE :pat OR content LIKE :pat) LIMIT 15",
+                    likePattern);
+
+            appendUsageQuery(usages, "Store",
+                    "SELECT id, name, CASE WHEN logo LIKE :pat THEN 'Logo' WHEN social_card_image LIKE :pat THEN 'Social Card' ELSE 'About Store' END " +
+                            "FROM stores WHERE is_deleted = false AND (logo LIKE :pat OR social_card_image LIKE :pat OR about_store LIKE :pat) LIMIT 15",
+                    likePattern);
+
+            appendUsageQuery(usages, "Offer",
+                    "SELECT id, name, 'Offer Image' FROM offers WHERE is_deleted = false AND image LIKE :pat LIMIT 15",
+                    likePattern);
+
+            appendUsageQuery(usages, "Category",
+                    "SELECT id, name, CASE WHEN image LIKE :pat THEN 'Category Image' ELSE 'Description' END " +
+                            "FROM categories WHERE is_deleted = false AND (image LIKE :pat OR description LIKE :pat) LIMIT 15",
+                    likePattern);
+
+            appendUsageQuery(usages, "Page",
+                    "SELECT id, title, CASE WHEN image LIKE :pat THEN 'Cover Image' ELSE 'Page Content' END " +
+                            "FROM pages WHERE is_deleted = false AND (image LIKE :pat OR content LIKE :pat) LIMIT 15",
+                    likePattern);
+
+            appendUsageQuery(usages, "Settings",
+                    "SELECT id, setting_key, 'Site Settings' FROM system_settings WHERE setting_value LIKE :pat LIMIT 15",
+                    likePattern);
+        }
+
+        return MediaUsageResponse.builder()
+                .mediaId(item.getId())
+                .mediaName(item.getName())
+                .url(item.getUrl())
+                .totalUsages(usages.size())
+                .usages(usages)
+                .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void appendUsageQuery(List<MediaUsageResponse.UsageItem> target, String module, String sql, String likePattern) {
         try {
-            storageService.deleteFile(item.getUrl());
+            List<Object[]> rows = entityManager.createNativeQuery(sql)
+                    .setParameter("pat", likePattern)
+                    .getResultList();
+            if (rows != null) {
+                for (Object[] row : rows) {
+                    if (row != null && row.length >= 3) {
+                        target.add(MediaUsageResponse.UsageItem.builder()
+                                .module(module)
+                                .resourceId(row[0] != null ? String.valueOf(row[0]) : "")
+                                .title(row[1] != null ? String.valueOf(row[1]) : "")
+                                .field(row[2] != null ? String.valueOf(row[2]) : "")
+                                .build());
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Failed to scan media usage in module {}: {}", module, ex.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public MediaItemResponse replaceMedia(Long id, MultipartFile file, String dimensions, Long currentUserId) {
+        log.info("Replacing/re-uploading media item id={} at exact objectKey", id);
+        MediaItemEntity item = mediaItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format("Media item not found with %s: %d", EntityFieldConstants.ID, id)));
+
+        String targetKey = item.getObjectKey();
+        String oldUrl = NullSafeUtils.safeTrim(item.getUrl());
+        String restoredUrl = storageService.uploadImageAtKey(file, targetKey);
+
+        // Build cache-busted URL on the EXACT same path so browsers, Next.js Image cache,
+        // and all referencing Posts/Stores/Offers/Pages/Settings immediately display the new image.
+        String baseUrl = StringUtils.hasText(oldUrl) ? oldUrl : restoredUrl;
+        if (baseUrl.contains("?v=")) {
+            baseUrl = baseUrl.substring(0, baseUrl.indexOf("?v="));
+        }
+        String versionedUrl = baseUrl + "?v=" + System.currentTimeMillis();
+
+        if (StringUtils.hasText(file.getOriginalFilename())) {
+            item.setName(file.getOriginalFilename());
+        }
+        item.setUrl(versionedUrl);
+        item.setSizeBytes(file.getSize());
+        item.setMimeType(file.getContentType());
+        if (StringUtils.hasText(dimensions)) {
+            item.setDimensions(NullSafeUtils.safeTrim(dimensions));
+        }
+        item.setIsDeleted(false);
+        item.setDeletedAt(null);
+        if (Objects.nonNull(currentUserId)) {
+            item.setUploadedBy(currentUserId);
+        }
+
+        MediaItemEntity saved = mediaItemRepository.save(item);
+
+        // Update all references from baseUrl (with any existing ?v=... query chain) -> versionedUrl
+        if (StringUtils.hasText(baseUrl)) {
+            propagateReplacedUrl(baseUrl, versionedUrl);
+        }
+
+        try {
+            redisCacheService.evictByPrefix(com.heygoodly.portal.common.cache.RedisCacheService.POSTS_PUBLIC_PREFIX);
+            redisCacheService.evictByPrefix(com.heygoodly.portal.common.cache.RedisCacheService.STORES_PUBLIC_PREFIX);
+            redisCacheService.evictByPrefix(com.heygoodly.portal.common.cache.RedisCacheService.OFFERS_PUBLIC_PREFIX);
+            redisCacheService.evictByPrefix(com.heygoodly.portal.common.cache.RedisCacheService.CATEGORIES_PREFIX);
+        } catch (Exception ex) {
+            log.warn("Failed to evict caches after media replace id={}: {}", id, ex.getMessage());
+        }
+
+        try {
+            if (!CollectionUtils.isEmpty(saved.getTags())) {
+                tagService.syncEntityTags(EntityFieldConstants.TYPE_MEDIA, saved.getId(), saved.getTags());
+            }
+        } catch (Exception ex) {
+            log.warn("Failed to re-sync tags for restored media id={}: {}", id, ex.getMessage());
+        }
+
+        try {
+            auditLogService.recordLog(CreateAuditLogRequest.builder()
+                    .userId(Objects.nonNull(currentUserId) ? currentUserId : 1L)
+                    .action("REPLACE_MEDIA")
+                    .module("media")
+                    .resourceId(String.valueOf(saved.getId()))
+                    .resourceName(saved.getName())
+                    .status("SUCCESS")
+                    .build());
+        } catch (Exception ex) {
+            log.warn("Failed to record media replace audit log: {}", ex.getMessage());
+        }
+
+        return mediaMapper.toDetailResponse(saved);
+    }
+
+    private void propagateReplacedUrl(String baseUrl, String newUrl) {
+        if (!StringUtils.hasText(baseUrl) || !StringUtils.hasText(newUrl)) {
+            return;
+        }
+        String cleanBase = baseUrl.contains("?v=") ? baseUrl.substring(0, baseUrl.indexOf("?v=")) : baseUrl;
+        String likePat = "%" + cleanBase + "%";
+        // Escape regex metacharacters for PostgreSQL POSIX regex, then match any stacked (?v=...) suffixes
+        String escapedBase = cleanBase.replaceAll("([\\\\.^$|?*+()\\[\\]{}])", "\\\\$1");
+        String regexPat = escapedBase + "(\\?v=[a-zA-Z0-9_-]+)*";
+
+        String[] updates = new String[] {
+                "UPDATE posts SET image = REGEXP_REPLACE(image, :regexPat, :newUrl, 'g') WHERE image LIKE :pat",
+                "UPDATE posts SET content = REGEXP_REPLACE(content, :regexPat, :newUrl, 'g') WHERE content LIKE :pat",
+                "UPDATE stores SET logo = REGEXP_REPLACE(logo, :regexPat, :newUrl, 'g') WHERE logo LIKE :pat",
+                "UPDATE stores SET social_card_image = REGEXP_REPLACE(social_card_image, :regexPat, :newUrl, 'g') WHERE social_card_image LIKE :pat",
+                "UPDATE stores SET about_store = REGEXP_REPLACE(about_store, :regexPat, :newUrl, 'g') WHERE about_store LIKE :pat",
+                "UPDATE offers SET image = REGEXP_REPLACE(image, :regexPat, :newUrl, 'g') WHERE image LIKE :pat",
+                "UPDATE categories SET image = REGEXP_REPLACE(image, :regexPat, :newUrl, 'g') WHERE image LIKE :pat",
+                "UPDATE categories SET description = REGEXP_REPLACE(description, :regexPat, :newUrl, 'g') WHERE description LIKE :pat",
+                "UPDATE pages SET image = REGEXP_REPLACE(image, :regexPat, :newUrl, 'g') WHERE image LIKE :pat",
+                "UPDATE pages SET content = REGEXP_REPLACE(content, :regexPat, :newUrl, 'g') WHERE content LIKE :pat",
+                "UPDATE system_settings SET setting_value = REGEXP_REPLACE(setting_value, :regexPat, :newUrl, 'g') WHERE setting_value LIKE :pat"
+        };
+        for (String sql : updates) {
+            try {
+                entityManager.createNativeQuery(sql)
+                        .setParameter("regexPat", regexPat)
+                        .setParameter("newUrl", newUrl)
+                        .setParameter("pat", likePat)
+                        .executeUpdate();
+            } catch (Exception ex) {
+                log.warn("Failed to propagate replaced media URL ({}): {}", sql, ex.getMessage());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteMedia(Long id) {
+        log.info("Soft-deleting media item id={} (removing file from storage, preserving URL slot for re-upload)", id);
+        MediaItemEntity item = mediaItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format("Media item not found with %s: %d", EntityFieldConstants.ID, id)));
+
+        String oldUrl = NullSafeUtils.safeTrim(item.getUrl());
+        String baseUrl = oldUrl.contains("?v=") ? oldUrl.substring(0, oldUrl.indexOf("?v=")) : oldUrl;
+
+        // Delete physical file from storage using clean key so ?v=... never blocks MinIO deletion
+        try {
+            if (StringUtils.hasText(baseUrl)) {
+                storageService.deleteFile(baseUrl);
+            } else {
+                storageService.deleteFile(oldUrl);
+            }
         } catch (Exception ex) {
             log.warn("Failed to delete physical file {}: {}", item.getUrl(), ex.getMessage());
         }
 
-        mediaItemRepository.delete(item);
+        // Bump ?v=deleted-<ts> so Next.js <Image> optimizer & browser caches immediately drop the deleted image
+        String deletedMarkerUrl = StringUtils.hasText(baseUrl)
+                ? baseUrl + "?v=deleted-" + System.currentTimeMillis()
+                : oldUrl;
+
+        item.setUrl(deletedMarkerUrl);
+        item.setIsDeleted(true);
+        item.setDeletedAt(java.time.Instant.now());
+        mediaItemRepository.save(item);
+
+        if (StringUtils.hasText(baseUrl)) {
+            propagateReplacedUrl(baseUrl, deletedMarkerUrl);
+        }
+
+        try {
+            redisCacheService.evictByPrefix(com.heygoodly.portal.common.cache.RedisCacheService.POSTS_PUBLIC_PREFIX);
+            redisCacheService.evictByPrefix(com.heygoodly.portal.common.cache.RedisCacheService.STORES_PUBLIC_PREFIX);
+            redisCacheService.evictByPrefix(com.heygoodly.portal.common.cache.RedisCacheService.OFFERS_PUBLIC_PREFIX);
+            redisCacheService.evictByPrefix(com.heygoodly.portal.common.cache.RedisCacheService.CATEGORIES_PREFIX);
+        } catch (Exception ex) {
+            log.warn("Failed to evict caches after media delete id={}: {}", id, ex.getMessage());
+        }
 
         try {
             auditLogService.recordLog(CreateAuditLogRequest.builder()
@@ -277,6 +498,29 @@ public class MediaServiceImpl implements MediaService {
         } catch (Exception ex) {
             log.warn("Failed to record media delete audit log: {}", ex.getMessage());
         }
+    }
+
+    @Override
+    @Transactional
+    public void purgeMedia(Long id) {
+        log.info("Permanently purging media item id={}", id);
+        MediaItemEntity item = mediaItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format("Media item not found with %s: %d", EntityFieldConstants.ID, id)));
+
+        try {
+            tagService.syncEntityTags(EntityFieldConstants.TYPE_MEDIA, item.getId(), List.of());
+        } catch (Exception ex) {
+            log.warn("Failed to clear tags for purged media id={}: {}", id, ex.getMessage());
+        }
+
+        try {
+            storageService.deleteFile(item.getUrl());
+        } catch (Exception ex) {
+            log.warn("Failed to delete physical file {}: {}", item.getUrl(), ex.getMessage());
+        }
+
+        mediaItemRepository.delete(item);
+        mediaItemRepository.flush();
     }
 
     @Override

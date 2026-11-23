@@ -342,6 +342,31 @@ public class CategoryServiceImpl implements CategoryService {
                 .filter(c -> !NullSafeUtils.safeBoolean(c.getIsDeleted()))
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
+        if ("other".equalsIgnoreCase(NullSafeUtils.safeTrim(entity.getSlug()))) {
+            throw new AppException(ErrorCode.BAD_REQUEST, "Cannot delete the default 'Other' category.");
+        }
+
+        // Resolve or auto-create the fallback 'Other' category so posts/stores are never orphaned
+        CategoryEntity otherCategory = categoryRepository.findBySlugAndIsDeletedFalse("other")
+                .orElseGet(() -> categoryRepository.findFirstByNameIgnoreCaseAndIsDeletedFalse("Other")
+                        .orElseGet(() -> {
+                            CategoryEntity created = CategoryEntity.builder()
+                                    .name("Other")
+                                    .slug("other")
+                                    .type(TYPE_POST)
+                                    .isActive(true)
+                                    .showOnHome(false)
+                                    .sortOrder(999)
+                                    .description("General and uncategorized articles.")
+                                    .build();
+                            created.setCreatedBy(SecurityUtils.getCurrentUserEmail().orElse(AppConstants.SYSTEM_USER));
+                            return categoryRepository.save(created);
+                        }));
+
+        // Reassign all non-deleted posts and stores from the deleted category into 'Other'
+        postRepository.reassignCategory(id, otherCategory.getId());
+        storeRepository.reassignCategory(id, otherCategory.getId());
+
         String deletedName = entity.getName();
         entity.setIsDeleted(true);
         entity.setSlug(new StringBuilder()
@@ -353,6 +378,8 @@ public class CategoryServiceImpl implements CategoryService {
                 .toString());
         categoryRepository.save(entity);
         redisCacheService.evictByPrefix(RedisCacheService.CATEGORIES_PREFIX);
+        redisCacheService.evictByPrefix(RedisCacheService.POSTS_PUBLIC_PREFIX);
+        redisCacheService.evictByPrefix(RedisCacheService.STORES_PUBLIC_PREFIX);
         redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
         auditLogService.recordAction("DELETE", "categories", String.valueOf(id), deletedName, null);
     }

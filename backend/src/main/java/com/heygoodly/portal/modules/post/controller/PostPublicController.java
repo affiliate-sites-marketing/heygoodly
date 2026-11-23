@@ -55,7 +55,8 @@ public class PostPublicController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "tag", required = false) String tag,
             @RequestParam(value = "tags", required = false) List<String> tags,
-            @RequestParam(value = "featured", required = false) Boolean featured
+            @RequestParam(value = "featured", required = false) Boolean featured,
+            @RequestParam(value = "postType", required = false) String postType
     ) {
         Pageable pageable = (sortBy == null || sortBy.isBlank())
                 ? org.springframework.data.domain.PageRequest.of(
@@ -81,6 +82,7 @@ public class PostPublicController {
                 .tag(tag)
                 .tags(tags)
                 .featured(featured)
+                .postType(postType)
                 .build();
         PageResponse<PostSummaryResponse> response = postService.getPublicPosts(criteria);
         return ResponseEntity.ok(ApiResponse.ok(response));

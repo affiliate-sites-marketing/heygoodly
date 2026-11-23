@@ -29,6 +29,10 @@ public interface StoreRepository extends JpaRepository<StoreEntity, Long>, JpaSp
     @Query("UPDATE StoreEntity s SET s.afVisitCount = s.afVisitCount + 1 WHERE s.id = :id")
     void incrementVisitCount(@Param("id") Long id);
 
+    @Modifying
+    @Query("UPDATE StoreEntity s SET s.categoryId = :targetCategoryId WHERE s.categoryId = :sourceCategoryId AND s.isDeleted = false")
+    int reassignCategory(@Param("sourceCategoryId") Long sourceCategoryId, @Param("targetCategoryId") Long targetCategoryId);
+
     long countByIsActiveTrueAndIsDeletedFalse();
 
     long countByIsActiveTrueAndIsFeaturedTrueAndIsDeletedFalse();

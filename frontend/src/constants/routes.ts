@@ -4,6 +4,8 @@ export const ROUTES = {
     STORES: '/stores',
     STORE_DETAIL: (slug: string) => `/store/${slug}`,
     POSTS: '/posts',
+    REVIEWS: '/reviews',
+    NEWS: '/news',
     POST_DETAIL: (slug: string) => `/post/${slug}`,
     CATEGORIES: '/categories',
     CATEGORY_DETAIL: (slug: string) => `/category/${slug}`,

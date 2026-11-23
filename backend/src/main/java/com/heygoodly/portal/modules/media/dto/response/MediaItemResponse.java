@@ -27,6 +27,8 @@ public class MediaItemResponse {
     private String format;
     private List<String> tags;
     private Long uploadedBy;
+    private Boolean isDeleted;
+    private String deletedAt;
     private String createdAt;
 }
 

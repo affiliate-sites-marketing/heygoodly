@@ -11,6 +11,7 @@ export interface PostFilterParams {
   categorySlug?: string | string[];
   category?: string | string[];
   storeSlug?: string;
+  postType?: 'all' | 'review' | 'news';
   featured?: boolean;
   search?: string;
   sortBy?: 'newest' | 'popular';
@@ -151,6 +152,7 @@ class PostService {
             ? (params.category.length > 0 ? params.category.join(',') : undefined)
             : (params.category && params.category.toLowerCase() !== 'all' ? params.category : undefined),
           storeSlug: params.storeSlug || undefined,
+          postType: params.postType && params.postType !== 'all' ? params.postType : undefined,
           featured: params.featured,
           search: params.search || undefined,
           tag: Array.isArray(params.tag)

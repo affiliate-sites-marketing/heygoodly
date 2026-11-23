@@ -18,6 +18,8 @@ public class MediaQueryCriteria {
     private String format;
     private String sortBy;
     @Builder.Default
+    private Boolean deleted = false;
+    @Builder.Default
     private int page = 0;
     @Builder.Default
     private int size = 24;

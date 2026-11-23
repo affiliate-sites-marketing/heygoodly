@@ -68,6 +68,30 @@ public class LocalStorageServiceImpl implements StorageService {
     }
 
     @Override
+    public String uploadImageAtKey(MultipartFile file, String objectKey) {
+        FileUtils.validateImageFile(file);
+        String cleanKey = objectKey != null ? objectKey.trim().replaceAll("^/+", "") : "";
+        if (cleanKey.isEmpty()) {
+            return uploadImage(file, "general");
+        }
+        Path targetFile = this.basePath.resolve(cleanKey).normalize();
+        if (!targetFile.startsWith(this.basePath)) {
+            throw new BadRequestException("Invalid target object key.", ErrorCodes.FILE_UPLOAD_FAILED);
+        }
+        try {
+            if (targetFile.getParent() != null) {
+                Files.createDirectories(targetFile.getParent());
+            }
+            Files.copy(file.getInputStream(), targetFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            log.info("Overwrote/restored local image at exact key: {}", targetFile);
+            return "/uploads/" + cleanKey;
+        } catch (IOException e) {
+            log.error("Failed to overwrite local image at key {}: ", cleanKey, e);
+            throw new BadRequestException("Failed to upload and process image.", ErrorCodes.FILE_UPLOAD_FAILED);
+        }
+    }
+
+    @Override
     public void deleteFile(String fileUrl) {
         if (fileUrl == null || !fileUrl.startsWith("/uploads/")) {
             return;

@@ -267,10 +267,40 @@ export default function MediaLibraryModal({
 
   const handleDelete = async (id: string | number) => {
     if (toastCtx) {
+      const usage = await mediaService.getMediaUsage(id);
+      const hasUsages = usage.totalUsages > 0;
       const ok = await toastCtx.confirm({
-        title: 'Delete Media Image?',
-        message: 'Are you sure you want to delete this image from the Media Library? This action cannot be undone.',
-        confirmText: 'Delete Image',
+        title: hasUsages ? 'Image Is Currently In Use' : 'Delete Media Image?',
+        message: hasUsages ? (
+          <div className="space-y-2.5 text-left">
+            <p className="text-xs sm:text-sm">
+              This image is currently referenced in <strong>{usage.totalUsages}</strong> place(s):
+            </p>
+            <ul className="max-h-36 overflow-y-auto space-y-1 rounded-lg border border-amber-200 bg-amber-50/80 p-2.5 text-xs text-amber-900">
+              {usage.usages.slice(0, 8).map((u, idx) => (
+                <li key={`${u.module}-${u.resourceId}-${idx}`} className="flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    <strong className="font-bold">[{u.module}]</strong> {u.title || `#${u.resourceId}`}
+                  </span>
+                  <span className="shrink-0 text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                    {u.field}
+                  </span>
+                </li>
+              ))}
+              {usage.totalUsages > 8 && (
+                <li className="text-[11px] font-semibold text-amber-700 pt-1">
+                  + {usage.totalUsages - 8} more reference(s)...
+                </li>
+              )}
+            </ul>
+            <p className="text-xs text-slate-500">
+              You can still delete it and re-upload the same image anytime.
+            </p>
+          </div>
+        ) : (
+          'Are you sure you want to delete this image from the Media Library? You can re-upload the same image anytime.'
+        ),
+        confirmText: hasUsages ? 'Delete Anyway' : 'Delete Image',
         cancelText: 'Cancel',
         variant: 'danger',
       });

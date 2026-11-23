@@ -563,6 +563,11 @@ public class StoreServiceImpl implements StoreService {
         store.setIsDeleted(true);
         store.setSlug(new StringBuilder().append(store.getSlug()).append(AppConstants.HYPHEN).append("deleted").append(AppConstants.HYPHEN).append(System.currentTimeMillis()).toString());
         storeRepository.save(store);
+
+        // Cascade soft-delete all offers belonging to this store so no orphaned offers remain active
+        int deletedOffers = offerRepository.softDeleteByStoreId(deletedId);
+        log.info("Deleted store id={} ('{}') and cascaded soft-delete to {} offer(s)", deletedId, deletedName, deletedOffers);
+
         auditLogService.recordAction("DELETE", "stores", String.valueOf(deletedId), deletedName, null);
         evictStoreCaches();
     }

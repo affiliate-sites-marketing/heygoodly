@@ -20,6 +20,7 @@ const newsreader = Newsreader({
 
 import { SITE_SLUG, SITE_URL } from '@/constants/site';
 import { parseCustomHeadHtml } from '@/components/seo/parseCustomHeadHtml';
+import TrackingScripts from '@/components/seo/TrackingScripts';
 import { getBrandCssVariablesStyle, resolveBrandPalette } from '@/lib/brandTheme';
 
 const BACKEND_BASE = (
@@ -119,6 +120,7 @@ export default async function RootLayout({
       }}
     >
       <body className={`${inter.className} min-h-screen bg-[#F8F8F6] text-[#171717] antialiased selection:bg-brand-primary selection:text-white transition-colors duration-200`}>
+        <TrackingScripts settings={map} />
         {customHeadNodes}
         <ThemeProvider initialSettings={map} initialTheme={isDarkTheme ? 'dark' : 'light'}>
           <QueryProvider>

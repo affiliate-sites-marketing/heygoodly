@@ -520,9 +520,26 @@ function AdminPostsContent() {
               </div>
             </td>
 
-            {/* Category */}
+            {/* Category + Auto Route Type (Review vs News) */}
             <td className="py-4 px-4 whitespace-nowrap">
-              <span className="inline-block bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-lg text-[11px]">{art.category}</span>
+              <div className="flex flex-col items-start gap-1">
+                <span className="inline-block bg-slate-100 text-slate-700 font-bold px-2.5 py-0.5 rounded-lg text-[11px]">{art.category}</span>
+                {art.storeSlug || art.storeName ? (
+                  <span
+                    title={`Linked to store: ${art.storeName || art.storeSlug} → Routed to /reviews`}
+                    className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-2 py-0.5 rounded-md text-[10px]"
+                  >
+                    ★ Review{art.storeName ? ` • ${art.storeName}` : ''}
+                  </span>
+                ) : (
+                  <span
+                    title="No store linked → Routed to /news with side banners"
+                    className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold px-2 py-0.5 rounded-md text-[10px]"
+                  >
+                    📰 News
+                  </span>
+                )}
+              </div>
             </td>
 
             {/* Author */}

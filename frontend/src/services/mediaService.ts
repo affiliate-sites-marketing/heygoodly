@@ -14,6 +14,8 @@ export interface MediaItem {
   dimensions: string;
   format: string;
   createdAt: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
   tags: string[];
 }
 
@@ -23,8 +25,24 @@ export interface MediaQueryOptions {
   tag?: string;
   format?: string;
   sortBy?: 'newest' | 'oldest' | 'size-desc' | 'name-asc';
+  deleted?: boolean;
   page?: number;
   size?: number;
+}
+
+export interface MediaUsageItem {
+  module: string;
+  resourceId: string;
+  title: string;
+  field: string;
+}
+
+export interface MediaUsageResponse {
+  mediaId: number | string;
+  mediaName: string;
+  url: string;
+  totalUsages: number;
+  usages: MediaUsageItem[];
 }
 
 export interface MediaPageResult {
@@ -75,9 +93,50 @@ class MediaService {
     return res.data?.data;
   }
 
+  async getMediaUsage(id: string | number): Promise<MediaUsageResponse> {
+    try {
+      const res = await apiClient.get(API_ENDPOINTS.ADMIN.MEDIA_USAGE(id));
+      const data = res.data?.data;
+      if (data) {
+        return {
+          mediaId: data.mediaId ?? id,
+          mediaName: data.mediaName ?? '',
+          url: data.url ?? '',
+          totalUsages: Number(data.totalUsages ?? (Array.isArray(data.usages) ? data.usages.length : 0)),
+          usages: Array.isArray(data.usages) ? data.usages : [],
+        };
+      }
+    } catch (err) {
+      console.warn('Failed to fetch media usage:', err);
+    }
+    return { mediaId: id, mediaName: '', url: '', totalUsages: 0, usages: [] };
+  }
+
+  async replaceMedia(
+    id: string | number,
+    file: File,
+    dimensions?: string
+  ): Promise<MediaItem> {
+    this.clearTagCountsCache();
+    const formData = new FormData();
+    formData.append('file', file);
+    if (dimensions) {
+      formData.append('dimensions', dimensions);
+    }
+    const res = await apiClient.post(API_ENDPOINTS.ADMIN.MEDIA_REPLACE(id), formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data?.data;
+  }
+
   async deleteMedia(id: string | number): Promise<void> {
     this.clearTagCountsCache();
     await apiClient.delete(API_ENDPOINTS.ADMIN.MEDIA_DETAIL(id));
+  }
+
+  async purgeMedia(id: string | number): Promise<void> {
+    this.clearTagCountsCache();
+    await apiClient.delete(API_ENDPOINTS.ADMIN.MEDIA_PURGE(id));
   }
 
   async getAllTags(): Promise<string[]> {

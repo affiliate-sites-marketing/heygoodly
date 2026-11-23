@@ -58,6 +58,15 @@ export interface SiteSettings {
   headerAdsDescription: string;
   headerAdsButtonText: string;
 
+  // News Side Banners (Left & Right sticky banners on News articles without linked Store)
+  newsSideBannersActive: boolean;
+  newsLeftBannerImg: string;
+  newsLeftBannerUrl: string;
+  newsLeftBannerAlt: string;
+  newsRightBannerImg: string;
+  newsRightBannerUrl: string;
+  newsRightBannerAlt: string;
+
   // Newsletter (homepage "Dispatch" block)
   newsletterEnabled: boolean;
   newsletterEyebrow: string;
@@ -119,6 +128,14 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   headerAdsTitle: '',
   headerAdsDescription: '',
   headerAdsButtonText: '',
+
+  newsSideBannersActive: false,
+  newsLeftBannerImg: '',
+  newsLeftBannerUrl: '',
+  newsLeftBannerAlt: 'Sponsored Banner',
+  newsRightBannerImg: '',
+  newsRightBannerUrl: '',
+  newsRightBannerAlt: 'Sponsored Banner',
 
   newsletterEnabled: false,
   newsletterEyebrow: '',
@@ -205,6 +222,14 @@ function mapResponseToSettings(map: Record<string, string>): Partial<SiteSetting
   if (map.header_ads_banner_img !== undefined) result.headerAdsBannerImg = map.header_ads_banner_img;
   if (map.header_ads_banner_url !== undefined) result.headerAdsBannerUrl = map.header_ads_banner_url;
 
+  if (map.news_side_banners_active !== undefined) result.newsSideBannersActive = map.news_side_banners_active === 'true';
+  if (map.news_left_banner_img !== undefined) result.newsLeftBannerImg = map.news_left_banner_img;
+  if (map.news_left_banner_url !== undefined) result.newsLeftBannerUrl = map.news_left_banner_url;
+  if (map.news_left_banner_alt !== undefined) result.newsLeftBannerAlt = map.news_left_banner_alt;
+  if (map.news_right_banner_img !== undefined) result.newsRightBannerImg = map.news_right_banner_img;
+  if (map.news_right_banner_url !== undefined) result.newsRightBannerUrl = map.news_right_banner_url;
+  if (map.news_right_banner_alt !== undefined) result.newsRightBannerAlt = map.news_right_banner_alt;
+
   if (map.newsletter_enabled !== undefined) result.newsletterEnabled = map.newsletter_enabled === 'true';
   if (map.newsletter_eyebrow !== undefined) result.newsletterEyebrow = map.newsletter_eyebrow;
   if (map.newsletter_title !== undefined) result.newsletterTitle = map.newsletter_title;
@@ -261,6 +286,13 @@ function mapSettingsToRequest(settings: SiteSettings): Record<string, string> {
     header_ads_button_text: settings.headerAdsButtonText,
     header_ads_banner_img: settings.headerAdsBannerImg,
     header_ads_banner_url: settings.headerAdsBannerUrl,
+    news_side_banners_active: String(Boolean(settings.newsSideBannersActive)),
+    news_left_banner_img: settings.newsLeftBannerImg,
+    news_left_banner_url: settings.newsLeftBannerUrl,
+    news_left_banner_alt: settings.newsLeftBannerAlt,
+    news_right_banner_img: settings.newsRightBannerImg,
+    news_right_banner_url: settings.newsRightBannerUrl,
+    news_right_banner_alt: settings.newsRightBannerAlt,
     newsletter_enabled: String(Boolean(settings.newsletterEnabled)),
     newsletter_eyebrow: settings.newsletterEyebrow,
     newsletter_title: settings.newsletterTitle,

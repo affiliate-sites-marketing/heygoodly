@@ -12,6 +12,7 @@ import com.heygoodly.portal.common.util.SecurityUtils;
 import com.heygoodly.portal.modules.media.dto.request.MediaQueryCriteria;
 import com.heygoodly.portal.modules.media.dto.request.UpdateMediaTagsRequest;
 import com.heygoodly.portal.modules.media.dto.response.MediaItemResponse;
+import com.heygoodly.portal.modules.media.dto.response.MediaUsageResponse;
 import com.heygoodly.portal.modules.media.service.MediaService;
 import com.heygoodly.portal.modules.role.enums.RoleCode;
 import lombok.RequiredArgsConstructor;
@@ -72,10 +73,37 @@ public class MediaAdminController {
         return ResponseEntity.ok(ApiResponse.ok(MessageConstants.UPDATED_SUCCESS, response));
     }
 
+    @PostMapping("/{id}/replace")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.FILE_UPLOAD + "') or hasAuthority('" + RoleCode.ROLE_SUPER_ADMIN + "')")
+    public ResponseEntity<ApiResponse<MediaItemResponse>> replaceMedia(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "dimensions", required = false) String dimensions
+    ) {
+        Long currentUserId = SecurityUtils.getCurrentUserId()
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        MediaItemResponse response = mediaService.replaceMedia(id, file, dimensions, currentUserId);
+        return ResponseEntity.ok(ApiResponse.ok(MessageConstants.UPDATED_SUCCESS, response));
+    }
+
+    @GetMapping("/{id}/usage")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<MediaUsageResponse>> getMediaUsage(@PathVariable Long id) {
+        MediaUsageResponse usage = mediaService.getMediaUsage(id);
+        return ResponseEntity.ok(ApiResponse.ok(usage));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('" + PermissionConstants.FILE_DELETE + "') or hasAuthority('" + RoleCode.ROLE_SUPER_ADMIN + "')")
     public ResponseEntity<ApiResponse<Void>> deleteMedia(@PathVariable Long id) {
         mediaService.deleteMedia(id);
+        return ResponseEntity.ok(ApiResponse.ok(MessageConstants.DELETED, null));
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.FILE_DELETE + "') or hasAuthority('" + RoleCode.ROLE_SUPER_ADMIN + "')")
+    public ResponseEntity<ApiResponse<Void>> purgeMedia(@PathVariable Long id) {
+        mediaService.purgeMedia(id);
         return ResponseEntity.ok(ApiResponse.ok(MessageConstants.DELETED, null));
     }
 

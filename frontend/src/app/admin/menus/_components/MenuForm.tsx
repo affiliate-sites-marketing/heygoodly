@@ -49,8 +49,9 @@ const FORM_ID = 'menu-form';
 const QUICK_PRESETS = [
   { label: 'Stores Hub', title: 'Stores', path: '/stores', type: 'url' as const, position: 'main' as const },
   { label: 'All Categories', title: 'Categories', path: '/categories', type: 'category' as const, position: 'main' as const },
-  { label: 'Editor Reviews', title: 'Reviews', path: '/category/reviews', type: 'category' as const, position: 'main' as const },
-  { label: 'Top Deals', title: 'Top Deals', path: '/posts', type: 'url' as const, position: 'main' as const },
+  { label: 'Product Reviews', title: 'Reviews', path: '/reviews', type: 'url' as const, position: 'main' as const },
+  { label: 'News Hub', title: 'News', path: '/news', type: 'url' as const, position: 'main' as const },
+  { label: 'All Articles', title: 'Editorial', path: '/posts', type: 'url' as const, position: 'main' as const },
   { label: 'About Desk', title: 'About Us', path: '/about-us', type: 'page' as const, position: 'footer' as const },
   { label: 'Affiliate Terms', title: 'Affiliate Disclosure', path: '/affiliate-disclosure', type: 'page' as const, position: 'footer' as const },
 ];

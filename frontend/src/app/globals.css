@@ -414,17 +414,103 @@ html.dark .article-content strong {
 .article-content .box-delete-btn,
 .article-content .box-edit-deal-btn,
 .article-content .box-edit-btn,
+.article-content .video-edit-btn,
+.article-content .toc-refresh-btn,
 .article-content .editor-only-controls,
 .word-studio-preview .box-delete-btn,
 .word-studio-preview .box-edit-deal-btn,
 .word-studio-preview .box-edit-btn,
+.word-studio-preview .video-edit-btn,
+.word-studio-preview .toc-refresh-btn,
 .word-studio-preview .editor-only-controls,
 .editorial-article-body .box-delete-btn,
 .editorial-article-body .box-edit-deal-btn,
 .editorial-article-body .box-edit-btn,
+.editorial-article-body .video-edit-btn,
+.editorial-article-body .toc-refresh-btn,
 .editorial-article-body .editor-only-controls,
-[data-box-type="toc"] {
+.editorial-article-body [data-box-type="toc"] {
   display: none !important;
+}
+
+/* 1:1 RichTextEditor table, list, media & typography parity across ALL client views */
+.word-studio-canvas table,
+.word-studio-preview table,
+.article-content table,
+.editorial-article-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 14px;
+}
+
+.word-studio-canvas th,
+.word-studio-canvas td,
+.word-studio-preview th,
+.word-studio-preview td,
+.article-content th,
+.article-content td,
+.editorial-article-body th,
+.editorial-article-body td {
+  border: 1px solid #e2e8f0;
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.word-studio-canvas th,
+.word-studio-preview th,
+.article-content th,
+.editorial-article-body th {
+  background-color: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.article-content::after,
+.editorial-article-body::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+html.dark .article-content h1,
+html.dark .article-content h2,
+html.dark .article-content h3,
+html.dark .article-content h4,
+html.dark .article-content strong,
+html.dark .article-content b,
+html.dark .article-content th,
+html.dark .editorial-article-body strong,
+html.dark .editorial-article-body b,
+html.dark .editorial-article-body th {
+  color: #f8fafc !important;
+}
+
+html.dark .article-content p,
+html.dark .article-content ul,
+html.dark .article-content ol,
+html.dark .article-content li,
+html.dark .article-content td,
+html.dark .editorial-article-body td {
+  color: #cbd5e1 !important;
+}
+
+html.dark .article-content a:not(.deal-button):not(.cta-button),
+html.dark .editorial-article-body a:not(.deal-button):not(.cta-button) {
+  color: #60a5fa !important;
+}
+
+html.dark .article-content th,
+html.dark .editorial-article-body th {
+  background-color: #161d2b !important;
+}
+
+html.dark .article-content th,
+html.dark .article-content td,
+html.dark .editorial-article-body th,
+html.dark .editorial-article-body td {
+  border-color: #242d42 !important;
 }
 
 @media (max-width: 639px) {

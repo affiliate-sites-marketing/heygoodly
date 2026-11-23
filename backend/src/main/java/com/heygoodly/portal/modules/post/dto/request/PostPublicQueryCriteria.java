@@ -22,7 +22,8 @@ public record PostPublicQueryCriteria(
         String search,
         String tag,
         List<String> tags,
-        Boolean featured
+        Boolean featured,
+        String postType
 ) {
     public List<String> resolvedCategories() {
         List<String> result = new ArrayList<>();
