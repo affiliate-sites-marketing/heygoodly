@@ -98,9 +98,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const toastMethods = useRef({
     success: (message: string, description?: string, duration?: number) =>
       addToast('success', message, description, duration),
-    error: (message: string, description?: string, duration?: number) =>
+    error: (message: string, description?: string, duration = 7000) =>
       addToast('error', message, description, duration),
-    warning: (message: string, description?: string, duration?: number) =>
+    warning: (message: string, description?: string, duration = 5500) =>
       addToast('warning', message, description, duration),
     info: (message: string, description?: string, duration?: number) =>
       addToast('info', message, description, duration),

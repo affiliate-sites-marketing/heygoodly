@@ -36,7 +36,7 @@ export default function PositionReorderCell({
             ? 'bg-red-50 text-brand-primary border border-red-200'
             : 'bg-slate-100 text-slate-500 border border-slate-200'
         }`}
-        title={isPinned ? `Pinned at position #${sortOrder} in store` : 'Auto (default order 9999)'}
+        title={isPinned ? `Pinned at position #${sortOrder}` : 'Auto (newest first)'}
       >
         {isPinned ? `#${sortOrder}` : 'Auto'}
       </span>

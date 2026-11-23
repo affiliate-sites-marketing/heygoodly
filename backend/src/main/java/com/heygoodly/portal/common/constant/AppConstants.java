@@ -35,7 +35,7 @@ public final class AppConstants {
     public static final String STATUS_UP = "UP";
 
     // Default Numeric & Value Constants (Eliminate magic numbers)
-    public static final int DEFAULT_SORT_ORDER = 9999;
+    public static final int DEFAULT_SORT_ORDER = 0;
     public static final int DEFAULT_PAGE_NUMBER = 0;
     public static final int DEFAULT_PAGE_SIZE = 20;
     public static final int DEFAULT_MEDIA_PAGE_SIZE = 24;

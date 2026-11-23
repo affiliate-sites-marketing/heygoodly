@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface MenuService {
     List<MenuResponse> getPublicMenus(String position);
+    List<String> getDisabledMenuRoutes();
     List<MenuResponse> getAllMenus(String position);
     PageResponse<MenuResponse> getMenus(Pageable pageable, String position);
     MenuResponse getMenuById(Long id);

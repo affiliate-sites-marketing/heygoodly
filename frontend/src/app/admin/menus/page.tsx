@@ -83,7 +83,7 @@ export default function AdminMenusPage() {
       targetType: (m.targetType || 'category') as any,
       targetValue: m.targetValue || '',
       imageIcon: m.imageIcon,
-      sortOrder: Number(m.sortOrder || 1),
+      sortOrder: Number(m.sortOrder ?? 0),
       isActive: Boolean(m.isActive),
     }),
     fallbackItems: [],

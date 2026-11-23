@@ -60,6 +60,11 @@ public class MenuMapper implements BaseMapper<MenuEntity, MenuResponse, MenuResp
         );
     }
 
+    private static final Comparator<MenuEntity> MENU_DISPLAY_ORDER = Comparator
+            .comparingInt((MenuEntity m) -> Objects.nonNull(m.getSortOrder()) ? m.getSortOrder() : AppConstants.DEFAULT_SORT_ORDER)
+            .thenComparing(MenuEntity::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(MenuEntity::getId, Comparator.nullsLast(Comparator.reverseOrder()));
+
     public List<MenuResponse> buildTree(List<MenuEntity> allItems) {
         if (CollectionUtils.isEmpty(allItems)) {
             return Collections.emptyList();
@@ -71,7 +76,7 @@ public class MenuMapper implements BaseMapper<MenuEntity, MenuResponse, MenuResp
 
         return allItems.stream()
                 .filter(m -> Objects.isNull(m.getParent()))
-                .sorted(Comparator.comparingInt(m -> Objects.nonNull(m.getSortOrder()) ? m.getSortOrder() : AppConstants.DEFAULT_SORT_ORDER))
+                .sorted(MENU_DISPLAY_ORDER)
                 .map(root -> mapRecursively(root, childrenByParentId))
                 .toList();
     }
@@ -79,7 +84,7 @@ public class MenuMapper implements BaseMapper<MenuEntity, MenuResponse, MenuResp
     private MenuResponse mapRecursively(MenuEntity parent, Map<Long, List<MenuEntity>> childrenMap) {
         List<MenuEntity> children = childrenMap.getOrDefault(parent.getId(), Collections.emptyList());
         List<MenuResponse> childResponses = children.stream()
-                .sorted(Comparator.comparingInt(m -> Objects.nonNull(m.getSortOrder()) ? m.getSortOrder() : AppConstants.DEFAULT_SORT_ORDER))
+                .sorted(MENU_DISPLAY_ORDER)
                 .map(child -> mapRecursively(child, childrenMap))
                 .toList();
 

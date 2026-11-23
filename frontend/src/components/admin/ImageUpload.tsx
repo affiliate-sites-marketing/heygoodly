@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Layers,
   Tag,
+  ClipboardPaste,
 } from 'lucide-react';
 import MediaLibraryModal from './MediaLibraryModal';
 import MediaTagInput from './MediaTagInput';
@@ -77,6 +78,89 @@ export default function ImageUpload({
   const [showTagModal, setShowTagModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isHoveredRef = useRef(false);
+
+  const normalizePastedImageFile = (blob: Blob, fallbackName = 'pasted-image'): File => {
+    const extMap: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+      'image/svg+xml': 'svg',
+    };
+    const ext = extMap[blob.type.toLowerCase()] || 'png';
+    const rawName = (blob as File).name;
+    const fileName =
+      rawName && rawName !== 'image.png'
+        ? rawName
+        : `${fallbackName}-${Date.now()}.${ext}`;
+    return new File([blob], fileName, { type: blob.type || 'image/png' });
+  };
+
+  const extractImageFromClipboardData = (clipboardData: DataTransfer | null): File | null => {
+    if (!clipboardData) return null;
+    if (clipboardData.items) {
+      for (let i = 0; i < clipboardData.items.length; i++) {
+        const item = clipboardData.items[i];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const blob = item.getAsFile();
+          if (blob) return normalizePastedImageFile(blob);
+        }
+      }
+    }
+    if (clipboardData.files && clipboardData.files.length > 0) {
+      for (let i = 0; i < clipboardData.files.length; i++) {
+        const f = clipboardData.files[i];
+        if (f.type.startsWith('image/')) {
+          return normalizePastedImageFile(f);
+        }
+      }
+    }
+    return null;
+  };
+
+  const handlePasteFromButton = async () => {
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.read !== 'function') {
+        toastCtx?.toast.info('Hover over this upload box and press Cmd+V / Ctrl+V to paste your copied image.');
+        return;
+      }
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          handleSelectFile(normalizePastedImageFile(blob));
+          return;
+        }
+      }
+      toastCtx?.toast.info('No image found in clipboard. Copy an image first, then paste.');
+    } catch {
+      toastCtx?.toast.info('Hover over this upload box and press Cmd+V / Ctrl+V to paste your copied image.');
+    }
+  };
+
+  useEffect(() => {
+    const onWindowPaste = (e: ClipboardEvent) => {
+      if (showTagModal || mediaModalOpen) return;
+      const target = e.target as HTMLElement | null;
+      const isInsideThisBox = Boolean(containerRef.current && target && containerRef.current.contains(target));
+      if (!isHoveredRef.current && !isInsideThisBox) return;
+
+      // Do not hijack text pasting inside the URL input unless clipboard actually carries an image file
+      const imageFile = extractImageFromClipboardData(e.clipboardData);
+      if (!imageFile) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      handleSelectFile(imageFile);
+    };
+
+    window.addEventListener('paste', onWindowPaste);
+    return () => window.removeEventListener('paste', onWindowPaste);
+  });
 
   const aspectClass = {
     video: 'h-48 sm:h-56 max-h-[220px]',
@@ -218,7 +302,16 @@ export default function ImageUpload({
   };
 
   return (
-    <div className="space-y-2">
+    <div
+      ref={containerRef}
+      onMouseEnter={() => {
+        isHoveredRef.current = true;
+      }}
+      onMouseLeave={() => {
+        isHoveredRef.current = false;
+      }}
+      className="space-y-2"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 shrink-0">
           <ImageIcon size={14} className="text-brand-primary" />
@@ -226,7 +319,7 @@ export default function ImageUpload({
         </label>
 
         {/* Switch mode */}
-        <div className="inline-flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/60 shrink-0">
+        <div className="inline-flex flex-wrap items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/60 max-w-full">
           <button
             type="button"
             onClick={() => setMode('upload')}
@@ -311,6 +404,15 @@ export default function ImageUpload({
             </button>
             <button
               type="button"
+              onClick={handlePasteFromButton}
+              className="h-8 px-3 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer"
+              title="Paste copied image from clipboard"
+            >
+              <ClipboardPaste size={13} />
+              <span>Paste</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setMediaModalOpen(true)}
               className="h-8 px-3 inline-flex items-center justify-center gap-1.5 bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer"
             >
@@ -387,10 +489,21 @@ export default function ImageUpload({
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800">
-                      Click to upload or drag &amp; drop
+                      Click to upload, drag &amp; drop, or paste (Ctrl+V / Cmd+V)
                     </p>
                     <p className="text-[11px] text-slate-400 mt-0.5">{description}</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePasteFromButton();
+                    }}
+                    className="mt-1 h-7 px-3 rounded-lg text-[11px] font-bold inline-flex items-center justify-center gap-1.5 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs transition cursor-pointer"
+                  >
+                    <ClipboardPaste size={12} />
+                    <span>Paste</span>
+                  </button>
                 </>
               )}
             </div>

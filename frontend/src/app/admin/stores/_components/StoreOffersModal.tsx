@@ -213,10 +213,10 @@ export default function StoreOffersModal({
         {/* Modal Header */}
         <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-brand-primary shrink-0 overflow-hidden shadow-2xs">
+            <div className="w-12 h-11 rounded-2xl bg-white border border-slate-200 p-1 flex items-center justify-center text-brand-primary shrink-0 overflow-hidden shadow-2xs">
               {store.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={store.logoUrl} alt={store.name} className="w-full h-full object-cover" />
+                <img src={store.logoUrl} alt={store.name} className="max-w-full max-h-full w-auto h-auto object-contain" />
               ) : (
                 <Tag size={20} />
               )}

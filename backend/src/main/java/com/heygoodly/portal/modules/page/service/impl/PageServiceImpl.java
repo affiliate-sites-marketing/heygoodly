@@ -50,7 +50,7 @@ public class PageServiceImpl implements PageService {
                 java.time.Duration.ofMinutes(5),
                 () -> {
                     log.info("Fetching all active public pages");
-                    List<PageEntity> pages = pageRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+                    List<PageEntity> pages = pageRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc();
                     return pageMapper.toSummaryResponseList(pages);
                 }
         );
@@ -144,6 +144,7 @@ public class PageServiceImpl implements PageService {
 
         PageEntity saved = pageRepository.save(entity);
         redisCacheService.evictByPrefix(RedisCacheService.PAGES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.MENUS_PUBLIC_PREFIX + "disabled-routes");
         redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
         auditLogService.recordAction("CREATE", "pages", String.valueOf(saved.getId()), saved.getTitle(), null);
         log.info("Successfully created CMS page id={}", saved.getId());
@@ -186,6 +187,7 @@ public class PageServiceImpl implements PageService {
 
         PageEntity updated = pageRepository.save(entity);
         redisCacheService.evictByPrefix(RedisCacheService.PAGES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.MENUS_PUBLIC_PREFIX + "disabled-routes");
         redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
         List<Map<String, Object>> diffs = new ArrayList<>();
         AuditLogService.appendDiff(diffs, "title", "Page Title", oldTitle, updated.getTitle());
@@ -208,6 +210,7 @@ public class PageServiceImpl implements PageService {
         entity.setIsDeleted(true);
         pageRepository.save(entity);
         redisCacheService.evictByPrefix(RedisCacheService.PAGES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.MENUS_PUBLIC_PREFIX + "disabled-routes");
         redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
         auditLogService.recordAction("DELETE", "pages", String.valueOf(id), deletedTitle, null);
         log.info("Successfully deleted CMS page id={}", id);
@@ -219,6 +222,7 @@ public class PageServiceImpl implements PageService {
         com.heygoodly.portal.common.util.SortOrderUtils.reorderEntities(
                 orderedIds, pageRepository, PageEntity::getId, PageEntity::setSortOrder);
         redisCacheService.evictByPrefix(RedisCacheService.PAGES_PUBLIC_PREFIX);
+        redisCacheService.evict(RedisCacheService.MENUS_PUBLIC_PREFIX + "disabled-routes");
         redisCacheService.evict(RedisCacheService.DASHBOARD_STATS_KEY);
     }
 }

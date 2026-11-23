@@ -57,6 +57,28 @@ export interface DashboardStats {
   chart7d?: Array<{ date: string; clicks: number; conversions: number }>;
   chart30d?: Array<{ date: string; clicks: number; conversions: number }>;
   chart90d?: Array<{ date: string; clicks: number; conversions: number }>;
+  clickSources?: Array<{
+    source: string;
+    label: string;
+    clicks: number;
+    clicks30d: number;
+    sharePercent: number;
+  }>;
+  topConvertingPosts?: Array<{
+    postId?: number;
+    slug: string;
+    title: string;
+    clicks: number;
+    clicks30d: number;
+    views: number;
+    ctrPercent: number;
+  }>;
+  topSubIds?: Array<{
+    subid: string;
+    source: string;
+    clicks: number;
+    clicks30d: number;
+  }>;
 }
 
 type StatsListener = (stats: DashboardStats) => void;

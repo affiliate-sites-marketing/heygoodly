@@ -76,28 +76,28 @@ export default function MediaTagInput({
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-          <Tag size={13} className="text-brand-primary" />
-          <span>{t(label)}</span>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5 min-w-0">
+          <Tag size={13} className="text-brand-primary shrink-0" />
+          <span className="truncate">{t(label)}</span>
           {required && (
-            <span className="text-[10px] font-black uppercase text-brand-primary bg-rose-50 border border-rose-200/80 px-1.5 py-0.2 rounded">
+            <span className="text-[10px] font-black uppercase text-brand-primary bg-rose-50 border border-rose-200/80 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
               {t('Required')}
             </span>
           )}
         </label>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <Link
             href={ROUTES.ADMIN.TAGS}
             target="_blank"
-            className="text-[11px] font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 hover:underline"
+            className="text-[11px] font-bold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1 hover:underline whitespace-nowrap shrink-0"
             title={t('Open Tag Management in new tab')}
           >
-            <Hash size={11} />
+            <Hash size={11} className="shrink-0" />
             <span>{t('Manage Tags')}</span>
-            <ExternalLink size={10} />
+            <ExternalLink size={10} className="shrink-0" />
           </Link>
-          <span className="text-[11px] font-semibold text-slate-400">
+          <span className="text-[11px] font-semibold text-slate-400 whitespace-nowrap shrink-0">
             {t('Added:')} <strong className="text-slate-700">{tags.length}</strong> {tags.length === 1 ? t('tag') : t('tags')}
           </span>
         </div>

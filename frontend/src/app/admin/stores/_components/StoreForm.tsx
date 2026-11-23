@@ -14,6 +14,7 @@ import AdminFormPage, {
   inputClass,
   labelClass,
 } from '@/components/admin/AdminFormPage';
+import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import { ROUTES } from '@/constants/routes';
 import { SITE_DOMAIN, SITE_NAME, SITE_SLUG } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
@@ -29,6 +30,7 @@ import { storeTemplateService } from '@/services/storeTemplateService';
 import { type AdminStore } from '../_lib/data';
 import { StoreCustomerReview, StoreRatingBreakdown } from '@/types/deals';
 import StoreCustomerReviewsSection from '@/components/store/StoreCustomerReviewsSection';
+import StoreLogoFrame from '@/components/store/StoreLogoFrame';
 import ReviewerPicker from './ReviewerPicker';
 import ReviewLibraryModal from './ReviewLibraryModal';
 import FaqLibraryModal from './FaqLibraryModal';
@@ -132,7 +134,7 @@ export default function StoreForm({ id }: { id?: string }) {
             isActive: data.isActive !== false,
             clicks: Number(data.afVisitCount ?? 0),
             tags: Array.isArray(data.tags) ? data.tags : [],
-            sortOrder: Number(data.sortOrder ?? 9999),
+            sortOrder: Number(data.sortOrder ?? 0),
           };
           setStoreData(mapped);
         }
@@ -186,7 +188,7 @@ export default function StoreForm({ id }: { id?: string }) {
       isFeatured: storeData.isFeatured,
       isActive: storeData.isActive,
       tags: storeData.tags || [],
-      sortOrder: storeData.sortOrder ?? 9999,
+      sortOrder: storeData.sortOrder ?? 0,
     }
     : {
       name: '',
@@ -215,7 +217,7 @@ export default function StoreForm({ id }: { id?: string }) {
       isFeatured: false,
       isActive: true,
       tags: [],
-      sortOrder: 9999,
+      sortOrder: 0,
     };
 
   return <StoreFormInner key={storeData?.id ?? 'new'} id={id} existing={storeData ?? undefined} initial={initial} />;
@@ -548,6 +550,24 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
     const cleanSlug = toCleanSlug(form.slug.trim() || trimmedName);
     if (trimmedName && !cleanSlug) {
       nextErrors.slug = t('URL Slug must contain letters or numbers (e.g. dutch-vet).');
+    } else if (cleanSlug.length > 150) {
+      nextErrors.slug = t('URL Slug must not exceed 150 characters.');
+    }
+
+    if (form.shortDescription && form.shortDescription.trim().length > 500) {
+      nextErrors.shortDescription = t('Short description must not exceed 500 characters.');
+    }
+
+    if (form.logoUrl && form.logoUrl.startsWith('data:')) {
+      nextErrors.logoUrl = t('Logo image failed to upload to server. Please re-upload or select from Media Library.');
+    } else if (form.logoUrl && form.logoUrl.length > 500) {
+      nextErrors.logoUrl = t('Logo URL must not exceed 500 characters.');
+    }
+
+    if (form.bannerUrl && form.bannerUrl.startsWith('data:')) {
+      nextErrors.bannerUrl = t('Banner image failed to upload to server. Please re-upload or select from Media Library.');
+    } else if (form.bannerUrl && form.bannerUrl.length > 500) {
+      nextErrors.bannerUrl = t('Banner URL must not exceed 500 characters.');
     }
 
     // Resolve affiliate URL (fall back to domain if user pasted full URL into domain)
@@ -624,7 +644,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
       isActive: form.isActive,
       isSearchable: true,
       isFeatured: form.isFeatured,
-      sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 9999,
+      sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
       popularSearches:
         parsedPopularSearches.length > 0
           ? parsedPopularSearches
@@ -684,8 +704,8 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
 
       const errCode = err?.response?.data?.code;
       const msg = err?.response?.data?.message || err?.message || t('Failed to save store.');
-      if (errCode === 'DUPLICATE_RESOURCE' || /slug/i.test(msg)) {
-        mappedErrors.slug = msg;
+      if (errCode === 'DUPLICATE_RESOURCE' || errCode === 'RESOURCE_CONFLICT' || /slug/i.test(msg)) {
+        if (!mappedErrors.slug) mappedErrors.slug = msg;
       }
 
       if (Object.keys(mappedErrors).length > 0) {
@@ -694,40 +714,47 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
         const fieldNames = Object.keys(mappedErrors)
           .map((k) => t(STORE_FIELD_LABELS[k] || k))
           .join(', ');
-        toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
+        toast.error(`${t('Please check required fields')}: ${fieldNames}`, mappedErrors[firstKey]);
         scrollToField(firstKey);
       } else {
-        toast.error(msg);
+        setErrors({ _form: msg });
+        toast.error(t('Failed to save store.'), msg);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
   };
 
+  const liveStoreSlug = toCleanSlug(form.slug.trim() || form.name.trim());
+
   const headerActions = (
-    <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold mr-2">
-      <button
-        type="button"
-        onClick={() => setActiveTab('edit')}
-        className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
-          activeTab === 'edit'
-            ? 'bg-white text-slate-900 shadow-2xs'
-            : 'text-slate-600 hover:text-slate-900'
-        }`}
-      >
-        <Edit2 size={13} />
-        <span>Editor</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => setActiveTab('preview')}
-        className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
-          activeTab === 'preview'
-            ? 'bg-brand-primary text-white shadow-2xs'
-            : 'text-slate-600 hover:text-slate-900'
-        }`}
-      >
-        <Eye size={13} />
-        <span>Live Preview</span>
-      </button>
+    <div className="flex items-center gap-2 mr-1">
+      <CopyPublicLinkButton path={liveStoreSlug ? `/store/${liveStoreSlug}` : ''} disabled={!liveStoreSlug} />
+      <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setActiveTab('edit')}
+          className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'edit'
+              ? 'bg-white text-slate-900 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Edit2 size={13} />
+          <span>Editor</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('preview')}
+          className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'preview'
+              ? 'bg-brand-primary text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Eye size={13} />
+          <span>Live Preview</span>
+        </button>
+      </div>
     </div>
   );
 
@@ -1880,20 +1907,13 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
 
                       <div className={`${isDesktop ? 'p-5' : 'p-3.5'} ${form.bannerUrl && isDesktop ? '-mt-11 pt-0 relative z-10' : ''} space-y-3`}>
                         <div className={isDesktop ? 'space-y-2.5' : 'flex items-center gap-3'}>
-                          <div
-                            className={`${
-                              isDesktop ? 'w-20 h-20 mx-auto rounded-2xl' : 'w-12 h-12 rounded-xl'
-                            } overflow-hidden flex items-center justify-center shadow-md border-2 border-white bg-slate-900 text-white shrink-0`}
-                          >
-                            {form.logoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={form.logoUrl} alt={displayStoreName} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className={`font-black ${isDesktop ? 'text-2xl' : 'text-sm'}`}>
-                                {displayStoreName.substring(0, 2).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
+                          <StoreLogoFrame
+                            src={form.logoUrl}
+                            name={displayStoreName}
+                            className={isDesktop ? 'w-40 h-20 mx-auto rounded-2xl shadow-sm' : 'w-20 h-12 rounded-xl shadow-sm'}
+                            paddingClassName={isDesktop ? 'p-2' : 'p-1.5'}
+                            fallbackTextClassName={isDesktop ? 'text-2xl' : 'text-sm'}
+                          />
                           <div className="min-w-0 flex-1 space-y-0.5">
                             <h1 className={`font-black text-slate-950 ${isDesktop ? 'text-lg' : 'text-base truncate'}`}>
                               {displayStoreName}

@@ -17,6 +17,8 @@ import {
   ArrowUpRight,
   Activity,
   Layers,
+  Compass,
+  Link2,
 } from 'lucide-react';
 import { Card, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -37,6 +39,7 @@ import {
 
 export default function AdminDashboardPage() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [attributionTab, setAttributionTab] = useState<'articles' | 'subids'>('articles');
   const [liveStats, setLiveStats] = useState<DashboardStats | null>(() => dashboardService.getCachedStats());
   const { t } = useAdminI18n();
   const { isDark } = useTheme();
@@ -530,6 +533,181 @@ export default function AdminDashboardPage() {
           </div>
         </Card>
 
+      </div>
+
+      {/* 5.5 Affiliate Click Attribution by Source (utm_source / subid) & Top Converting Articles */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left 5 Cols: Click Sources Breakdown */}
+        <Card className="lg:col-span-5 p-6 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <Compass size={18} className="text-indigo-500" />
+                <CardTitle>{t('Click Attribution by Source')}</CardTitle>
+              </div>
+              <CardDescription>{t('Breakdown of outbound clicks by source page (Store, Review, Homepage)')}</CardDescription>
+            </div>
+            <Badge variant="secondary" className="text-[10px] font-mono shrink-0">utm_source</Badge>
+          </div>
+
+          {liveStats?.clickSources && liveStats.clickSources.length > 0 ? (
+            <div className="space-y-3.5 pt-1">
+              {liveStats.clickSources.map((src) => {
+                const barColors: Record<string, string> = {
+                  store_page: 'bg-emerald-500',
+                  review_article: 'bg-indigo-500',
+                  homepage: 'bg-amber-500',
+                  category_page: 'bg-sky-500',
+                  search_page: 'bg-violet-500',
+                  coupon_popup: 'bg-rose-500',
+                  direct: 'bg-slate-400',
+                };
+                const barClass = barColors[src.source] || 'bg-brand-primary';
+                return (
+                  <div key={src.source} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${barClass}`} />
+                        <span className="font-bold text-zinc-900 truncate">{t(src.label)}</span>
+                        <span className="text-[10px] font-mono text-zinc-400 hidden sm:inline">({src.source})</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono font-bold text-zinc-900">
+                          {Number(src.clicks || 0).toLocaleString()}
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md tabular-nums">
+                          {Number(src.sharePercent || 0).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-zinc-100 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${barClass}`}
+                        style={{ width: `${Math.min(100, Math.max(2, Number(src.sharePercent || 0)))}%` }}
+                      />
+                    </div>
+                    <div className="text-[10px] text-zinc-400 flex justify-between">
+                      <span>{t('Last 30 days')}: <strong className="text-zinc-600">{Number(src.clicks30d || 0).toLocaleString()}</strong></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-10 text-center space-y-1.5 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/40">
+              <p className="text-xs font-semibold text-zinc-600">{t('No attributed clicks recorded yet.')}</p>
+              <p className="text-[11px] text-zinc-400 max-w-xs mx-auto">
+                {t('Outbound clicks from Store pages, Review articles, and Homepage are tracked automatically.')}
+              </p>
+            </div>
+          )}
+        </Card>
+
+        {/* Right 7 Cols: Top Converting Articles & Top SubIDs */}
+        <Card className="lg:col-span-7 p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Link2 size={18} className="text-brand-primary" />
+                <CardTitle>{t('Top Converting Articles & SubIDs')}</CardTitle>
+              </div>
+              <CardDescription>{t('Track which review articles and subid placements generate the most affiliate clicks')}</CardDescription>
+            </div>
+
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-zinc-100 border border-zinc-200 text-xs">
+              <button
+                type="button"
+                onClick={() => setAttributionTab('articles')}
+                className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                  attributionTab === 'articles'
+                    ? 'bg-white text-zinc-900 shadow-2xs'
+                    : 'text-zinc-500 hover:text-zinc-900'
+                }`}
+              >
+                {t('Top Articles')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAttributionTab('subids')}
+                className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                  attributionTab === 'subids'
+                    ? 'bg-white text-zinc-900 shadow-2xs'
+                    : 'text-zinc-500 hover:text-zinc-900'
+                }`}
+              >
+                {t('Top SubIDs')}
+              </button>
+            </div>
+          </div>
+
+          {attributionTab === 'articles' ? (
+            liveStats?.topConvertingPosts && liveStats.topConvertingPosts.length > 0 ? (
+              <div className="divide-y divide-zinc-100">
+                {liveStats.topConvertingPosts.map((art, idx) => (
+                  <div key={art.slug} className="py-3 flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-mono text-zinc-400 font-bold w-4 text-center shrink-0">{idx + 1}</span>
+                      <div className="min-w-0">
+                        <p className="font-bold text-zinc-900 truncate">{art.title}</p>
+                        <p className="text-[11px] font-mono text-zinc-400 truncate">/post/{art.slug}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 space-y-0.5">
+                      <p className="font-mono font-bold text-zinc-900 text-sm">
+                        {Number(art.clicks || 0).toLocaleString()}{' '}
+                        <span className="text-[11px] font-normal text-zinc-400">clicks</span>
+                      </p>
+                      <p className="text-[11px] text-emerald-600 font-semibold">
+                        CTR: {Number(art.ctrPercent || 0).toFixed(1)}% • 30d: {Number(art.clicks30d || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-10 text-center space-y-1.5 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/40">
+                <p className="text-xs font-semibold text-zinc-600">{t('No review article clicks recorded yet.')}</p>
+                <p className="text-[11px] text-zinc-400">
+                  {t('Clicks from /post/[slug] links will appear here with conversion CTR.')}
+                </p>
+              </div>
+            )
+          ) : liveStats?.topSubIds && liveStats.topSubIds.length > 0 ? (
+            <div className="divide-y divide-zinc-100">
+              {liveStats.topSubIds.map((item, idx) => (
+                <div key={`${item.subid}-${item.source}`} className="py-3 flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="font-mono text-zinc-400 font-bold w-4 text-center shrink-0">{idx + 1}</span>
+                    <div className="min-w-0 flex items-center gap-2">
+                      <span className="font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md truncate">
+                        {item.subid}
+                      </span>
+                      <span className="text-[10px] font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full shrink-0">
+                        {item.source}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-mono font-bold text-zinc-900 text-sm">
+                      {Number(item.clicks || 0).toLocaleString()}{' '}
+                      <span className="text-[11px] font-normal text-zinc-400">clicks</span>
+                    </p>
+                    <p className="text-[10px] text-zinc-400">
+                      30d: {Number(item.clicks30d || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-10 text-center space-y-1.5 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/40">
+              <p className="text-xs font-semibold text-zinc-600">{t('No SubID click tags recorded yet.')}</p>
+              <p className="text-[11px] text-zinc-400">
+                {t('SubID & utm_content parameters are automatically attached to every coupon and deal button.')}
+              </p>
+            </div>
+          )}
+        </Card>
       </div>
 
       {/* 6. Operational Audit Trail */}

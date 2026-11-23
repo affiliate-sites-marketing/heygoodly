@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { copyToClipboard } from '@/lib/utils/clipboard';
+import { appendAffiliateTracking } from '@/lib/deals/affiliateAction';
 
 export interface CouponModalOffer {
   id: string;
@@ -56,9 +57,13 @@ export default function CouponModal({
   };
 
   const storeInitials = offer.storeName.substring(0, 2).toUpperCase();
-  const affiliateDestination =
+  const rawAffiliateDestination =
     offer.affiliateUrl ||
-    `${ROUTES.PUBLIC.GO_AFFILIATE(offer.storeSlug)}?offer=${offer.id}`;
+    (offer.id ? ROUTES.PUBLIC.OUT_OFFER(offer.id) : ROUTES.PUBLIC.GO_AFFILIATE(offer.storeSlug));
+  const affiliateDestination = appendAffiliateTracking(rawAffiliateDestination, {
+    medium: 'coupon_modal',
+    subid: offer.code ? `${offer.storeSlug}_${offer.code}` : `${offer.storeSlug}_offer_${offer.id}`,
+  });
 
   return (
     <div

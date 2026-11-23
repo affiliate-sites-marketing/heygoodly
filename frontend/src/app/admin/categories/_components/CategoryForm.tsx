@@ -17,6 +17,7 @@ import AdminFormPage, {
   scrollToFormField,
   toValidSlug,
 } from '@/components/admin/AdminFormPage';
+import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import { ROUTES } from '@/constants/routes';
 import { SITE_DOMAIN } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
@@ -56,7 +57,7 @@ export default function CategoryForm({ id }: { id?: string }) {
             slug: data.slug || '',
             description: data.description || '',
             articlesCount: Number(data.postCount || 0),
-            sortOrder: Number(data.sortOrder || 1),
+            sortOrder: Number(data.sortOrder ?? 0),
             isActive: data.isActive !== false,
             imageUrl: data.image || data.imageUrl || '',
           });
@@ -93,7 +94,7 @@ export default function CategoryForm({ id }: { id?: string }) {
         imageUrl: existing.imageUrl || '',
         isActive: existing.isActive,
       }
-    : { name: '', slug: '', description: '', sortOrder: 1, imageUrl: '', isActive: true };
+    : { name: '', slug: '', description: '', sortOrder: 0, imageUrl: '', isActive: true };
 
   return <CategoryFormInner key={id ?? 'new'} existing={existing} initial={initial} />;
 }
@@ -167,10 +168,19 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
     const fieldErrors: Record<string, string> = {};
     if (!form.name.trim()) {
       fieldErrors.name = t('Category name is required');
+    } else if (form.name.trim().length > 150) {
+      fieldErrors.name = t('Category name must not exceed 150 characters.');
     }
     const cleanSlug = toValidSlug(form.slug.trim() || form.name);
     if (form.name.trim() && !cleanSlug) {
       fieldErrors.slug = t('URL Slug must contain letters or numbers (e.g. tech).');
+    } else if (cleanSlug.length > 160) {
+      fieldErrors.slug = t('URL Slug must not exceed 160 characters.');
+    }
+    if (form.imageUrl && form.imageUrl.trim().startsWith('data:')) {
+      fieldErrors.imageUrl = t('Image cannot be a raw base64 string — please upload via the Upload button.');
+    } else if (form.imageUrl && form.imageUrl.trim().length > 500) {
+      fieldErrors.imageUrl = t('Image URL must not exceed 500 characters.');
     }
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors);
@@ -219,40 +229,46 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
         toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
         scrollToFormField(firstKey);
       } else {
+        setErrors({ _form: msg });
         toast.error(msg);
       }
     }
   };
 
+  const liveCategorySlug = toValidSlug(form.slug.trim() || form.name.trim());
+
   const headerActions = (
-    <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold mr-2">
-      <button
-        type="button"
-        onClick={() => setActiveTab('edit')}
-        className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
-          activeTab === 'edit'
-            ? 'bg-white text-slate-900 shadow-2xs'
-            : 'text-slate-600 hover:text-slate-900'
-        }`}
-      >
-        <Edit2 size={13} />
-        <span>Editor</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setActiveTab('preview');
-          loadCategoryArticlesOnDemand();
-        }}
-        className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
-          activeTab === 'preview'
-            ? 'bg-brand-primary text-white shadow-2xs'
-            : 'text-slate-600 hover:text-slate-900'
-        }`}
-      >
-        <Eye size={13} />
-        <span>Live Preview</span>
-      </button>
+    <div className="flex items-center gap-2 mr-1">
+      <CopyPublicLinkButton path={liveCategorySlug ? `/category/${liveCategorySlug}` : ''} disabled={!liveCategorySlug} />
+      <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setActiveTab('edit')}
+          className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'edit'
+              ? 'bg-white text-slate-900 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Edit2 size={13} />
+          <span>Editor</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('preview');
+            loadCategoryArticlesOnDemand();
+          }}
+          className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'preview'
+              ? 'bg-brand-primary text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Eye size={13} />
+          <span>Live Preview</span>
+        </button>
+      </div>
     </div>
   );
 
@@ -269,6 +285,12 @@ function CategoryFormInner({ existing, initial }: { existing?: CategoryData; ini
     >
       {activeTab === 'edit' ? (
         <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+          {errors._form && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
+              <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
+              <span className="leading-relaxed">{errors._form}</span>
+            </div>
+          )}
           <FormQuickGuide
             title="Quick Category Setup"
             description="Only Category Name (*) is required. URL Slug is generated automatically from the category name; Banner Image and Editorial Description are optional."

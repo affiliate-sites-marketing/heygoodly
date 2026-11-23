@@ -13,15 +13,15 @@ import java.util.List;
 
 @Repository
 public interface OfferRepository extends JpaRepository<OfferEntity, Long>, JpaSpecificationExecutor<OfferEntity> {
-    List<OfferEntity> findByStoreIdAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDesc(Long storeId);
+    List<OfferEntity> findByStoreIdAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc(Long storeId);
 
-    @Query("SELECT o FROM OfferEntity o WHERE o.storeId = :storeId AND o.isActive = true AND o.isDeleted = false AND o.isVerified = true ORDER BY o.sortOrder ASC")
+    @Query("SELECT o FROM OfferEntity o WHERE o.storeId = :storeId AND o.isActive = true AND o.isDeleted = false AND o.isVerified = true ORDER BY o.sortOrder ASC, o.createdAt DESC, o.id DESC")
     List<OfferEntity> findVerifiedByStoreId(@Param("storeId") Long storeId);
 
-    @Query("SELECT o FROM OfferEntity o WHERE o.storeId = :storeId AND o.isActive = true AND o.isDeleted = false AND o.code IS NOT NULL AND o.code <> '' ORDER BY o.sortOrder ASC")
+    @Query("SELECT o FROM OfferEntity o WHERE o.storeId = :storeId AND o.isActive = true AND o.isDeleted = false AND o.code IS NOT NULL AND o.code <> '' ORDER BY o.sortOrder ASC, o.createdAt DESC, o.id DESC")
     List<OfferEntity> findCodesByStoreId(@Param("storeId") Long storeId);
 
-    @Query("SELECT o FROM OfferEntity o WHERE o.storeId = :storeId AND o.isActive = true AND o.isDeleted = false AND (o.code IS NULL OR o.code = '') ORDER BY o.sortOrder ASC")
+    @Query("SELECT o FROM OfferEntity o WHERE o.storeId = :storeId AND o.isActive = true AND o.isDeleted = false AND (o.code IS NULL OR o.code = '') ORDER BY o.sortOrder ASC, o.createdAt DESC, o.id DESC")
     List<OfferEntity> findDealsByStoreId(@Param("storeId") Long storeId);
 
     long countByStoreIdAndIsActiveTrueAndIsDeletedFalse(Long storeId);

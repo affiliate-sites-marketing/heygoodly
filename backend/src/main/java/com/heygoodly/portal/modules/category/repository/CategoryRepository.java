@@ -16,9 +16,9 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, Long>,
     List<CategoryEntity> findBySlugInAndIsDeletedFalse(java.util.Collection<String> slugs);
     boolean existsBySlugAndIsDeletedFalse(String slug);
     boolean existsBySlugAndIdNotAndIsDeletedFalse(String slug, Long id);
-    List<CategoryEntity> findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
-    List<CategoryEntity> findByTypeAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc(String type);
-    List<CategoryEntity> findByShowOnHomeTrueAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+    List<CategoryEntity> findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc();
+    List<CategoryEntity> findByTypeAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc(String type);
+    List<CategoryEntity> findByShowOnHomeTrueAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc();
     long countByIsDeletedFalse();
     long countByIsActiveTrueAndIsDeletedFalse();
 }

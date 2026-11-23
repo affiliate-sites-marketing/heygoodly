@@ -24,4 +24,9 @@ public class MenuPublicController {
             @RequestParam(value = "position", required = false, defaultValue = "main") String position) {
         return ResponseEntity.ok(ApiResponse.success(menuService.getPublicMenus(position)));
     }
+
+    @GetMapping("/disabled-routes")
+    public ResponseEntity<ApiResponse<List<String>>> getDisabledRoutes() {
+        return ResponseEntity.ok(ApiResponse.success(menuService.getDisabledMenuRoutes()));
+    }
 }

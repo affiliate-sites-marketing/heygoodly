@@ -306,13 +306,13 @@ export default function StoreOrderMatrixModal({
 
                     {/* Store Logo + Name */}
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-11 h-11 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">
+                      <div className="w-12 h-11 rounded-xl border border-slate-200 bg-white p-1 overflow-hidden flex items-center justify-center shrink-0">
                         {store.logo ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={store.logo}
                             alt={store.name}
-                            className="w-full h-full object-cover pointer-events-none"
+                            className="max-w-full max-h-full w-auto h-auto object-contain pointer-events-none"
                           />
                         ) : (
                           <span className="font-black text-xs text-slate-700">

@@ -70,7 +70,7 @@ public class OfferServiceImpl implements OfferService {
                     }
 
                     List<OfferEntity> offers = offerRepository
-                            .findByStoreIdAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDesc(store.getId());
+                            .findByStoreIdAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc(store.getId());
 
                     List<Long> offerIds = offers.stream().map(OfferEntity::getId).toList();
                     Map<Long, Long> clicksMap = offerIds.isEmpty() ? Map.of() :

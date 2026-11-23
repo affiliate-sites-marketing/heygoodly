@@ -16,6 +16,7 @@ interface ThemeContextValue {
 }
 
 const STORAGE_KEY = `${SITE_SLUG}:theme`;
+const COOKIE_KEY = `${SITE_SLUG}_theme`;
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: 'light',
@@ -36,19 +37,26 @@ function applyThemeToDocument(mode: ThemeMode) {
     root.setAttribute('data-theme', 'light');
     root.style.colorScheme = 'light';
   }
+  try {
+    document.cookie = `${COOKIE_KEY}=${mode}; path=/; max-age=31536000; SameSite=Lax`;
+  } catch {
+    // ignore cookie errors
+  }
 }
 
 export function ThemeProvider({
   children,
   initialSettings,
+  initialTheme = 'light',
 }: {
   children: React.ReactNode;
   initialSettings?: Record<string, string>;
+  initialTheme?: ThemeMode;
 }) {
   hydrateSiteSettingsFromServer(initialSettings);
 
-  const [theme, setThemeState] = useState<ThemeMode>('light');
-  const themeRef = useRef<ThemeMode>('light');
+  const [theme, setThemeState] = useState<ThemeMode>(initialTheme);
+  const themeRef = useRef<ThemeMode>(initialTheme);
   const { settings } = useSiteSettings();
 
   useEffect(() => {

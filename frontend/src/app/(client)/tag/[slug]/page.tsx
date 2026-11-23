@@ -9,6 +9,7 @@ import storeService, { extractPlainTextExcerpt } from '@/services/storeService';
 import tagService, { type TagItem } from '@/services/tagService';
 import Pagination from '@/components/admin/Pagination';
 import ArticleCard from '@/components/deals/ArticleCard';
+import StoreLogoFrame from '@/components/store/StoreLogoFrame';
 import {
   ChevronRight,
   ArrowRight,
@@ -342,21 +343,13 @@ export default function TagArchivePage({ params }: TagPageProps) {
                   className="bg-white border border-slate-200 hover:border-brand-primary rounded-2xl p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 group"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center overflow-hidden shrink-0 border border-slate-100">
-                      {store.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={store.logoUrl}
-                          alt={store.name}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span className="font-black text-base">
-                          {store.name.substring(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
+                    <StoreLogoFrame
+                      src={store.logoUrl}
+                      name={store.name}
+                      className="w-14 h-12 rounded-xl"
+                      paddingClassName="p-1.5"
+                      fallbackTextClassName="text-base"
+                    />
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block truncate">
                         {store.category}

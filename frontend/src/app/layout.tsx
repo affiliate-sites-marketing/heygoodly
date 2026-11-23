@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { Inter, Newsreader } from 'next/font/google';
 import './globals.css';
 import QueryProvider from '@/components/providers/QueryProvider';
@@ -73,8 +74,18 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       siteName,
       locale: 'en_US',
+      alternateLocale: ['en_CA', 'en_GB'],
       type: 'website',
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630, alt: title }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+    other: {
+      'pinterest-rich-pin': 'true',
     },
   };
 }
@@ -84,7 +95,11 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const map = await fetchPublicSettingsMap();
+  const [map, cookieStore] = await Promise.all([
+    fetchPublicSettingsMap(),
+    cookies(),
+  ]);
+  const isDarkTheme = cookieStore.get(`${SITE_SLUG}_theme`)?.value === 'dark';
   const customHeadNodes = parseCustomHeadHtml(map.custom_head_code);
   const brandPalette = resolveBrandPalette(
     map.brand_theme_preset,
@@ -96,19 +111,16 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${newsreader.variable}`}
-      style={getBrandCssVariablesStyle(brandPalette)}
+      data-theme={isDarkTheme ? 'dark' : 'light'}
+      className={`${inter.variable} ${newsreader.variable}${isDarkTheme ? ' dark' : ''}`}
+      style={{
+        ...getBrandCssVariablesStyle(brandPalette),
+        colorScheme: isDarkTheme ? 'dark' : 'light',
+      }}
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var m=localStorage.getItem('${SITE_SLUG}:theme');if(m==='dark'){document.documentElement.classList.add('dark');document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark';}}catch(e){}`,
-          }}
-        />
-        {customHeadNodes}
-      </head>
       <body className={`${inter.className} min-h-screen bg-[#F8F8F6] text-[#171717] antialiased selection:bg-brand-primary selection:text-white transition-colors duration-200`}>
-        <ThemeProvider initialSettings={map}>
+        {customHeadNodes}
+        <ThemeProvider initialSettings={map} initialTheme={isDarkTheme ? 'dark' : 'light'}>
           <QueryProvider>
             {children}
           </QueryProvider>

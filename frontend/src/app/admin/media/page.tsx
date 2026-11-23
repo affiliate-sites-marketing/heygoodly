@@ -165,6 +165,34 @@ export default function AdminMediaPage() {
     if (file) handleStageFile(file);
   };
 
+  // Global clipboard paste listener on Media Library page (Cmd+V / Ctrl+V to upload copied image)
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if (showUploadModal) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const blob = item.getAsFile();
+          if (blob) {
+            e.preventDefault();
+            const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+            const namedFile = new File(
+              [blob],
+              blob.name && blob.name !== 'image.png' ? blob.name : `pasted-image-${Date.now()}.${ext}`,
+              { type: blob.type || 'image/png' }
+            );
+            handleStageFile(namedFile);
+            return;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  });
+
   // Step 2: Confirm upload with mandatory tags to PostgreSQL & MinIO / storage
   const handleConfirmUpload = async () => {
     if (!stagedFile) return;

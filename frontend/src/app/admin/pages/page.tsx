@@ -81,7 +81,7 @@ export default function AdminPagesPage() {
       metaTitle: p.title || '',
       metaDescription: '',
       updatedAt: p.updatedAt ? new Date(p.updatedAt).toISOString().slice(0, 10) : '2026-10-31',
-      sortOrder: Number(p.sortOrder || 1),
+      sortOrder: Number(p.sortOrder ?? 0),
       isActive: Boolean(p.isActive),
     }),
     fallbackItems: [],

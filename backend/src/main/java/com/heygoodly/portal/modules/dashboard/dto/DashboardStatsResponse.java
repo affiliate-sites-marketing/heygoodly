@@ -47,6 +47,50 @@ public class DashboardStatsResponse {
     private List<ChartPointDto> chart30d;
     private List<ChartPointDto> chart90d;
 
+    private List<ClickSourceSummaryDto> clickSources;
+    private List<TopConvertingPostDto> topConvertingPosts;
+    private List<SubIdSummaryDto> topSubIds;
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ClickSourceSummaryDto {
+        private String source;
+        private String label;
+        private Long clicks;
+        private Long clicks30d;
+        private Double sharePercent;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TopConvertingPostDto {
+        private Long postId;
+        private String slug;
+        private String title;
+        private Long clicks;
+        private Long clicks30d;
+        private Long views;
+        private Double ctrPercent;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SubIdSummaryDto {
+        private String subid;
+        private String source;
+        private Long clicks;
+        private Long clicks30d;
+    }
+
     @Getter
     @Setter
     @Builder

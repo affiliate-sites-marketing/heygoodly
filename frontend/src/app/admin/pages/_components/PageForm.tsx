@@ -13,6 +13,7 @@ import AdminFormPage, {
   scrollToFormField,
   toValidSlug,
 } from '@/components/admin/AdminFormPage';
+import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import { ROUTES } from '@/constants/routes';
 import { SITE_DOMAIN } from '@/constants/site';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
@@ -60,7 +61,7 @@ export default function PageForm({ id }: { id?: string }) {
             content: data.content || '',
             metaTitle: data.metaTitle || `${data.title} - HeyGoodly`,
             metaDescription: data.metaDescription || `Read about ${data.title} on HeyGoodly.`,
-            sortOrder: Number(data.sortOrder || 1),
+            sortOrder: Number(data.sortOrder ?? 0),
             isActive: data.isActive !== false,
             updatedAt: data.updatedAt ? new Date(data.updatedAt).toLocaleDateString() : 'Today',
           });
@@ -104,7 +105,7 @@ export default function PageForm({ id }: { id?: string }) {
         content: '',
         metaTitle: '',
         metaDescription: '',
-        sortOrder: 1,
+        sortOrder: 0,
         isActive: true,
       };
 
@@ -134,10 +135,14 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
     const nextErrors: Record<string, string> = {};
     if (!form.title.trim()) {
       nextErrors.title = t('Please enter the Page Title.');
+    } else if (form.title.trim().length > 200) {
+      nextErrors.title = t('Page Title must not exceed 200 characters.');
     }
     const cleanSlug = toValidSlug(form.slug.trim() || form.title);
     if (form.title.trim() && !cleanSlug) {
       nextErrors.slug = t('URL Slug must contain letters or numbers.');
+    } else if (cleanSlug.length > 160) {
+      nextErrors.slug = t('URL Slug must not exceed 160 characters.');
     }
     const strippedContent = (form.content || '').replace(/<[^>]*>/g, '').trim();
     if (!strippedContent) {
@@ -191,37 +196,43 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
         toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
         scrollToFormField(firstKey);
       } else {
+        setErrors({ _form: msg });
         toast.error(msg);
       }
     }
   };
 
+  const livePageSlug = toValidSlug(form.slug.trim() || form.title.trim());
+
   const headerActions = (
-    <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold mr-2">
-      <button
-        type="button"
-        onClick={() => setActiveTab('edit')}
-        className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
-          activeTab === 'edit'
-            ? 'bg-white text-slate-900 shadow-2xs'
-            : 'text-slate-600 hover:text-slate-900'
-        }`}
-      >
-        <Edit2 size={13} />
-        <span>Editor</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => setActiveTab('preview')}
-        className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
-          activeTab === 'preview'
-            ? 'bg-[#2b579a] text-white shadow-2xs'
-            : 'text-slate-600 hover:text-slate-900'
-        }`}
-      >
-        <Eye size={13} />
-        <span>Live Preview</span>
-      </button>
+    <div className="flex items-center gap-2 mr-1">
+      <CopyPublicLinkButton path={livePageSlug ? `/${livePageSlug}` : ''} disabled={!livePageSlug} />
+      <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setActiveTab('edit')}
+          className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'edit'
+              ? 'bg-white text-slate-900 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Edit2 size={13} />
+          <span>Editor</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('preview')}
+          className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'preview'
+              ? 'bg-[#2b579a] text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Eye size={13} />
+          <span>Live Preview</span>
+        </button>
+      </div>
     </div>
   );
 
@@ -238,6 +249,12 @@ function PageFormInner({ existing, initial }: { existing?: StaticPageData; initi
     >
       {activeTab === 'edit' ? (
         <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+          {errors._form && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
+              <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
+              <span className="leading-relaxed">{errors._form}</span>
+            </div>
+          )}
           <FormQuickGuide
             title="Quick Static Page Setup"
             description="Only Page Title (*) and Document Content (*) are required. URL Slug and SEO Meta Title are generated automatically from the Page Title."

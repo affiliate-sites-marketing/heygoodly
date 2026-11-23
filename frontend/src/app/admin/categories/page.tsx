@@ -68,7 +68,7 @@ export default function AdminCategoriesPage() {
       slug: c.slug || '',
       description: c.description || '',
       articlesCount: Number(c.postCount ?? c.articlesCount ?? 0),
-      sortOrder: Number(c.sortOrder || 1),
+      sortOrder: Number(c.sortOrder ?? 0),
       isActive: c.isActive !== false,
       imageUrl: c.image || c.imageUrl || '',
     }),

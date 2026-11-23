@@ -68,12 +68,12 @@ public class CategoryServiceImpl implements CategoryService {
                 java.time.Duration.ofMinutes(3),
                 () -> {
                     if (TYPE_ALL.equalsIgnoreCase(queryType)) {
-                        List<CategoryEntity> allActive = categoryRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+                        List<CategoryEntity> allActive = categoryRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc();
                         return mapToResponseList(allActive);
                     }
 
                     if (TYPE_STORE.equalsIgnoreCase(queryType)) {
-                        List<CategoryEntity> allActive = categoryRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+                        List<CategoryEntity> allActive = categoryRepository.findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc();
                         List<CategoryResponse> mapped = mapToResponseList(allActive);
                         return mapped.stream()
                                 .filter(c -> TYPE_STORE.equalsIgnoreCase(c.type()) || c.storeCount() > 0)
@@ -81,7 +81,7 @@ public class CategoryServiceImpl implements CategoryService {
                     }
 
                     List<CategoryEntity> entities = categoryRepository
-                            .findByTypeAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc(queryType);
+                            .findByTypeAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc(queryType);
                     return mapToResponseList(entities);
                 }
         );
@@ -130,7 +130,7 @@ public class CategoryServiceImpl implements CategoryService {
                 java.time.Duration.ofMinutes(3),
                 () -> {
                     List<CategoryEntity> entities = categoryRepository
-                            .findByShowOnHomeTrueAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+                            .findByShowOnHomeTrueAndIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc();
                     return mapToResponseList(entities);
                 }
         );

@@ -93,7 +93,7 @@ function OfferFormContent({ id }: { id?: string }) {
             hasExpiration: Boolean(data.hasExpiration || data.startAt || data.expireAt),
             startAt: data.startAt ?? null,
             expireAt: data.expireAt ?? null,
-            sortOrder: data.sortOrder ?? 9999,
+            sortOrder: data.sortOrder ?? 0,
           };
           setOfferData(mapped);
         }
@@ -138,7 +138,7 @@ function OfferFormContent({ id }: { id?: string }) {
         hasExpiration: Boolean(offerData.hasExpiration || offerData.startAt || offerData.expireAt),
         startDate: offerData.startAt ? new Date(offerData.startAt).toISOString().slice(0, 10) : '',
         expireDate: offerData.expireAt ? new Date(offerData.expireAt).toISOString().slice(0, 10) : '',
-        sortOrder: offerData.sortOrder ?? 9999,
+        sortOrder: offerData.sortOrder ?? 0,
       }
     : {
         storeId: undefined,
@@ -158,7 +158,7 @@ function OfferFormContent({ id }: { id?: string }) {
         hasExpiration: false,
         startDate: '',
         expireDate: '',
-        sortOrder: 9999,
+        sortOrder: 0,
       };
 
   return <OfferFormInner key={offerData?.id ?? 'new'} id={id} existing={offerData ?? undefined} initial={initial} />;
@@ -414,6 +414,19 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
 
     if (!resolvedUrl) {
       nextErrors.destinationUrl = t('Please enter the Destination URL (Tracking Link).');
+    } else if (resolvedUrl.length > 500) {
+      nextErrors.destinationUrl = t('Destination URL must not exceed 500 characters.');
+    }
+    if (form.title.trim().length > 255) {
+      nextErrors.title = t('Offer title must not exceed 255 characters.');
+    }
+    if (form.couponCode.trim().length > 100) {
+      nextErrors.couponCode = t('Coupon code must not exceed 100 characters.');
+    }
+    if (form.imageUrl && form.imageUrl.trim().startsWith('data:')) {
+      nextErrors.imageUrl = t('Offer image cannot be a raw base64 string — please upload via the Upload button.');
+    } else if (form.imageUrl && form.imageUrl.trim().length > 500) {
+      nextErrors.imageUrl = t('Offer image URL must not exceed 500 characters.');
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -452,7 +465,7 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
       isVerified: form.isVerified,
       isExclusive: form.isExclusive,
       isActive: form.isActive,
-      sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 9999,
+      sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
       image: form.imageUrl?.trim() || selectedStore?.logo || null,
       tags: mergeBrandTag(form.tags || [], selectedStore?.name || form.storeName),
       hasExpiration: form.hasExpiration,
@@ -516,6 +529,7 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
         toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
         scrollToField(firstKey);
       } else {
+        setErrors({ _form: msg });
         toast.error(msg);
       }
     }
@@ -546,6 +560,12 @@ function OfferFormInner({ id, existing, initial }: { id?: string; existing?: Off
     >
       {activeTab === 'edit' ? (
       <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+        {errors._form && (
+          <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
+            <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
+            <span className="leading-relaxed">{errors._form}</span>
+          </div>
+        )}
         {Object.keys(errors).length > 0 && (
           <div
             role="alert"

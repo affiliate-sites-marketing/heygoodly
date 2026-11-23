@@ -25,6 +25,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
 import AdminActionButton from '@/components/admin/AdminActionButton';
+import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { adminSearchInputClass } from '@/components/admin/adminStyles';
 import { ROUTES } from '@/constants/routes';
@@ -450,7 +451,7 @@ export default function AdminStoresPage() {
               </td>
 
               {/* Actions */}
-              <td className="py-3.5 px-4 text-right whitespace-nowrap w-48 min-w-[192px]">
+              <td className="py-3.5 px-4 text-right whitespace-nowrap w-56 min-w-[224px]">
                 <div className="flex items-center justify-end gap-1.5">
                   <AdminActionButton
                     icon={Eye}
@@ -459,6 +460,7 @@ export default function AdminStoresPage() {
                     variant="default"
                   />
                   <AdminActionButton icon={Globe} href={`/store/${store.slug}`} target="_blank" title="View Live Store Page" variant="default" />
+                  <CopyPublicLinkButton path={`/store/${store.slug}`} compact />
                   {hasPermission('store.clone') && (
                     <AdminActionButton icon={Copy} onClick={() => handleClone(store)} title="Clone Store" variant="indigo" />
                   )}

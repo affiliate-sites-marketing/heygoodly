@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Globe, Edit2, Trash2, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 import AdminActionButton from '@/components/admin/AdminActionButton';
+import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import { ROUTES } from '@/constants/routes';
 import type { StaticPageData } from '../_lib/data';
 
@@ -47,7 +48,7 @@ export default function StaticPageTableRow({ page: p, onDelete }: StaticPageTabl
           </span>
         )}
       </td>
-      <td className="py-3.5 px-4 text-right whitespace-nowrap w-36 min-w-[144px]">
+      <td className="py-3.5 px-4 text-right whitespace-nowrap w-44 min-w-[176px]">
         <div className="flex items-center justify-end gap-1.5">
           <AdminActionButton
             href={`/${p.slug}`}
@@ -55,6 +56,7 @@ export default function StaticPageTableRow({ page: p, onDelete }: StaticPageTabl
             title="View Live Page"
             variant="default"
           />
+          <CopyPublicLinkButton path={`/${p.slug}`} compact />
           <AdminActionButton
             href={ROUTES.ADMIN.PAGE_EDIT(p.id)}
             icon={Edit2}

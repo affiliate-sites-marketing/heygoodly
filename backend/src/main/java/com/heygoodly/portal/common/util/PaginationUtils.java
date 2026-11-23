@@ -1,6 +1,7 @@
 package com.heygoodly.portal.common.util;
 
 import com.heygoodly.portal.common.constant.AppConstants;
+import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.constant.PaginationConstants;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,14 @@ public final class PaginationUtils {
                 ? Sort.Direction.ASC
                 : Sort.Direction.DESC;
 
-        return PageRequest.of(pageNumber, pageSize, Sort.by(direction, sortField));
+        Sort sort = EntityFieldConstants.SORT_ORDER.equals(sortField)
+                ? Sort.by(
+                        new Sort.Order(direction, sortField),
+                        Sort.Order.desc(EntityFieldConstants.CREATED_AT),
+                        Sort.Order.desc(EntityFieldConstants.ID)
+                )
+                : Sort.by(direction, sortField);
+
+        return PageRequest.of(pageNumber, pageSize, sort);
     }
 }

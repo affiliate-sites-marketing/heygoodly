@@ -26,6 +26,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminFilterBar from '@/components/admin/AdminFilterBar';
 import AdminTableShell from '@/components/admin/AdminTableShell';
 import AdminActionButton from '@/components/admin/AdminActionButton';
+import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import PostOrderMatrixModal from './_components/PostOrderMatrixModal';
 import { adminSearchInputClass } from '@/components/admin/adminStyles';
@@ -471,8 +472,8 @@ function AdminPostsContent() {
         {pagedItems.map((art) => (
           <tr key={art.id} className="hover:bg-slate-50/60 transition-colors group">
             {/* Headline + thumbnail */}
-            <td className="py-3.5 px-4 max-w-md">
-              <div className="flex items-center gap-3">
+            <td className="py-4 px-4 max-w-[440px]">
+              <div className="flex items-center gap-3.5">
                 <div className="w-14 h-10 rounded-lg overflow-hidden bg-slate-100 shrink-0 relative border border-slate-200 shadow-2xs">
                   {art.imageUrl ? (
                     <Image src={art.imageUrl} alt={art.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -482,40 +483,50 @@ function AdminPostsContent() {
                     </div>
                   )}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-brand-primary transition-colors">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      title={art.title}
+                      className="font-bold text-slate-900 text-sm truncate group-hover:text-brand-primary transition-colors"
+                    >
                       {art.title}
                     </span>
                     {art.isHero && (
-                      <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Hero</span>
+                      <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">Hero</span>
                     )}
                     {art.featured && (
-                      <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">Editor&apos;s Pick</span>
+                      <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">Editor&apos;s Pick</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                    <span className="font-mono text-slate-400">/post/{art.slug}</span>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-500 min-w-0">
+                    <span
+                      title={`/post/${art.slug}`}
+                      className="font-mono text-slate-400 truncate max-w-[190px]"
+                    >
+                      /post/{art.slug}
+                    </span>
                     {art.readTime && (
                       <>
-                        <span>•</span>
-                        <span className="flex items-center gap-1"><Clock size={11} /> {art.readTime}</span>
+                        <span className="text-slate-300 shrink-0">•</span>
+                        <span className="inline-flex items-center gap-1 whitespace-nowrap shrink-0">
+                          <Clock size={11} className="shrink-0" /> {art.readTime}
+                        </span>
                       </>
                     )}
-                    <span>•</span>
-                    <span>{art.publishedAt}</span>
+                    <span className="text-slate-300 shrink-0">•</span>
+                    <span className="whitespace-nowrap shrink-0">{art.publishedAt}</span>
                   </div>
                 </div>
               </div>
             </td>
 
             {/* Category */}
-            <td className="py-3.5 px-4">
+            <td className="py-4 px-4 whitespace-nowrap">
               <span className="inline-block bg-slate-100 text-slate-700 font-bold px-2.5 py-1 rounded-lg text-[11px]">{art.category}</span>
             </td>
 
             {/* Author */}
-            <td className="py-3.5 px-4">
+            <td className="py-4 px-4 whitespace-nowrap">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-200 shrink-0 relative border border-slate-300">
                   {art.author.avatar ? (
@@ -531,7 +542,7 @@ function AdminPostsContent() {
             </td>
 
             {/* Reader Views */}
-            <td className="py-3.5 px-4">
+            <td className="py-4 px-4 whitespace-nowrap">
               <div className="flex items-center gap-1.5 text-slate-800 font-bold">
                 <Eye size={13} className="text-slate-400" />
                 <span className="font-mono text-xs">{(art.views || 0).toLocaleString()}</span>
@@ -564,9 +575,10 @@ function AdminPostsContent() {
             </td>
 
             {/* Actions */}
-            <td className="py-3.5 px-4 text-right whitespace-nowrap w-44 min-w-[176px]">
+            <td className="py-3.5 px-4 text-right whitespace-nowrap w-52 min-w-[208px]">
               <div className="flex items-center justify-end gap-1.5">
                 <AdminActionButton icon={ExternalLink} href={`/post/${art.slug}`} target="_blank" title="View Live on Client Website" variant="default" />
+                <CopyPublicLinkButton path={`/post/${art.slug}`} compact />
                 {hasPermission('post.clone') && (
                   <AdminActionButton icon={Copy} onClick={() => handleClone(art)} title="Clone Article" variant="indigo" />
                 )}

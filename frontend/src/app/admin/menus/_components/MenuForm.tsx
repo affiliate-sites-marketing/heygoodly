@@ -78,7 +78,7 @@ export default function MenuForm({ id }: { id?: string }) {
             position: data.position || 'main',
             targetType: data.targetType || 'url',
             targetValue: data.targetValue || '',
-            sortOrder: Number(data.sortOrder || 1),
+            sortOrder: Number(data.sortOrder ?? 0),
             isActive: data.isActive !== false,
           });
           setNotFound(false);
@@ -119,7 +119,7 @@ export default function MenuForm({ id }: { id?: string }) {
         position: 'main',
         targetType: 'url',
         targetValue: '',
-        sortOrder: 1,
+        sortOrder: 0,
         isActive: true,
       };
 
@@ -155,7 +155,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
     position: form.position,
     targetType: form.targetType,
     targetValue: form.targetValue.trim() || '/',
-    sortOrder: form.sortOrder || 1,
+    sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
     isActive: form.isActive,
   };
 
@@ -178,9 +178,13 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
     const nextErrors: Record<string, string> = {};
     if (!form.title.trim()) {
       nextErrors.title = t('Please enter the menu label / title.');
+    } else if (form.title.trim().length > 150) {
+      nextErrors.title = t('Menu title must not exceed 150 characters.');
     }
     if (!form.targetValue.trim()) {
       nextErrors.targetValue = t('Please enter the destination target path or URL (e.g. /stores).');
+    } else if (form.targetValue.trim().length > 500) {
+      nextErrors.targetValue = t('Destination target must not exceed 500 characters.');
     }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -226,6 +230,7 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
         toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
         scrollToFormField(firstKey);
       } else {
+        setErrors({ _form: msg });
         toast.error(msg);
       }
     }
@@ -254,6 +259,12 @@ function MenuFormInner({ existing, initial }: { existing?: MenuItem; initial: Me
       width="full"
     >
       <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+        {errors._form && (
+          <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
+            <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
+            <span className="leading-relaxed">{errors._form}</span>
+          </div>
+        )}
         <FormErrorBanner errors={errors} fieldLabels={MENU_FIELD_LABELS} />
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
           

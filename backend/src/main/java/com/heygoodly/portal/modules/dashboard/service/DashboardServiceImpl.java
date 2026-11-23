@@ -16,6 +16,7 @@ import com.heygoodly.portal.modules.menu.repository.MenuRepository;
 import com.heygoodly.portal.modules.offer.entity.OfferEntity;
 import com.heygoodly.portal.modules.offer.repository.OfferRepository;
 import com.heygoodly.portal.modules.page.repository.PageRepository;
+import com.heygoodly.portal.modules.post.entity.PostEntity;
 import com.heygoodly.portal.modules.post.repository.PostRepository;
 import com.heygoodly.portal.modules.role.repository.RoleRepository;
 import com.heygoodly.portal.modules.store.entity.StoreEntity;
@@ -205,9 +206,69 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Growth rate: compare current 30 days vs preceding 30 days from DB
         Instant now = Instant.now();
-        long current30d = affiliateClickRepository.countClicksBetween(now.minus(Duration.ofDays(30)), now);
-        long prev30d = affiliateClickRepository.countClicksBetween(now.minus(Duration.ofDays(60)), now.minus(Duration.ofDays(30)));
+        Instant since30d = now.minus(Duration.ofDays(30));
+        long current30d = affiliateClickRepository.countClicksBetween(since30d, now);
+        long prev30d = affiliateClickRepository.countClicksBetween(now.minus(Duration.ofDays(60)), since30d);
         double growthRate = prev30d > 0 ? ((double) (current30d - prev30d) / prev30d) * 100.0 : 0.0;
+
+        // Click Attribution by Source (utm_source / Referer)
+        List<Object[]> sourceRows = affiliateClickRepository.summarizeClicksBySource(since30d);
+        long attributedTotal = sourceRows.stream().mapToLong(r -> toLong(r, 1)).sum();
+        List<DashboardStatsResponse.ClickSourceSummaryDto> clickSources = sourceRows.stream()
+                .map(r -> {
+                    String src = r[0] != null ? r[0].toString() : "direct";
+                    long clicks = toLong(r, 1);
+                    long clicks30 = toLong(r, 2);
+                    double share = attributedTotal > 0 ? Math.round(((double) clicks / attributedTotal) * 1000.0) / 10.0 : 0.0;
+                    return DashboardStatsResponse.ClickSourceSummaryDto.builder()
+                            .source(src)
+                            .label(formatClickSourceLabel(src))
+                            .clicks(clicks)
+                            .clicks30d(clicks30)
+                            .sharePercent(share)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // Top Converting Review Articles (utm_source = 'review_article' grouped by utm_campaign slug)
+        List<Object[]> articleRows = affiliateClickRepository.findTopConvertingArticleSlugs(since30d);
+        List<String> articleSlugs = articleRows.stream()
+                .map(r -> r[0] != null ? r[0].toString() : "")
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toList());
+        Map<String, PostEntity> postBySlugMap = articleSlugs.isEmpty() ? Map.of() :
+                postRepository.findBySlugInAndIsDeletedFalse(articleSlugs).stream()
+                        .collect(Collectors.toMap(PostEntity::getSlug, p -> p, (a, b) -> a));
+
+        List<DashboardStatsResponse.TopConvertingPostDto> topConvertingPosts = articleRows.stream()
+                .map(r -> {
+                    String slug = r[0] != null ? r[0].toString() : "";
+                    long clicks = toLong(r, 1);
+                    long clicks30 = toLong(r, 2);
+                    PostEntity post = postBySlugMap.get(slug);
+                    long views = post != null && post.getViewCount() != null ? post.getViewCount() : 0L;
+                    double ctr = views > 0 ? Math.round(((double) clicks / views) * 1000.0) / 10.0 : 0.0;
+                    return DashboardStatsResponse.TopConvertingPostDto.builder()
+                            .postId(post != null ? post.getId() : null)
+                            .slug(slug)
+                            .title(post != null && post.getTitle() != null ? post.getTitle() : slug)
+                            .clicks(clicks)
+                            .clicks30d(clicks30)
+                            .views(views)
+                            .ctrPercent(ctr)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // Top SubIDs / utm_content placements
+        List<DashboardStatsResponse.SubIdSummaryDto> topSubIds = affiliateClickRepository.findTopSubIds(since30d).stream()
+                .map(r -> DashboardStatsResponse.SubIdSummaryDto.builder()
+                        .subid(r[0] != null ? r[0].toString() : "")
+                        .source(r[1] != null ? r[1].toString() : "direct")
+                        .clicks(toLong(r, 2))
+                        .clicks30d(toLong(r, 3))
+                        .build())
+                .collect(Collectors.toList());
 
         return DashboardStatsResponse.builder()
                 .totalClicks(totalClicks)
@@ -239,7 +300,25 @@ public class DashboardServiceImpl implements DashboardService {
                 .chart7d(chart7d)
                 .chart30d(chart30d)
                 .chart90d(chart90d)
+                .clickSources(clickSources)
+                .topConvertingPosts(topConvertingPosts)
+                .topSubIds(topSubIds)
                 .build();
+    }
+
+    private String formatClickSourceLabel(String source) {
+        if (source == null) return "Direct / Other";
+        return switch (source) {
+            case "store_page" -> "Store Page";
+            case "review_article" -> "Review Articles";
+            case "homepage" -> "Homepage";
+            case "category_page" -> "Category Pages";
+            case "tag_page" -> "Tag Pages";
+            case "search_page" -> "Search Results";
+            case "coupon_popup" -> "Coupon Popup";
+            case "direct" -> "Direct / Untracked";
+            default -> source.replace('_', ' ');
+        };
     }
 
     private ZoneId resolveZoneId() {

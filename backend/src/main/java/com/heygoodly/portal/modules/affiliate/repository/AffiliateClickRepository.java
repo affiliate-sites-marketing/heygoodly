@@ -38,5 +38,34 @@ public interface AffiliateClickRepository extends JpaRepository<AffiliateClickEn
 
     @Query("SELECT COUNT(c.id) FROM AffiliateClickEntity c WHERE c.createdAt >= :since")
     long countClicksSince(@Param("since") Instant since);
+
+    @Query(value = "SELECT COALESCE(NULLIF(TRIM(utm_source), ''), 'direct') AS source_key, " +
+                   "COUNT(id) AS total_clicks, " +
+                   "SUM(CASE WHEN created_at >= :since30d THEN 1 ELSE 0 END) AS clicks_30d " +
+                   "FROM affiliate_clicks " +
+                   "GROUP BY source_key " +
+                   "ORDER BY total_clicks DESC", nativeQuery = true)
+    List<Object[]> summarizeClicksBySource(@Param("since30d") Instant since30d);
+
+    @Query(value = "SELECT TRIM(utm_campaign) AS article_slug, " +
+                   "COUNT(id) AS total_clicks, " +
+                   "SUM(CASE WHEN created_at >= :since30d THEN 1 ELSE 0 END) AS clicks_30d " +
+                   "FROM affiliate_clicks " +
+                   "WHERE utm_source = 'review_article' AND utm_campaign IS NOT NULL AND TRIM(utm_campaign) <> '' " +
+                   "GROUP BY TRIM(utm_campaign) " +
+                   "ORDER BY total_clicks DESC " +
+                   "LIMIT 8", nativeQuery = true)
+    List<Object[]> findTopConvertingArticleSlugs(@Param("since30d") Instant since30d);
+
+    @Query(value = "SELECT TRIM(utm_content) AS subid_key, " +
+                   "COALESCE(NULLIF(TRIM(utm_source), ''), 'direct') AS source_key, " +
+                   "COUNT(id) AS total_clicks, " +
+                   "SUM(CASE WHEN created_at >= :since30d THEN 1 ELSE 0 END) AS clicks_30d " +
+                   "FROM affiliate_clicks " +
+                   "WHERE utm_content IS NOT NULL AND TRIM(utm_content) <> '' " +
+                   "GROUP BY TRIM(utm_content), source_key " +
+                   "ORDER BY total_clicks DESC " +
+                   "LIMIT 8", nativeQuery = true)
+    List<Object[]> findTopSubIds(@Param("since30d") Instant since30d);
 }
 

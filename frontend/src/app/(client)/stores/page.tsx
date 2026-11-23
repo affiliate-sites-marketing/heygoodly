@@ -19,6 +19,7 @@ import {
 import storeService, { extractPlainTextExcerpt } from '@/services/storeService';
 import categoryService, { CategoryItem } from '@/services/categoryService';
 import Pagination from '@/components/admin/Pagination';
+import StoreLogoFrame from '@/components/store/StoreLogoFrame';
 import { Store } from '@/types/deals';
 import { formatCurrentMonthYear } from '@/lib/utils/formatters';
 
@@ -433,21 +434,14 @@ export default function StoresDirectoryPage() {
                 >
                   <div className="flex items-start gap-3.5">
                     {/* Store Logo */}
-                    <div className="w-14 h-14 rounded-xl bg-slate-900 text-white flex items-center justify-center overflow-hidden shrink-0 shadow-2xs border border-slate-100">
-                      {store.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={store.logoUrl}
-                          alt={store.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span className="font-black text-xl tracking-wider">
-                          {store.name.substring(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
+                    <StoreLogoFrame
+                      src={store.logoUrl}
+                      name={store.name}
+                      className="w-16 h-14 rounded-xl"
+                      paddingClassName="p-1.5"
+                      fallbackTextClassName="text-xl"
+                      imgClassName="group-hover:scale-105 transition-transform duration-300"
+                    />
 
                     <div className="space-y-1 min-w-0 flex-1">
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">

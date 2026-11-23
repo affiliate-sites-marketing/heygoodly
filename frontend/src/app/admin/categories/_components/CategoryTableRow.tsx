@@ -9,6 +9,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import AdminActionButton from '@/components/admin/AdminActionButton';
+import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import { ROUTES } from '@/constants/routes';
 import { useAdminI18n } from '@/context/AdminI18nContext';
 import type { CategoryData } from '../_lib/data';
@@ -80,7 +81,7 @@ export default function CategoryTableRow({
           </span>
         )}
       </td>
-      <td className="py-3 px-4 text-right whitespace-nowrap w-32 min-w-[128px]">
+      <td className="py-3 px-4 text-right whitespace-nowrap w-40 min-w-[160px]">
         <div className="flex items-center justify-end gap-1.5">
           <AdminActionButton
             onClick={() => onOpenArticlesModal(cat)}
@@ -88,6 +89,7 @@ export default function CategoryTableRow({
             title="View articles in this category"
             variant="default"
           />
+          <CopyPublicLinkButton path={`/category/${cat.slug}`} compact />
           <AdminActionButton
             href={ROUTES.ADMIN.CATEGORY_EDIT(cat.id)}
             icon={Edit2}

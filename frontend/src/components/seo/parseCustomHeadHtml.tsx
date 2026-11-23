@@ -1,4 +1,5 @@
 import React from 'react';
+import Script from 'next/script';
 
 const ATTR_NAME_MAP: Record<string, string> = {
   crossorigin: 'crossOrigin',
@@ -231,18 +232,19 @@ export function parseCustomHeadHtml(rawHtml?: string): React.ReactNode[] {
     if (tagName === 'meta') {
       nodes.push(<meta key={key} {...(attrs as React.MetaHTMLAttributes<HTMLMetaElement>)} />);
     } else if (tagName === 'link') {
-      nodes.push(<link key={key} {...(attrs as React.LinkHTMLAttributes<HTMLLinkElement>)} />);
+      const linkAttrs = attrs as React.LinkHTMLAttributes<HTMLLinkElement>;
+      if (linkAttrs.rel && String(linkAttrs.rel).trim()) {
+        nodes.push(<link key={key} {...linkAttrs} />);
+      }
     } else if (tagName === 'script') {
       const scriptAttrs = attrs as React.ScriptHTMLAttributes<HTMLScriptElement>;
       if (scriptAttrs.src) {
-        nodes.push(<script key={key} {...scriptAttrs} />);
+        nodes.push(<Script key={key} id={key} strategy="afterInteractive" {...scriptAttrs} />);
       } else if (innerContent.trim()) {
         nodes.push(
-          <script
-            key={key}
-            {...scriptAttrs}
-            dangerouslySetInnerHTML={{ __html: innerContent }}
-          />
+          <Script key={key} id={key} strategy="afterInteractive">
+            {innerContent}
+          </Script>
         );
       }
     } else if (tagName === 'style' && innerContent.trim()) {

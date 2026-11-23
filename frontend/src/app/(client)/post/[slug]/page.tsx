@@ -25,6 +25,9 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import JsonLd from '@/components/seo/JsonLd';
+import CouponModal from '@/components/deals/CouponModal';
+import StoreLogoFrame from '@/components/store/StoreLogoFrame';
+import { triggerDualActionCoupon } from '@/lib/deals/affiliateAction';
 
 export default function ArticleDetailPage() {
   const params = useParams();
@@ -35,6 +38,7 @@ export default function ArticleDetailPage() {
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [matchedStore, setMatchedStore] = useState<Store | null>(null);
   const [storeCoupons, setStoreCoupons] = useState<Coupon[]>([]);
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -434,18 +438,13 @@ export default function ArticleDetailPage() {
               {/* 1. Target Store Affiliate Callout Box (Strictly only when post is linked to a real Store) */}
               {showBrandCard && (
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-900 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-xs overflow-hidden border border-slate-200">
-                    {matchedStore?.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={matchedStore.logoUrl}
-                        alt={targetStoreName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span>{targetStoreName.substring(0, 2).toUpperCase()}</span>
-                    )}
-                  </div>
+                  <StoreLogoFrame
+                    src={matchedStore?.logoUrl}
+                    name={targetStoreName}
+                    className="w-36 h-16 mx-auto rounded-2xl"
+                    paddingClassName="p-2"
+                    fallbackTextClassName="text-2xl"
+                  />
 
                   <div className="space-y-1.5">
                     {formattedMaxDiscount && (
@@ -475,7 +474,7 @@ export default function ArticleDetailPage() {
                   </div>
 
                   <Link
-                    href={ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}
+                    href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?utm_source=review_article&utm_campaign=${encodeURIComponent(article.slug)}`}
                     className="w-full py-3 bg-brand-primary hover:bg-brand-primary-hover text-white font-black text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 group cursor-pointer"
                   >
                     <span>
@@ -500,10 +499,25 @@ export default function ArticleDetailPage() {
 
                   <div className="space-y-2.5">
                     {storeCoupons.map((c) => (
-                      <Link
+                      <button
                         key={c.id}
-                        href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?offer=${c.id}`}
-                        className="block p-3 rounded-xl border border-slate-200/90 hover:border-brand-primary bg-slate-50/60 hover:bg-brand-primary-soft/40 transition group space-y-1.5"
+                        type="button"
+                        onClick={() =>
+                          triggerDualActionCoupon({
+                            code: c.code,
+                            storeSlug: targetStoreSlug,
+                            offerId: c.id,
+                            customUrl: c.affiliateUrl || matchedStore?.affiliateUrl,
+                            tracking: {
+                              source: 'review_article',
+                              medium: 'review_sidebar',
+                              campaign: article.slug,
+                              subid: c.code ? `${targetStoreSlug}_${c.code}` : `${targetStoreSlug}_offer_${c.id}`,
+                            },
+                            onOpenModal: () => setSelectedCoupon(c),
+                          })
+                        }
+                        className="w-full text-left block p-3 rounded-xl border border-slate-200/90 hover:border-brand-primary bg-slate-50/60 hover:bg-brand-primary-soft/40 transition group space-y-1.5 cursor-pointer"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
@@ -522,12 +536,12 @@ export default function ArticleDetailPage() {
                         <p className="text-xs font-bold text-slate-800 group-hover:text-brand-primary transition line-clamp-1">
                           {c.title}
                         </p>
-                      </Link>
+                      </button>
                     ))}
                   </div>
 
                   <Link
-                    href={ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}
+                    href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?utm_source=review_article&utm_campaign=${encodeURIComponent(article.slug)}`}
                     className="w-full py-2 text-center text-xs font-bold text-slate-600 hover:text-brand-primary flex items-center justify-center gap-1 pt-1 transition"
                   >
                     <span>View all {targetStoreName} coupons</span>
@@ -656,6 +670,26 @@ export default function ArticleDetailPage() {
         )}
 
       </div>
+
+      {/* Coupon Reveal Modal for Sidebar Offers */}
+      {selectedCoupon && (
+        <CouponModal
+          isOpen={Boolean(selectedCoupon)}
+          onClose={() => setSelectedCoupon(null)}
+          offer={{
+            id: String(selectedCoupon.id),
+            storeName: targetStoreName,
+            storeSlug: targetStoreSlug,
+            title: selectedCoupon.title,
+            code: selectedCoupon.code,
+            discount: selectedCoupon.discount,
+            terms: selectedCoupon.terms || selectedCoupon.description,
+            affiliateUrl: selectedCoupon.affiliateUrl || matchedStore?.affiliateUrl,
+            imageUrl: selectedCoupon.imageUrl || matchedStore?.logoUrl,
+          }}
+          initialCopied={Boolean(selectedCoupon.code)}
+        />
+      )}
     </div>
   );
 }

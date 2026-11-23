@@ -63,7 +63,8 @@ public class PostPublicController {
                         Math.max(1, size),
                         org.springframework.data.domain.Sort.by(
                                 org.springframework.data.domain.Sort.Order.asc(EntityFieldConstants.SORT_ORDER),
-                                org.springframework.data.domain.Sort.Order.desc(EntityFieldConstants.PUBLISHED_AT)
+                                org.springframework.data.domain.Sort.Order.desc(EntityFieldConstants.CREATED_AT),
+                                org.springframework.data.domain.Sort.Order.desc(EntityFieldConstants.ID)
                         )
                 )
                 : PaginationUtils.createPageable(page, size, sortBy, direction);

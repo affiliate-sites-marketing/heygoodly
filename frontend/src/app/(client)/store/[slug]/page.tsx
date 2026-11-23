@@ -26,7 +26,8 @@ import { absoluteUrl } from '@/constants/site';
 import GetCodeButton from '@/components/deals/GetCodeButton';
 import CouponModal from '@/components/deals/CouponModal';
 import StoreCustomerReviewsSection from '@/components/store/StoreCustomerReviewsSection';
-import { triggerDualActionCoupon } from '@/lib/deals/affiliateAction';
+import StoreLogoFrame from '@/components/store/StoreLogoFrame';
+import { triggerDualActionCoupon, appendAffiliateTracking } from '@/lib/deals/affiliateAction';
 import { Store, Coupon } from '@/types/deals';
 import storeService, {
   extractPlainTextExcerpt,
@@ -140,7 +141,13 @@ export default function StoreAffiliatePage() {
   const storeRating = typeof store.rating === 'number' && store.rating > 0 ? store.rating : null;
   const storeReviews = typeof store.reviewCount === 'number' && store.reviewCount > 0 ? store.reviewCount : null;
   const storeBestOffer = store.maxDiscount || coupons[0]?.discount || null;
-  const storeAffiliateUrl = store.affiliateUrl || ROUTES.PUBLIC.GO_AFFILIATE(store.slug);
+  const storeAffiliateUrl = appendAffiliateTracking(
+    store.affiliateUrl || ROUTES.PUBLIC.GO_AFFILIATE(store.slug),
+    {
+      medium: 'store_sidebar',
+      subid: `store_${store.slug}_visit`,
+    }
+  );
   const cleanDescription =
     extractPlainTextExcerpt(store.shortDescription, 260) ||
     extractPlainTextExcerpt(store.description, 240) ||
@@ -259,18 +266,14 @@ export default function StoreAffiliatePage() {
 
               <div className={`p-3.5 sm:p-4 lg:p-5 ${store.bannerUrl ? 'lg:-mt-11 lg:pt-0 relative z-10' : ''} space-y-2.5 lg:space-y-3.5`}>
                 <div className="flex items-center gap-3 lg:block lg:space-y-3">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-20 lg:h-20 lg:mx-auto rounded-xl lg:rounded-2xl overflow-hidden flex items-center justify-center shadow-md border-2 border-white bg-slate-900 text-white shrink-0">
-                    {store.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={store.logoUrl}
-                        alt={storeName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="font-black text-base lg:text-2xl">{storeName.substring(0, 2).toUpperCase()}</span>
-                    )}
-                  </div>
+                  <StoreLogoFrame
+                    src={store.logoUrl}
+                    name={storeName}
+                    className="w-20 h-14 sm:w-24 sm:h-16 lg:w-44 lg:h-20 lg:mx-auto rounded-xl lg:rounded-2xl shadow-sm"
+                    paddingClassName="p-2"
+                    fallbackTextClassName="text-base lg:text-2xl"
+                    loading="eager"
+                  />
 
                   <div className="min-w-0 flex-1 space-y-0.5 lg:space-y-1">
                     <h1 className="font-black text-base sm:text-lg lg:text-xl text-slate-950 truncate lg:whitespace-normal">

@@ -159,12 +159,73 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         Locale locale = resolveRequestLocale(request);
+        boolean isVi = locale != null && "vi".equalsIgnoreCase(locale.getLanguage());
+        Throwable root = ex.getMostSpecificCause();
+        String rawDetail = root != null && root.getMessage() != null ? root.getMessage() : (ex.getMessage() != null ? ex.getMessage() : "");
+        log.warn("Database constraint violation at [{}]: {}", request.getRequestURI(), rawDetail);
+
+        // 1. Value too long for varchar(N)
+        java.util.regex.Matcher lenMatcher = java.util.regex.Pattern
+                .compile("value too long for type character varying\\((\\d+)\\)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(rawDetail);
+        if (lenMatcher.find()) {
+            String limit = lenMatcher.group(1);
+            String msg = isVi
+                    ? "Có trường nhập liệu vượt quá độ dài tối đa " + limit + " ký tự (thường là Link Affiliate, Mô tả ngắn, URL ảnh hoặc Tiêu đề). Vui lòng rút ngắn lại."
+                    : "A field exceeds the maximum allowed length of " + limit + " characters (commonly Affiliate URL, Short Description, Image URL, or Title). Please shorten it.";
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("VALUE_TOO_LONG", msg));
+        }
+
+        // 2. Duplicate unique key: Key (col)=(val) already exists
+        java.util.regex.Matcher dupMatcher = java.util.regex.Pattern
+                .compile("Key \\(([^)]+)\\)=\\(([^)]+)\\) already exists", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(rawDetail);
+        if (dupMatcher.find()) {
+            String col = dupMatcher.group(1).trim();
+            String val = dupMatcher.group(2).trim();
+            String msg = isVi
+                    ? "Trường '" + col + "' với giá trị '" + val + "' đã tồn tại trong hệ thống. Vui lòng đổi sang giá trị khác."
+                    : "Field '" + col + "' with value '" + val + "' already exists. Please use a different value.";
+            Map<String, String> fieldErrors = new java.util.LinkedHashMap<>();
+            fieldErrors.put(col, msg);
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error("DUPLICATE_RESOURCE", msg, fieldErrors));
+        }
+
+        // 3. Not-null violation: null value in column "col"
+        java.util.regex.Matcher nullMatcher = java.util.regex.Pattern
+                .compile("null value in column \"([^\"]+)\"", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(rawDetail);
+        if (nullMatcher.find()) {
+            String col = nullMatcher.group(1).trim();
+            String msg = isVi
+                    ? "Thiếu dữ liệu bắt buộc ở trường '" + col + "'. Vui lòng điền đầy đủ trước khi lưu."
+                    : "Required field '" + col + "' cannot be empty.";
+            Map<String, String> fieldErrors = new java.util.LinkedHashMap<>();
+            fieldErrors.put(col, msg);
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("MISSING_REQUIRED_FIELD", msg, fieldErrors));
+        }
+
+        // 4. Foreign key violation
+        if (rawDetail.toLowerCase(Locale.ROOT).contains("foreign key constraint")) {
+            String msg = isVi
+                    ? "Dữ liệu liên kết (Chuyên mục / Thương hiệu / Người dùng) không còn tồn tại hoặc không hợp lệ. Vui lòng chọn lại."
+                    : "A referenced record (Category / Store / User) is invalid or was deleted. Please re-select it.";
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("INVALID_REFERENCE", msg));
+        }
+
         String message = i18nService.getMessage(
                 "error.resource_conflict",
                 locale,
                 "A record with this identifier or unique attribute already exists."
         );
-        log.warn("Database constraint violation at [{}]: {}", request.getRequestURI(), ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error("RESOURCE_CONFLICT", message));

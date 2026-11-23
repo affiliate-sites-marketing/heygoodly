@@ -805,7 +805,7 @@ public class PostServiceImpl implements PostService {
                             .type("post")
                             .isActive(true)
                             .showOnHome(true)
-                            .sortOrder(999)
+                            .sortOrder(AppConstants.DEFAULT_SORT_ORDER)
                             .description("General articles, guides, and miscellaneous reviews.")
                             .build();
                     other.setCreatedBy(AppConstants.SYSTEM_USER);

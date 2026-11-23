@@ -7,6 +7,7 @@ import { SITE_NAME } from '@/constants/site';
 import Image from 'next/image';
 import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import AdminDevicePreviewFrame from '@/components/admin/AdminDevicePreviewFrame';
+import StoreLogoFrame from '@/components/store/StoreLogoFrame';
 import {
   Edit2,
   Eye,
@@ -44,6 +45,7 @@ import AdminFormPage, {
   scrollToFormField,
   toValidSlug,
 } from '@/components/admin/AdminFormPage';
+import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import { ROUTES } from '@/constants/routes';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { STORAGE_KEYS } from '@/constants/ui-constants';
@@ -226,7 +228,7 @@ function PostFormContent({ id }: { id?: string }) {
             imageUrl: data.image || '',
             featured: Boolean(data.isFeatured),
             isHero: Boolean(data.isHero),
-            sortOrder: Number(data.sortOrder ?? 9999),
+            sortOrder: Number(data.sortOrder ?? 0),
             tags: parsedTags,
             storeSlug: data.storeSlug || '',
             storeName: data.storeName || '',
@@ -279,7 +281,7 @@ function PostFormContent({ id }: { id?: string }) {
         imageUrl: existing.imageUrl,
         featured: existing.featured,
         isHero: Boolean(existing.isHero),
-        sortOrder: existing.sortOrder ?? 9999,
+        sortOrder: existing.sortOrder ?? 0,
         tags: mergeCategoryTag(existing.tags.join(', '), existing.category),
         storeSlug: existing.storeSlug || '',
         storeName: existing.sidebarConfig?.storeName || existing.storeName || '',
@@ -334,7 +336,7 @@ function PostFormContent({ id }: { id?: string }) {
         imageUrl: '',
         featured: false,
         isHero: false,
-        sortOrder: 9999,
+        sortOrder: 0,
         tags: categoryParam && isNaN(Number(categoryParam)) ? categoryParam : '',
         storeSlug: '',
         storeName: '',
@@ -619,10 +621,19 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
     const nextErrors: Record<string, string> = {};
     if (!form.title.trim()) {
       nextErrors.title = t('Please enter the article headline / title.');
+    } else if (form.title.trim().length > 255) {
+      nextErrors.title = t('Article headline must not exceed 255 characters.');
     }
     const cleanSlug = generateSlug(form.slug.trim() || form.title);
     if (form.title.trim() && !cleanSlug) {
       nextErrors.slug = t('URL Slug must contain letters or numbers.');
+    } else if (cleanSlug.length > 255) {
+      nextErrors.slug = t('URL Slug must not exceed 255 characters.');
+    }
+    if (form.imageUrl.trim().startsWith('data:')) {
+      nextErrors.imageUrl = t('Cover image cannot be a raw base64 string — please upload via the Upload button.');
+    } else if (form.imageUrl.trim().length > 500) {
+      nextErrors.imageUrl = t('Cover image URL must not exceed 500 characters.');
     }
     const strippedContent = (form.content || '').replace(/<[^>]*>/g, '').trim();
     if (!strippedContent) {
@@ -732,7 +743,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       isFeatured: form.featured,
       isHero: form.isHero,
       isActive: isActive,
-      sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 9999,
+      sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
       publishedAt: finalPublishedAt,
       status: form.status,
       tags: parsedTags,
@@ -769,6 +780,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
         toast.error(`${t('Please check required fields')}: ${fieldNames} — ${mappedErrors[firstKey]}`);
         scrollToFormField(firstKey);
       } else {
+        setErrors({ _form: msg });
         toast.error(msg);
       }
     }
@@ -785,32 +797,37 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       ? 'Save Article'
       : 'Publish Live';
 
+  const livePostSlug = generateSlug(form.slug.trim() || form.title.trim());
+
   const headerActions = (
-    <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold mr-2">
-      <button
-        type="button"
-        onClick={() => setActiveTab('edit')}
-        className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
-          activeTab === 'edit'
-            ? 'bg-white text-slate-900 shadow-2xs'
-            : 'text-slate-600 hover:text-slate-900'
-        }`}
-      >
-        <Edit2 size={13} />
-        <span>Editor</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => setActiveTab('preview')}
-        className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
-          activeTab === 'preview'
-            ? 'bg-brand-primary text-white shadow-2xs'
-            : 'text-slate-600 hover:text-slate-900'
-        }`}
-      >
-        <Eye size={13} />
-        <span>Live Preview</span>
-      </button>
+    <div className="flex items-center gap-2 mr-1">
+      <CopyPublicLinkButton path={livePostSlug ? `/post/${livePostSlug}` : ''} disabled={!livePostSlug} />
+      <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setActiveTab('edit')}
+          className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'edit'
+              ? 'bg-white text-slate-900 shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Edit2 size={13} />
+          <span>Editor</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('preview')}
+          className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'preview'
+              ? 'bg-brand-primary text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Eye size={13} />
+          <span>Live Preview</span>
+        </button>
+      </div>
     </div>
   );
 
@@ -827,6 +844,12 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
     >
       {activeTab === 'edit' ? (
         <form noValidate id={FORM_ID} onSubmit={handleSave} className="space-y-6">
+          {errors._form && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
+              <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
+              <span className="leading-relaxed">{errors._form}</span>
+            </div>
+          )}
           <FormQuickGuide
             title="Quick Article & Review Setup"
             description="Headline / Title (*), Editorial Category (*), and Article Body Content (*) are required. URL Slug is generated automatically; pick Other if no specific category fits."
@@ -1601,18 +1624,13 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
 
                   {form.showBrandCard && (
                     <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-2.5 text-center">
-                      <div className="w-12 h-12 rounded-xl bg-slate-900 text-white font-black text-lg flex items-center justify-center mx-auto overflow-hidden border border-slate-200">
-                        {selectedStore?.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={selectedStore.logoUrl}
-                            alt={previewStoreName}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span>{previewStoreName.substring(0, 2).toUpperCase()}</span>
-                        )}
-                      </div>
+                      <StoreLogoFrame
+                        src={selectedStore?.logoUrl}
+                        name={previewStoreName}
+                        className="w-28 h-12 mx-auto rounded-xl"
+                        paddingClassName="p-1.5"
+                        fallbackTextClassName="text-lg"
+                      />
                       <div className="space-y-1">
                         <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded-full tracking-widest">
                           <Sparkles size={10} /> Brand Deals • Up to {previewStoreDiscount}
@@ -1780,18 +1798,13 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     <aside className={isDesktop ? 'col-span-4 space-y-5' : 'space-y-4'}>
                       {form.showBrandCard && (
                         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 text-center">
-                          <div className="w-16 h-16 rounded-2xl bg-slate-900 text-white font-black text-2xl flex items-center justify-center mx-auto shadow-xs overflow-hidden border border-slate-200">
-                            {selectedStore?.logoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={selectedStore.logoUrl}
-                                alt={previewStoreName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span>{previewStoreName.substring(0, 2).toUpperCase()}</span>
-                            )}
-                          </div>
+                          <StoreLogoFrame
+                            src={selectedStore?.logoUrl}
+                            name={previewStoreName}
+                            className="w-36 h-16 mx-auto rounded-2xl"
+                            paddingClassName="p-2"
+                            fallbackTextClassName="text-2xl"
+                          />
                           <div className="space-y-1.5">
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
                               <Sparkles size={11} /> Brand Deals • Up to {previewStoreDiscount}

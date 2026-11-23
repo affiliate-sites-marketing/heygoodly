@@ -1,6 +1,7 @@
 package com.heygoodly.portal.modules.page.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,8 @@ public class PageRequest {
     @Size(max = 200, message = "{validation.title.size.200}")
     private String title;
 
+    @Pattern(regexp = "^$|^[a-z0-9]+(?:-[a-z0-9]+)*$", message = "{validation.slug.letters_numbers_hyphens}")
+    @Size(max = 160, message = "{validation.slug.size.160}")
     private String slug;
     private String image;
 

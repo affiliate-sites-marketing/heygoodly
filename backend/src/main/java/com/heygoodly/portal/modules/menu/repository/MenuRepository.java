@@ -10,7 +10,7 @@ import java.util.List;
 
 @Repository
 public interface MenuRepository extends JpaRepository<MenuEntity, Long> {
-    List<MenuEntity> findByPositionAndIsActiveTrueOrderBySortOrderAsc(String position);
-    List<MenuEntity> findByPositionOrderBySortOrderAsc(String position);
-    Page<MenuEntity> findByPositionOrderBySortOrderAsc(String position, Pageable pageable);
+    List<MenuEntity> findByPositionAndIsActiveTrueOrderBySortOrderAscCreatedAtDescIdDesc(String position);
+    List<MenuEntity> findByPositionOrderBySortOrderAscCreatedAtDescIdDesc(String position);
+    Page<MenuEntity> findByPositionOrderBySortOrderAscCreatedAtDescIdDesc(String position, Pageable pageable);
 }

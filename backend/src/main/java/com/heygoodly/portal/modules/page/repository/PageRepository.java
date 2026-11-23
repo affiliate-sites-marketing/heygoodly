@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface PageRepository extends JpaRepository<PageEntity, Long>, JpaSpecificationExecutor<PageEntity> {
-    List<PageEntity> findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAsc();
+    List<PageEntity> findByIsActiveTrueAndIsDeletedFalseOrderBySortOrderAscCreatedAtDescIdDesc();
     Optional<PageEntity> findBySlugAndIsActiveTrueAndIsDeletedFalse(String slug);
     Optional<PageEntity> findBySlugAndIsDeletedFalse(String slug);
     boolean existsBySlugAndIsDeletedFalse(String slug);
