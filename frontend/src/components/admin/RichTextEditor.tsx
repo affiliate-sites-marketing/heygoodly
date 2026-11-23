@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { SITE_DOMAIN, SITE_NAME, SITE_SLUG } from '@/constants/site';
 import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
+import { convertClipboardToCleanHtml, looksLikeMarkdown, markdownToCleanHtml } from '@/lib/editor/smartPaste';
+import { buildVideoEmbedHtml, parseVideoEmbed } from '@/lib/editor/videoEmbed';
 import {
   Bold,
   Italic,
@@ -16,6 +18,7 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   Images,
+  Video,
   Minus,
   RotateCcw,
   RotateCw,
@@ -989,6 +992,13 @@ export default function RichTextEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const [isSourceMode, setIsSourceMode] = useState(false);
   const [sourceCode, setSourceCode] = useState(value);
+  const [markdownModalOpen, setMarkdownModalOpen] = useState(false);
+  const [markdownDraft, setMarkdownDraft] = useState('');
+  const [markdownPreviewMode, setMarkdownPreviewMode] = useState<'readme' | 'html'>('readme');
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [videoUrlInput, setVideoUrlInput] = useState('');
+  const [videoCaptionInput, setVideoCaptionInput] = useState('');
+  const [videoWidthInput, setVideoWidthInput] = useState<'100%' | '80%' | '60%'>('100%');
   
   // Modals state
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -996,6 +1006,118 @@ export default function RichTextEditor({
   const [linkText, setLinkText] = useState('');
   const [linkTargetBlank, setLinkTargetBlank] = useState(true);
   const [linkSponsored, setLinkSponsored] = useState(true);
+
+  // Floating Link Inspector popover (click / cursor inside any <a> in editor)
+  const [activeLinkEl, setActiveLinkEl] = useState<HTMLAnchorElement | null>(null);
+  const [activeLinkPos, setActiveLinkPos] = useState<{ top: number; left: number } | null>(null);
+  const [activeLinkEditing, setActiveLinkEditing] = useState(false);
+  const [activeLinkDraftUrl, setActiveLinkDraftUrl] = useState('');
+  const [activeLinkDraftText, setActiveLinkDraftText] = useState('');
+  const [activeLinkDraftNewTab, setActiveLinkDraftNewTab] = useState(true);
+  const [activeLinkCopied, setActiveLinkCopied] = useState(false);
+  const linkPopoverRef = useRef<HTMLDivElement>(null);
+
+  const findEnclosingAnchor = (node: Node | null): HTMLAnchorElement | null => {
+    let curr: Node | null = node;
+    while (curr && curr !== editorRef.current) {
+      if (curr.nodeType === Node.ELEMENT_NODE && (curr as HTMLElement).tagName.toLowerCase() === 'a') {
+        return curr as HTMLAnchorElement;
+      }
+      curr = curr.parentNode;
+    }
+    return null;
+  };
+
+  const inspectLinkAtNode = (node: Node | null) => {
+    const anchor = findEnclosingAnchor(node);
+    if (!anchor || !editorRef.current?.contains(anchor)) {
+      setActiveLinkEl(null);
+      setActiveLinkPos(null);
+      setActiveLinkEditing(false);
+      return;
+    }
+    const rect = anchor.getBoundingClientRect();
+    const popoverWidth = 340;
+    const left = Math.max(12, Math.min(rect.left, window.innerWidth - popoverWidth - 12));
+    const top = Math.min(rect.bottom + 8, window.innerHeight - 160);
+    setActiveLinkEl(anchor);
+    setActiveLinkPos({ top, left });
+    setActiveLinkDraftUrl(anchor.getAttribute('href') || '');
+    setActiveLinkDraftText(anchor.textContent || '');
+    setActiveLinkDraftNewTab(anchor.getAttribute('target') === '_blank');
+    setActiveLinkEditing(false);
+    setActiveLinkCopied(false);
+  };
+
+  const handleSaveActiveLink = () => {
+    if (!activeLinkEl || !editorRef.current?.contains(activeLinkEl)) return;
+    let nextHref = activeLinkDraftUrl.trim();
+    if (!nextHref) {
+      handleUnlinkActiveLink();
+      return;
+    }
+    if (!/^(https?:\/\/|\/|#|mailto:|tel:)/i.test(nextHref)) {
+      nextHref = `https://${nextHref}`;
+    }
+    activeLinkEl.setAttribute('href', nextHref);
+    if (activeLinkDraftText.trim()) {
+      activeLinkEl.textContent = activeLinkDraftText.trim();
+    }
+    if (activeLinkDraftNewTab) {
+      activeLinkEl.setAttribute('target', '_blank');
+      activeLinkEl.setAttribute('rel', 'noopener noreferrer');
+    } else {
+      activeLinkEl.removeAttribute('target');
+      activeLinkEl.removeAttribute('rel');
+    }
+    setActiveLinkDraftUrl(nextHref);
+    setActiveLinkEditing(false);
+    handleInput();
+    toastCtx?.toast.success('Updated link!');
+  };
+
+  const handleUnlinkActiveLink = () => {
+    if (!activeLinkEl || !activeLinkEl.parentNode) return;
+    const textNode = document.createTextNode(activeLinkEl.textContent || '');
+    activeLinkEl.parentNode.replaceChild(textNode, activeLinkEl);
+    setActiveLinkEl(null);
+    setActiveLinkPos(null);
+    setActiveLinkEditing(false);
+    handleInput();
+    toastCtx?.toast.success('Removed link');
+  };
+
+  useEffect(() => {
+    if (!activeLinkEl) return;
+    const onDocMouseDown = (ev: MouseEvent) => {
+      const target = ev.target as Node | null;
+      if (!target) return;
+      if (linkPopoverRef.current?.contains(target)) return;
+      if (activeLinkEl.contains(target)) return;
+      setActiveLinkEl(null);
+      setActiveLinkPos(null);
+      setActiveLinkEditing(false);
+    };
+    const onScroll = () => {
+      if (!activeLinkEl || !editorRef.current?.contains(activeLinkEl)) {
+        setActiveLinkEl(null);
+        setActiveLinkPos(null);
+        return;
+      }
+      const rect = activeLinkEl.getBoundingClientRect();
+      const popoverWidth = 340;
+      setActiveLinkPos({
+        top: Math.min(rect.bottom + 8, window.innerHeight - 160),
+        left: Math.max(12, Math.min(rect.left, window.innerWidth - popoverWidth - 12)),
+      });
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [activeLinkEl]);
 
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalTab, setImageModalTab] = useState<'single' | 'gallery2' | 'gallery3' | 'split'>('single');
@@ -1351,10 +1473,12 @@ export default function RichTextEditor({
     };
   }, [activeComp]);
 
-  // Sync incoming value to editor content if not focused
+  // Sync incoming value to editor content ONLY when not actively focused (prevents caret/selection jump)
   useEffect(() => {
     if (editorRef.current && !isSourceMode) {
-      if (editorRef.current.innerHTML !== value) {
+      const isFocused = document.activeElement === editorRef.current;
+      const isEmptyInitial = editorRef.current.innerHTML === '' && Boolean(value);
+      if ((!isFocused || isEmptyInitial) && editorRef.current.innerHTML !== value) {
         editorRef.current.innerHTML = value || '';
       }
     }
@@ -2681,14 +2805,23 @@ export default function RichTextEditor({
   };
 
   const handleCanvasBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      const firstEl = editorRef.current?.firstElementChild as HTMLElement | null;
-      if (firstEl && e.clientY <= firstEl.getBoundingClientRect().top + 8) {
-        ensureLeadingEditableParagraphAndFocus();
-        return;
-      }
-      focusBottomCanvasLine();
+    if (e.target !== e.currentTarget) return;
+    // Never hijack selection or jump caret to bottom when user drags to highlight text
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && sel.toString().length > 0) {
+      return;
     }
+    const firstEl = editorRef.current?.firstElementChild as HTMLElement | null;
+    if (firstEl && e.clientY <= firstEl.getBoundingClientRect().top + 8) {
+      ensureLeadingEditableParagraphAndFocus();
+      return;
+    }
+    // Only focus the bottom line when clicking genuinely BELOW the last block in the editor
+    const lastEl = editorRef.current?.lastElementChild as HTMLElement | null;
+    if (lastEl && e.clientY < lastEl.getBoundingClientRect().bottom) {
+      return;
+    }
+    focusBottomCanvasLine();
   };
 
   // Delegated click handler on editor container for quick delete and edit buttons
@@ -3079,19 +3212,28 @@ export default function RichTextEditor({
     }
   };
 
-  // Intercept Clipboard Pasted Screenshots / Images into editor canvas
+  // Intercept Clipboard Pasted Screenshots / Images & Smart Formatted Paste (ChatGPT / Markdown / Docs)
   const handleEditorPaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
-    if (!items) return;
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.kind === 'file' && item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (file) {
-          e.preventDefault();
-          await uploadAndInsertCanvasImage(file, 'Image pasted into article body!');
-          return;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            await uploadAndInsertCanvasImage(file, 'Image pasted into article body!');
+            return;
+          }
         }
+      }
+    }
+
+    if (e.clipboardData) {
+      const cleanHtml = convertClipboardToCleanHtml(e.clipboardData);
+      if (cleanHtml) {
+        e.preventDefault();
+        insertCustomHTML(cleanHtml);
       }
     }
   };
@@ -4096,6 +4238,26 @@ export default function RichTextEditor({
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Mode'}
           >
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVideoModalOpen(true)}
+            className="px-2 py-1 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer bg-white/15 text-white hover:bg-white/25"
+            title="Embed Video (YouTube, TikTok, Vimeo, Facebook, Instagram, Loom, MP4, or <iframe>)"
+          >
+            <Video size={13} />
+            <span className="hidden sm:inline">Video</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMarkdownModalOpen(true)}
+            className="px-2 py-1 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer bg-white/15 text-white hover:bg-white/25"
+            title="Paste Markdown (.md) → Convert to HTML / README Preview"
+          >
+            <FileText size={13} />
+            <span className="hidden sm:inline">MD → HTML</span>
           </button>
 
           <button
@@ -6176,9 +6338,25 @@ export default function RichTextEditor({
           <textarea
             value={sourceCode}
             onChange={handleSourceChange}
+            onPaste={(e) => {
+              const plain = e.clipboardData?.getData('text/plain') || '';
+              if (plain && !plain.trim().startsWith('<') && looksLikeMarkdown(plain)) {
+                const converted = markdownToCleanHtml(plain);
+                if (converted) {
+                  e.preventDefault();
+                  const target = e.currentTarget;
+                  const start = target.selectionStart ?? sourceCode.length;
+                  const end = target.selectionEnd ?? sourceCode.length;
+                  const next = sourceCode.slice(0, start) + converted + sourceCode.slice(end);
+                  setSourceCode(next);
+                  onChange(next);
+                  toastCtx?.toast.success('Converted pasted Markdown to clean HTML!');
+                }
+              }
+            }}
             className="w-full p-5 font-mono text-xs text-emerald-400 bg-slate-900 focus:outline-none resize-y min-h-[500px]"
             style={{ minHeight }}
-            placeholder="Edit raw HTML markup..."
+            placeholder="Edit raw HTML markup (or paste Markdown to auto-convert to HTML)..."
           />
         ) : (
           <div
@@ -6222,10 +6400,12 @@ export default function RichTextEditor({
                   if (sel?.anchorNode) {
                     const comp = findEnclosingComponent(sel.anchorNode);
                     selectComponent(comp);
+                    inspectLinkAtNode(sel.anchorNode);
                   }
                 }}
                 onMouseUp={(e) => {
                   captureEditorSelection(true);
+                  inspectLinkAtNode(e.target as Node);
                   const clickedComp = findEnclosingComponent(e.target as Node);
                   if (clickedComp) {
                     selectComponent(clickedComp);
@@ -6248,6 +6428,453 @@ export default function RichTextEditor({
             </div>
           </div>
         )}
+
+        {/* Floating Link Inspector / Inline Editor Popover */}
+        {activeLinkEl && activeLinkPos && !isSourceMode && (
+          <div
+            ref={linkPopoverRef}
+            style={{ top: activeLinkPos.top, left: activeLinkPos.left }}
+            className="fixed z-50 w-[340px] max-w-[calc(100vw-24px)] rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/15 p-2.5 text-xs animate-fadeIn"
+          >
+            {!activeLinkEditing ? (
+              <div className="flex items-center gap-1.5">
+                <LinkIcon size={13} className="text-brand-primary shrink-0" />
+                <a
+                  href={activeLinkEl.getAttribute('href') || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={activeLinkEl.getAttribute('href') || ''}
+                  className="flex-1 min-w-0 truncate text-blue-600 hover:underline font-mono text-[11px]"
+                >
+                  {activeLinkEl.getAttribute('href') || '(empty link)'}
+                </a>
+                <a
+                  href={activeLinkEl.getAttribute('href') || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open link in new tab"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition shrink-0"
+                >
+                  <ExternalLink size={13} />
+                </a>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const href = activeLinkEl.getAttribute('href') || '';
+                    try {
+                      await navigator.clipboard.writeText(href);
+                      setActiveLinkCopied(true);
+                      toastCtx?.toast.success('Copied link URL!');
+                      window.setTimeout(() => setActiveLinkCopied(false), 1800);
+                    } catch {}
+                  }}
+                  title="Copy URL"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition shrink-0 cursor-pointer"
+                >
+                  {activeLinkCopied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveLinkEditing(true)}
+                  title="Edit link"
+                  className="p-1.5 rounded-lg text-slate-600 hover:text-brand-primary hover:bg-slate-100 transition shrink-0 cursor-pointer"
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUnlinkActiveLink}
+                  title="Remove link (keep text)"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition shrink-0 cursor-pointer"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <LinkIcon size={12} className="text-brand-primary" /> Edit Link
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveLinkEditing(false)}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={activeLinkDraftText}
+                  onChange={(e) => setActiveLinkDraftText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveActiveLink();
+                    } else if (e.key === 'Escape') {
+                      setActiveLinkEditing(false);
+                    }
+                  }}
+                  placeholder="Display text..."
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary"
+                />
+                <input
+                  type="text"
+                  value={activeLinkDraftUrl}
+                  onChange={(e) => setActiveLinkDraftUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveActiveLink();
+                    } else if (e.key === 'Escape') {
+                      setActiveLinkEditing(false);
+                    }
+                  }}
+                  placeholder="https://example.com"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 font-mono text-[11px] focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary"
+                />
+                <div className="flex items-center justify-between pt-0.5">
+                  <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={activeLinkDraftNewTab}
+                      onChange={(e) => setActiveLinkDraftNewTab(e.target.checked)}
+                      className="rounded border-slate-300 text-brand-primary"
+                    />
+                    Open in new tab
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveLinkEditing(false)}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveActiveLink}
+                      className="px-2.5 py-1 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white font-bold cursor-pointer"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Markdown (.md) → HTML / README Live Converter Modal */}
+        {markdownModalOpen && (
+          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="w-full max-w-5xl max-h-[88vh] bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between gap-3 bg-slate-50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText size={16} className="text-brand-primary shrink-0" />
+                  <h3 className="text-sm font-extrabold text-slate-900 truncate">
+                    Markdown (.md) → README / HTML Importer
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const clip = await navigator.clipboard.readText();
+                        if (clip) {
+                          setMarkdownDraft(clip);
+                          toastCtx?.toast.success('Pasted Markdown from clipboard!');
+                        }
+                      } catch {
+                        toastCtx?.toast.error('Please paste directly into the left box (Cmd+V / Ctrl+V).');
+                      }
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Copy size={12} /> Paste Clipboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMarkdownModalOpen(false)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 flex-1 min-h-0 overflow-hidden">
+                {/* Left: Raw Markdown Input */}
+                <div className="flex flex-col min-h-[300px] max-h-[62vh]">
+                  <div className="px-4 py-2 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <span>Markdown Input (.md / ChatGPT / Claude / DeepSeek / Gemini / Qwen)</span>
+                    {markdownDraft && (
+                      <button
+                        type="button"
+                        onClick={() => setMarkdownDraft('')}
+                        className="text-rose-500 hover:underline normal-case cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={markdownDraft}
+                    onChange={(e) => setMarkdownDraft(e.target.value)}
+                    placeholder="# Paste Markdown here...&#10;&#10;## Key Takeaways&#10;- **Bold**, *italic*, `code`, [links](https://...)&#10;- Tables, checklists, blockquotes, images..."
+                    className="flex-1 w-full p-4 font-mono text-xs text-slate-800 bg-white focus:outline-none resize-none leading-relaxed"
+                  />
+                </div>
+
+                {/* Right: Live README / HTML Preview */}
+                <div className="flex flex-col min-h-[300px] max-h-[62vh]">
+                  <div className="px-4 py-1.5 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setMarkdownPreviewMode('readme')}
+                        className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                          markdownPreviewMode === 'readme'
+                            ? 'bg-white text-slate-900 shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        README View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMarkdownPreviewMode('html')}
+                        className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                          markdownPreviewMode === 'html'
+                            ? 'bg-white text-slate-900 shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        HTML Code
+                      </button>
+                    </div>
+                    {markdownDraft.trim() && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(markdownToCleanHtml(markdownDraft));
+                            toastCtx?.toast.success('Copied clean HTML!');
+                          } catch {}
+                        }}
+                        className="text-[11px] font-bold text-brand-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy size={11} /> Copy HTML
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-4 bg-white">
+                    {!markdownDraft.trim() ? (
+                      <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
+                        Paste Markdown on the left to preview README / HTML here...
+                      </div>
+                    ) : markdownPreviewMode === 'readme' ? (
+                      <div
+                        className="prose prose-slate prose-sm max-w-none prose-headings:font-bold prose-a:text-[#2b579a] prose-a:underline"
+                        dangerouslySetInnerHTML={{ __html: markdownToCleanHtml(markdownDraft) }}
+                      />
+                    ) : (
+                      <pre className="text-[11px] font-mono text-emerald-700 bg-slate-50 border border-slate-200 rounded-xl p-3 whitespace-pre-wrap break-words">
+                        {markdownToCleanHtml(markdownDraft)}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMarkdownModalOpen(false)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!markdownDraft.trim()}
+                  onClick={() => {
+                    const html = markdownToCleanHtml(markdownDraft);
+                    if (!html) return;
+                    if (isSourceMode) {
+                      setSourceCode(html);
+                      onChange(html);
+                    } else if (editorRef.current) {
+                      editorRef.current.innerHTML = html;
+                      handleInput();
+                    }
+                    setMarkdownModalOpen(false);
+                    setMarkdownDraft('');
+                    toastCtx?.toast.success('Replaced article content from Markdown!');
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-brand-primary/30 bg-brand-primary-soft/50 text-brand-primary hover:bg-brand-primary-soft text-xs font-bold disabled:opacity-40 cursor-pointer"
+                >
+                  Replace All
+                </button>
+                <button
+                  type="button"
+                  disabled={!markdownDraft.trim()}
+                  onClick={() => {
+                    const html = markdownToCleanHtml(markdownDraft);
+                    if (!html) return;
+                    insertCustomHTML(html);
+                    setMarkdownModalOpen(false);
+                    setMarkdownDraft('');
+                    toastCtx?.toast.success('Inserted formatted Markdown!');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold disabled:opacity-40 cursor-pointer"
+                >
+                  Insert into Editor
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Universal Video Embed Modal (YouTube, TikTok, Vimeo, Facebook, Instagram, Loom, MP4, iframe) */}
+        {videoModalOpen && (() => {
+          const parsedVideo = parseVideoEmbed(videoUrlInput);
+          return (
+            <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col">
+                <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between gap-3 bg-slate-50">
+                  <div className="flex items-center gap-2">
+                    <Video size={16} className="text-brand-primary shrink-0" />
+                    <h3 className="text-sm font-extrabold text-slate-900">
+                      Embed Video (YouTube, TikTok, Vimeo, Facebook, Instagram, MP4, iframe...)
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setVideoModalOpen(false)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4 overflow-y-auto max-h-[75vh]">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700">
+                        Video URL or &lt;iframe&gt; Embed Code
+                      </label>
+                      {parsedVideo && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
+                          ✓ Detected: {parsedVideo.platform} ({parsedVideo.aspect})
+                        </span>
+                      )}
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={videoUrlInput}
+                      onChange={(e) => setVideoUrlInput(e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=... or https://www.tiktok.com/... or <iframe src=&quot;https://...&quot;>"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary resize-none"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      Tip: You can also paste any video URL directly into the editor (Cmd+V / Ctrl+V) to auto-embed!
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Caption (optional)</label>
+                      <input
+                        type="text"
+                        value={videoCaptionInput}
+                        onChange={(e) => setVideoCaptionInput(e.target.value)}
+                        placeholder="e.g. Hands-on unboxing & speed test video"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-primary/25 focus:border-brand-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Width</label>
+                      <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
+                        {(['100%', '80%', '60%'] as const).map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            onClick={() => setVideoWidthInput(w)}
+                            className={`py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                              videoWidthInput === w
+                                ? 'bg-white text-slate-900 shadow-2xs'
+                                : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {videoUrlInput.trim() && !parsedVideo && (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                      Unrecognized video URL. Paste a direct link from YouTube, TikTok, Vimeo, Facebook, Instagram, Loom, Dailymotion, Google Drive, Streamable, an .mp4/.webm URL, or any HTTPS &lt;iframe&gt; embed code.
+                    </div>
+                  )}
+
+                  {parsedVideo && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div
+                        className="mx-auto overflow-hidden rounded-xl bg-slate-950"
+                        style={{
+                          maxWidth: parsedVideo.aspect === '9:16' ? '240px' : '100%',
+                          aspectRatio: parsedVideo.aspect === '9:16' ? '9 / 16' : '16 / 9',
+                        }}
+                      >
+                        {parsedVideo.embedType === 'video' ? (
+                          <video controls playsInline src={parsedVideo.src} className="w-full h-full" />
+                        ) : (
+                          <iframe
+                            src={parsedVideo.src}
+                            title="Video preview"
+                            className="w-full h-full border-0"
+                            allowFullScreen
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setVideoModalOpen(false)}
+                    className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!parsedVideo}
+                    onClick={() => {
+                      if (!parsedVideo) return;
+                      insertCustomHTML(buildVideoEmbedHtml(parsedVideo, videoCaptionInput, videoWidthInput));
+                      setVideoModalOpen(false);
+                      setVideoUrlInput('');
+                      setVideoCaptionInput('');
+                      toastCtx?.toast.success(`Embedded ${parsedVideo.platform} video!`);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs font-bold disabled:opacity-40 cursor-pointer"
+                  >
+                    Insert Video
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* =========================================================================
