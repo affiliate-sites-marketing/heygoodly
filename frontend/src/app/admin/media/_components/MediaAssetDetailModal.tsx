@@ -287,7 +287,7 @@ export default function MediaAssetDetailModal({
                 onClick={() => onInspectUsage(asset)}
                 className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-amber-700 hover:bg-amber-50 border border-amber-200 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Link2 size={14} /> Nơi đang dùng
+                <Link2 size={14} /> {t('Where Used')}
               </button>
             )}
           </div>
@@ -307,10 +307,10 @@ export default function MediaAssetDetailModal({
                 <RefreshCw size={14} className={isReplacing ? 'animate-spin' : ''} />
                 <span>
                   {isReplacing
-                    ? 'Đang thay ảnh...'
+                    ? t('Replacing image...')
                     : isDeletedView
-                    ? 'Upload lại ảnh (Khôi phục URL)'
-                    : 'Thay ảnh (Giữ nguyên URL)'}
+                    ? t('Re-upload Image (Restore URL)')
+                    : t('Replace Image (Keep URL)')}
                 </span>
               </button>
             )}
@@ -319,7 +319,7 @@ export default function MediaAssetDetailModal({
               onClick={() => onDelete(asset.id)}
               className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl transition cursor-pointer whitespace-nowrap shrink-0"
             >
-              <Trash2 size={14} /> {isDeletedView ? 'Xóa vĩnh viễn' : t('Delete Image')}
+              <Trash2 size={14} /> {isDeletedView ? t('Delete Permanently') : t('Delete Image')}
             </button>
             <button
               type="button"

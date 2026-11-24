@@ -29,6 +29,7 @@ import com.heygoodly.portal.modules.user.repository.UserLoginRecordRepository;
 import com.heygoodly.portal.modules.user.repository.UserPreferenceRepository;
 import com.heygoodly.portal.modules.user.repository.UserRepository;
 import com.heygoodly.portal.modules.user.service.ProfileService;
+import com.heygoodly.portal.security.TokenBlacklistService;
 import com.heygoodly.portal.security.TotpService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,7 @@ public class ProfileServiceImpl implements ProfileService {
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final TotpService totpService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final SettingService settingService;
     private final RedisCacheService redisCacheService;
 
@@ -107,7 +109,13 @@ public class ProfileServiceImpl implements ProfileService {
 
     @Override
     @Transactional
-    public void changePassword(Long userId, ChangePasswordRequest request) {
+    public void changePassword(
+            Long userId,
+            ChangePasswordRequest request,
+            Long currentSessionId,
+            String currentIp,
+            String currentDevice
+    ) {
         UserEntity user = getUserOrThrow(userId);
 
         String currentRaw = request.getCurrentPassword();
@@ -133,7 +141,7 @@ public class ProfileServiceImpl implements ProfileService {
 
         // Invalidate other sessions if requested
         if (request.isInvalidateOtherSessions()) {
-            loginRecordRepository.deleteByUserIdAndIdNot(userId, -1L);
+            revokeOtherSessions(userId, currentSessionId, currentIp, currentDevice);
         }
 
         // Record audit activity
@@ -233,34 +241,80 @@ public class ProfileServiceImpl implements ProfileService {
         return codes;
     }
 
+    private Long resolveCurrentRecordId(
+            List<UserLoginRecordEntity> records,
+            Long currentSessionId,
+            String currentIp,
+            String currentDevice
+    ) {
+        if (records == null || records.isEmpty()) return null;
+
+        // 1. Exact cryptographic JWT sessionId match
+        if (currentSessionId != null) {
+            for (UserLoginRecordEntity r : records) {
+                if (currentSessionId.equals(r.getId())) {
+                    return r.getId();
+                }
+            }
+        }
+
+        String normIp = currentIp != null ? currentIp.trim() : "";
+        String normDev = currentDevice != null ? currentDevice.trim() : "";
+
+        // 2. Exact Device + IP match (for pre-existing tokens before refresh/re-login)
+        if (!normDev.isEmpty() && !normIp.isEmpty()) {
+            for (UserLoginRecordEntity r : records) {
+                if (normDev.equalsIgnoreCase(NullSafeUtils.safeTrim(r.getDevice()))
+                        && normIp.equalsIgnoreCase(NullSafeUtils.safeTrim(r.getIpAddress()))) {
+                    return r.getId();
+                }
+            }
+        }
+
+        // 3. Exact Device/Browser match (e.g. "macOS • Chrome" when proxy/VPN IP shifted)
+        if (!normDev.isEmpty()) {
+            for (UserLoginRecordEntity r : records) {
+                if (normDev.equalsIgnoreCase(NullSafeUtils.safeTrim(r.getDevice()))) {
+                    return r.getId();
+                }
+            }
+        }
+
+        // 4. Exact IP match fallback
+        if (!normIp.isEmpty()) {
+            for (UserLoginRecordEntity r : records) {
+                if (normIp.equalsIgnoreCase(NullSafeUtils.safeTrim(r.getIpAddress()))) {
+                    return r.getId();
+                }
+            }
+        }
+
+        return records.get(0).getId();
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<SessionResponse> getSessions(Long userId, String currentIp) {
+    public List<SessionResponse> getSessions(Long userId, Long currentSessionId, String currentIp, String currentDevice) {
         List<UserLoginRecordEntity> records = loginRecordRepository.findByUserIdOrderByCreatedAtDesc(userId);
         if (records.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // Deduplicate by (device + "::" + ipAddress) to show only unique active device sessions
-        Set<String> seenDeviceIp = new HashSet<>();
+        Long activeRecordId = resolveCurrentRecordId(records, currentSessionId, currentIp, currentDevice);
+
         List<SessionResponse> result = new ArrayList<>();
-        boolean isFirst = true;
-
-        for (UserLoginRecordEntity r : records) {
-            String devKey = (r.getDevice() != null ? r.getDevice().trim().toLowerCase() : "") + "::"
-                    + (r.getIpAddress() != null ? r.getIpAddress().trim() : "");
-            if (seenDeviceIp.contains(devKey)) {
-                continue;
-            }
-            seenDeviceIp.add(devKey);
-
-            boolean isCurrent = isFirst;
-            isFirst = false;
+        int limit = Math.min(records.size(), 20);
+        for (int i = 0; i < limit; i++) {
+            UserLoginRecordEntity r = records.get(i);
+            boolean isCurrent = activeRecordId != null && activeRecordId.equals(r.getId());
 
             String browser = "Browser";
             String deviceName = r.getDevice() != null ? r.getDevice() : "Desktop Device";
-            if (deviceName.contains("/")) {
-                String[] parts = deviceName.split("/");
+            if (deviceName.contains(" • ")) {
+                String[] parts = deviceName.split(" • ", 2);
+                browser = parts[1].trim();
+            } else if (deviceName.contains("/")) {
+                String[] parts = deviceName.split("/", 2);
                 deviceName = parts[0].trim();
                 browser = parts[1].trim();
             }
@@ -283,22 +337,106 @@ public class ProfileServiceImpl implements ProfileService {
                     r.getCreatedAt()
             ));
         }
+
+        // Always place the authenticated Current Device at the top of the list
+        result.sort((a, b) -> Boolean.compare(b.isCurrent(), a.isCurrent()));
         return result;
     }
 
     @Override
     @Transactional
-    public void revokeSession(Long userId, Long sessionId) {
-        loginRecordRepository.deleteByUserIdAndId(userId, sessionId);
+    public void revokeSession(Long userId, Long sessionId, Long currentSessionId) {
+        if (currentSessionId != null) {
+            tokenBlacklistService.requireSessionIdForUser(userId);
+        }
+        List<UserLoginRecordEntity> records = loginRecordRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        UserLoginRecordEntity target = records.stream()
+                .filter(r -> sessionId.equals(r.getId()))
+                .findFirst()
+                .orElse(null);
+
+        tokenBlacklistService.revokeSession(sessionId);
+        if (target != null) {
+            if (currentSessionId == null) {
+                tokenBlacklistService.revokeDeviceFingerprint(userId, target.getDevice(), target.getIpAddress());
+            }
+            loginRecordRepository.deleteByUserIdAndId(userId, target.getId());
+
+            String targetDevice = NullSafeUtils.safeTrim(target.getDevice());
+            String targetIp = NullSafeUtils.safeTrim(target.getIpAddress());
+            try {
+                UserEntity user = getUserOrThrow(userId);
+                auditLogService.recordLog(CreateAuditLogRequest.builder()
+                        .userId(userId)
+                        .userEmail(user.getEmail())
+                        .action("REVOKE_DEVICE_SESSION")
+                        .module("security")
+                        .resourceId(String.valueOf(sessionId))
+                        .resourceName("Terminated Session #" + sessionId + ": " + targetDevice + " (" + targetIp + ")")
+                        .ipAddress(targetIp)
+                        .device(targetDevice)
+                        .status("WARNING")
+                        .build());
+            } catch (Exception ex) {
+                log.warn("Failed to record session revoke audit log: {}", ex.getMessage());
+            }
+        }
     }
 
     @Override
     @Transactional
-    public void revokeOtherSessions(Long userId, String currentIp) {
+    public void revokeOtherSessions(Long userId, Long currentSessionId, String currentIp, String currentDevice) {
+        if (currentSessionId != null) {
+            tokenBlacklistService.requireSessionIdForUser(userId);
+        }
         List<UserLoginRecordEntity> records = loginRecordRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        if (!records.isEmpty()) {
-            Long currentRecordId = records.get(0).getId();
-            loginRecordRepository.deleteByUserIdAndIdNot(userId, currentRecordId);
+        if (records.isEmpty()) {
+            return;
+        }
+
+        Long activeRecordId = resolveCurrentRecordId(records, currentSessionId, currentIp, currentDevice);
+        UserLoginRecordEntity activeRecord = records.stream()
+                .filter(r -> activeRecordId != null && activeRecordId.equals(r.getId()))
+                .findFirst()
+                .orElse(null);
+
+        String keepDevice = activeRecord != null ? NullSafeUtils.safeTrim(activeRecord.getDevice()) : "";
+        String keepIp = activeRecord != null ? NullSafeUtils.safeTrim(activeRecord.getIpAddress()) : "";
+
+        for (UserLoginRecordEntity r : records) {
+            if (activeRecordId != null && activeRecordId.equals(r.getId())) {
+                continue;
+            }
+            tokenBlacklistService.revokeSession(r.getId());
+            boolean sameAsCurrentFp = !keepDevice.isEmpty()
+                    && keepDevice.equalsIgnoreCase(NullSafeUtils.safeTrim(r.getDevice()))
+                    && keepIp.equalsIgnoreCase(NullSafeUtils.safeTrim(r.getIpAddress()));
+            if (!sameAsCurrentFp) {
+                tokenBlacklistService.revokeDeviceFingerprint(userId, r.getDevice(), r.getIpAddress());
+            }
+        }
+
+        if (activeRecordId != null) {
+            loginRecordRepository.deleteByUserIdAndIdNot(userId, activeRecordId);
+        } else {
+            loginRecordRepository.deleteAllByUserId(userId);
+        }
+
+        try {
+            UserEntity user = getUserOrThrow(userId);
+            auditLogService.recordLog(CreateAuditLogRequest.builder()
+                    .userId(userId)
+                    .userEmail(user.getEmail())
+                    .action("REVOKE_OTHER_SESSIONS")
+                    .module("security")
+                    .resourceId(String.valueOf(userId))
+                    .resourceName("Terminated All Other Remote Device Sessions")
+                    .ipAddress(currentIp)
+                    .device(currentDevice)
+                    .status("WARNING")
+                    .build());
+        } catch (Exception ex) {
+            log.warn("Failed to record revoke-other-sessions audit log: {}", ex.getMessage());
         }
     }
 

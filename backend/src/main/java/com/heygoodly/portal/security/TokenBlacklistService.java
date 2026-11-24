@@ -13,5 +13,17 @@ public interface TokenBlacklistService {
     void invalidateAllUserTokens(Long userId);
 
     boolean isUserTokenRevoked(Long userId, long tokenIssuedAtMs);
+
+    void revokeSession(Long sessionId);
+
+    boolean isSessionRevoked(Long sessionId);
+
+    void revokeDeviceFingerprint(Long userId, String device, String ipAddress);
+
+    boolean isDeviceFingerprintRevoked(Long userId, String device, String ipAddress, long tokenIssuedAtMs);
+
+    void requireSessionIdForUser(Long userId);
+
+    boolean isSessionIdRequiredForUser(Long userId);
 }
 

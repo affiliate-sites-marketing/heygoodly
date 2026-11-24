@@ -2,10 +2,13 @@ package com.heygoodly.portal.modules.user.controller;
 
 import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.MessageConstants;
+import com.heygoodly.portal.common.constant.SecurityConstants;
 import com.heygoodly.portal.common.dto.ApiResponse;
 import com.heygoodly.portal.common.exception.AppException;
 import com.heygoodly.portal.common.exception.ErrorCode;
+import com.heygoodly.portal.common.util.NetworkUtils;
 import com.heygoodly.portal.common.util.SecurityUtils;
+import com.heygoodly.portal.common.util.UserAgentUtils;
 import com.heygoodly.portal.modules.audit.entity.AuditLogEntity;
 import com.heygoodly.portal.modules.user.dto.request.ChangePasswordRequest;
 import com.heygoodly.portal.modules.user.dto.request.UpdateProfileRequest;
@@ -16,6 +19,7 @@ import com.heygoodly.portal.modules.user.dto.response.SessionResponse;
 import com.heygoodly.portal.modules.user.dto.response.TwoFactorDetailsResponse;
 import com.heygoodly.portal.modules.user.dto.response.UserPreferenceResponse;
 import com.heygoodly.portal.modules.user.service.ProfileService;
+import com.heygoodly.portal.security.JwtProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +46,7 @@ import java.util.Map;
 public class ProfileController {
 
     private final ProfileService profileService;
+    private final JwtProvider jwtProvider;
 
     @GetMapping
     public ResponseEntity<ApiResponse<ProfileResponse>> getProfile() {
@@ -58,9 +63,15 @@ public class ProfileController {
     }
 
     @PutMapping("/password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            HttpServletRequest httpRequest
+    ) {
         Long userId = resolveUserId();
-        profileService.changePassword(userId, request);
+        Long currentSessionId = extractSessionId(httpRequest);
+        String clientIp = extractClientIp(httpRequest);
+        String clientDevice = extractClientDevice(httpRequest);
+        profileService.changePassword(userId, request, currentSessionId, clientIp, clientDevice);
         return ResponseEntity.ok(ApiResponse.success(null, MessageConstants.UPDATED_SUCCESS));
     }
 
@@ -88,23 +99,31 @@ public class ProfileController {
     @GetMapping("/sessions")
     public ResponseEntity<ApiResponse<List<SessionResponse>>> getSessions(HttpServletRequest request) {
         Long userId = resolveUserId();
+        Long currentSessionId = extractSessionId(request);
         String clientIp = extractClientIp(request);
-        List<SessionResponse> response = profileService.getSessions(userId, clientIp);
+        String clientDevice = extractClientDevice(request);
+        List<SessionResponse> response = profileService.getSessions(userId, currentSessionId, clientIp, clientDevice);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     @DeleteMapping("/sessions/{id}")
-    public ResponseEntity<ApiResponse<Void>> revokeSession(@PathVariable("id") Long sessionId) {
+    public ResponseEntity<ApiResponse<Void>> revokeSession(
+            @PathVariable("id") Long sessionId,
+            HttpServletRequest request
+    ) {
         Long userId = resolveUserId();
-        profileService.revokeSession(userId, sessionId);
+        Long currentSessionId = extractSessionId(request);
+        profileService.revokeSession(userId, sessionId, currentSessionId);
         return ResponseEntity.ok(ApiResponse.success(null, MessageConstants.DELETED_SUCCESS));
     }
 
     @DeleteMapping("/sessions/other")
     public ResponseEntity<ApiResponse<Void>> revokeOtherSessions(HttpServletRequest request) {
         Long userId = resolveUserId();
+        Long currentSessionId = extractSessionId(request);
         String clientIp = extractClientIp(request);
-        profileService.revokeOtherSessions(userId, clientIp);
+        String clientDevice = extractClientDevice(request);
+        profileService.revokeOtherSessions(userId, currentSessionId, clientIp, clientDevice);
         return ResponseEntity.ok(ApiResponse.success(null, MessageConstants.DELETED_SUCCESS));
     }
 
@@ -156,10 +175,25 @@ public class ProfileController {
     }
 
     private String extractClientIp(HttpServletRequest request) {
-        String xf = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(xf)) {
-            return xf.split(AppConstants.COMMA)[0].trim();
+        String ip = NetworkUtils.getClientIp(request);
+        if ("::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
+            return "127.0.0.1";
         }
-        return request.getRemoteAddr();
+        return ip;
+    }
+
+    private String extractClientDevice(HttpServletRequest request) {
+        String ua = request != null ? request.getHeader("User-Agent") : null;
+        return UserAgentUtils.parsePlatformOs(ua);
+    }
+
+    private Long extractSessionId(HttpServletRequest request) {
+        if (request == null) return null;
+        String bearer = request.getHeader(SecurityConstants.TOKEN_HEADER);
+        if (StringUtils.hasText(bearer) && bearer.startsWith(SecurityConstants.TOKEN_PREFIX)) {
+            String token = bearer.substring(SecurityConstants.TOKEN_PREFIX.length()).trim();
+            return jwtProvider.getSessionIdFromToken(token);
+        }
+        return null;
     }
 }

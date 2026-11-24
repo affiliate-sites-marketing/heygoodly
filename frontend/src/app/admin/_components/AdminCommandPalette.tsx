@@ -78,7 +78,13 @@ export default function AdminCommandPalette({ isOpen, onClose }: AdminCommandPal
       {
         id: 'toggle-theme',
         title: isDark ? t('Switch to Light Mode') : t('Switch to Dark Mode'),
-        subtitle: isDark ? 'Giao diện sáng' : 'Giao diện tối',
+        subtitle: isDark
+          ? locale === 'vi'
+            ? 'Giao diện sáng'
+            : 'Light interface'
+          : locale === 'vi'
+            ? 'Giao diện tối'
+            : 'Dark interface',
         keywords: 'theme dark light mode giao dien sang toi mau',
         category: 'Quick Actions',
         icon: isDark ? Sun : Moon,
@@ -104,7 +110,7 @@ export default function AdminCommandPalette({ isOpen, onClose }: AdminCommandPal
       {
         id: 'open-live-site',
         title: t('Live Site'),
-        subtitle: 'Mở trang chủ',
+        subtitle: locale === 'vi' ? 'Mở trang chủ' : 'Open public homepage',
         keywords: 'live site trang chu public homepage store post',
         category: 'Quick Actions',
         icon: ExternalLink,

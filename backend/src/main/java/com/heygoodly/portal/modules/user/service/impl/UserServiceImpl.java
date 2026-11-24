@@ -25,6 +25,7 @@ import com.heygoodly.portal.modules.user.mapper.UserMapper;
 import com.heygoodly.portal.modules.user.repository.UserLoginRecordRepository;
 import com.heygoodly.portal.modules.user.repository.UserRepository;
 import com.heygoodly.portal.modules.user.service.UserService;
+import com.heygoodly.portal.security.TokenBlacklistService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final AuditLogService auditLogService;
     private final RedisCacheService redisCacheService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     @Transactional(readOnly = true)
@@ -403,6 +405,12 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUserLoginRecord(Long userId, Long recordId) {
+        loginRecordRepository.findById(recordId)
+                .filter(r -> userId.equals(r.getUserId()))
+                .ifPresent(r -> {
+                    tokenBlacklistService.revokeSession(r.getId());
+                    tokenBlacklistService.revokeDeviceFingerprint(userId, r.getDevice(), r.getIpAddress());
+                });
         loginRecordRepository.deleteByUserIdAndId(userId, recordId);
         userRepository.findById(userId).ifPresent(user -> {
             List<UserLoginRecordEntity> remaining = loginRecordRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -421,6 +429,11 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteAllUserLoginRecords(Long userId) {
+        List<UserLoginRecordEntity> all = loginRecordRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        for (UserLoginRecordEntity r : all) {
+            tokenBlacklistService.revokeSession(r.getId());
+        }
+        tokenBlacklistService.invalidateAllUserTokens(userId);
         loginRecordRepository.deleteAllByUserId(userId);
         userRepository.findById(userId).ifPresent(user -> {
             user.setLoginCount(0);

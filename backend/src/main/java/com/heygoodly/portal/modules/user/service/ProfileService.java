@@ -18,7 +18,7 @@ public interface ProfileService {
 
     ProfileResponse updateProfile(Long userId, UpdateProfileRequest request);
 
-    void changePassword(Long userId, ChangePasswordRequest request);
+    void changePassword(Long userId, ChangePasswordRequest request, Long currentSessionId, String currentIp, String currentDevice);
 
     boolean verifyPassword(Long userId, String password);
 
@@ -26,11 +26,11 @@ public interface ProfileService {
 
     List<String> regenerateRecoveryCodes(Long userId);
 
-    List<SessionResponse> getSessions(Long userId, String currentIp);
+    List<SessionResponse> getSessions(Long userId, Long currentSessionId, String currentIp, String currentDevice);
 
-    void revokeSession(Long userId, Long sessionId);
+    void revokeSession(Long userId, Long sessionId, Long currentSessionId);
 
-    void revokeOtherSessions(Long userId, String currentIp);
+    void revokeOtherSessions(Long userId, Long currentSessionId, String currentIp, String currentDevice);
 
     List<AuditLogEntity> getUserAuditLogs(Long userId, String userEmail, String type, String search);
 

@@ -14,6 +14,8 @@ public interface UserLoginRecordRepository extends JpaRepository<UserLoginRecord
 
     List<UserLoginRecordEntity> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    boolean existsByIdAndUserId(Long id, Long userId);
+
     @Modifying
     @Query("DELETE FROM UserLoginRecordEntity r WHERE r.userId = :userId AND r.id = :id")
     void deleteByUserIdAndId(@Param("userId") Long userId, @Param("id") Long id);

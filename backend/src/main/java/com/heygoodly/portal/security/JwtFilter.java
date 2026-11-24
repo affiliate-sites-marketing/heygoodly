@@ -2,6 +2,9 @@ package com.heygoodly.portal.security;
 
 import com.heygoodly.portal.common.constant.SecurityConstants;
 import com.heygoodly.portal.common.exception.ErrorCode;
+import com.heygoodly.portal.common.util.NetworkUtils;
+import com.heygoodly.portal.common.util.UserAgentUtils;
+import com.heygoodly.portal.modules.user.repository.UserLoginRecordRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -27,6 +30,8 @@ public class JwtFilter extends OncePerRequestFilter {
     private final JwtProvider jwtProvider;
     private final CustomUserDetailsService userDetailsService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final UserLoginRecordRepository loginRecordRepository;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -35,6 +40,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String jwt = extractJwtFromRequest(request);
 
         if (StringUtils.hasText(jwt)) {
+            boolean isLogoutRequest = request.getRequestURI() != null && request.getRequestURI().endsWith("/api/v1/auth/logout");
             JwtProvider.JwtValidationResult parsed = jwtProvider.validateAndParse(jwt);
             switch (parsed.status()) {
                 case VALID -> {
@@ -42,6 +48,10 @@ public class JwtFilter extends OncePerRequestFilter {
                     if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
                         log.warn("Revoked/blacklisted token used for [{}]", request.getRequestURI());
                         request.setAttribute(SecurityConstants.AUTH_ERROR_ATTRIBUTE, ErrorCode.TOKEN_REVOKED);
+                        if (!isLogoutRequest) {
+                            jwtAuthenticationEntryPoint.commence(request, response, null);
+                            return;
+                        }
                         break;
                     }
 
@@ -55,7 +65,47 @@ public class JwtFilter extends OncePerRequestFilter {
                         if (userId != null && issuedAt != null && tokenBlacklistService.isUserTokenRevoked(userId, issuedAt.getTime())) {
                             log.warn("User tokens revoked prior to timestamp for userId [{}]", userId);
                             request.setAttribute(SecurityConstants.AUTH_ERROR_ATTRIBUTE, ErrorCode.TOKEN_REVOKED);
+                            if (!isLogoutRequest) {
+                                jwtAuthenticationEntryPoint.commence(request, response, null);
+                                return;
+                            }
                             break;
+                        }
+
+                        Long sessionId = jwtProvider.extractSessionId(claims);
+                        if (sessionId != null) {
+                            boolean revokedInRedis = tokenBlacklistService.isSessionRevoked(sessionId);
+                            boolean missingInDb = userId != null && !loginRecordRepository.existsByIdAndUserId(sessionId, userId);
+                            if (revokedInRedis || missingInDb) {
+                                log.warn("Terminated device session [{}] used for [{}]", sessionId, request.getRequestURI());
+                                request.setAttribute(SecurityConstants.AUTH_ERROR_ATTRIBUTE, ErrorCode.TOKEN_REVOKED);
+                                if (!isLogoutRequest) {
+                                    jwtAuthenticationEntryPoint.commence(request, response, null);
+                                    return;
+                                }
+                                break;
+                            }
+                        } else if (userId != null && issuedAt != null) {
+                            Object authObj = claims.get(SecurityConstants.CLAIM_AUTHORITIES);
+                            boolean isPreAuth = authObj instanceof java.util.Collection<?> col && col.contains("ROLE_PRE_AUTH");
+                            if (!isPreAuth) {
+                                String clientIp = NetworkUtils.getClientIp(request);
+                                if ("::1".equals(clientIp) || "0:0:0:0:0:0:0:1".equals(clientIp)) {
+                                    clientIp = "127.0.0.1";
+                                }
+                                String device = UserAgentUtils.parsePlatformOs(request.getHeader("User-Agent"));
+                                boolean sidRequired = tokenBlacklistService.isSessionIdRequiredForUser(userId);
+                                boolean fpRevoked = tokenBlacklistService.isDeviceFingerprintRevoked(userId, device, clientIp, issuedAt.getTime());
+                                if (sidRequired || fpRevoked) {
+                                    log.warn("Revoked legacy token [{} / {}] used for [{}]", device, clientIp, request.getRequestURI());
+                                    request.setAttribute(SecurityConstants.AUTH_ERROR_ATTRIBUTE, ErrorCode.TOKEN_REVOKED);
+                                    if (!isLogoutRequest) {
+                                        jwtAuthenticationEntryPoint.commence(request, response, null);
+                                        return;
+                                    }
+                                    break;
+                                }
+                            }
                         }
 
                         UserDetails userDetails = userDetailsService.loadUserByUsername(email);

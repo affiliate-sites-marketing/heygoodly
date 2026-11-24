@@ -1794,7 +1794,9 @@ export default function AdminProfilePage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
                 <div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    <Laptop className="text-indigo-600" size={22} /> Authorized Device Sessions ({sessions.length})
+                    <Laptop className="text-indigo-600" size={22} />
+                    <span>Authorized Device Sessions</span>
+                    <span>({sessions.length})</span>
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Hardware devices and geographic locations currently holding authenticated ProCMS tokens.

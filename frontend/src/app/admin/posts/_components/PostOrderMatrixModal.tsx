@@ -166,11 +166,7 @@ export default function PostOrderMatrixModal({
   if (!isOpen) return null;
 
   const selectedCategory = categories.find((c) => String(c.id) === selectedCategoryId);
-  const selectedCategoryName = selectedCategory
-    ? selectedCategory.slug === 'other'
-      ? `${selectedCategory.name} (Khác)`
-      : selectedCategory.name
-    : '';
+  const selectedCategoryName = selectedCategory ? t(selectedCategory.name) : '';
 
   const handleDrop = (targetIdx: number) => {
     if (dragIndex === null || dragIndex === targetIdx) {
@@ -269,7 +265,7 @@ export default function PostOrderMatrixModal({
               searchPlaceholder="Search category..."
               options={categories.map((c) => ({
                 value: String(c.id),
-                label: c.slug === 'other' ? `${c.name} (Khác)` : c.name,
+                label: c.name,
               }))}
             />
           </div>

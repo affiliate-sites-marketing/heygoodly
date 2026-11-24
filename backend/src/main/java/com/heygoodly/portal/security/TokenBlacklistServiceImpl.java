@@ -94,6 +94,91 @@ public class TokenBlacklistServiceImpl implements TokenBlacklistService {
         return false;
     }
 
+    @Override
+    public void revokeSession(Long sessionId) {
+        if (sessionId == null) return;
+        try {
+            String key = SecurityConstants.REDIS_REVOKED_SESSION_PREFIX + sessionId;
+            stringRedisTemplate.opsForValue().set(key, "revoked", Duration.ofDays(7));
+            log.info("Revoked device session [{}] in Redis", sessionId);
+        } catch (Exception ex) {
+            log.error("Redis error revoking session [{}]: {}", sessionId, ex.getMessage());
+        }
+    }
+
+    @Override
+    public boolean isSessionRevoked(Long sessionId) {
+        if (sessionId == null) return false;
+        try {
+            String key = SecurityConstants.REDIS_REVOKED_SESSION_PREFIX + sessionId;
+            return Boolean.TRUE.equals(stringRedisTemplate.hasKey(key));
+        } catch (Exception ex) {
+            log.error("Redis error checking session revocation [{}]: {}", sessionId, ex.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public void revokeDeviceFingerprint(Long userId, String device, String ipAddress) {
+        if (userId == null) return;
+        try {
+            String fp = buildFingerprint(device, ipAddress);
+            String key = SecurityConstants.REDIS_REVOKED_DEVICE_FP_PREFIX + userId + ":" + hashToken(fp);
+            stringRedisTemplate.opsForValue().set(key, String.valueOf(System.currentTimeMillis()), Duration.ofDays(7));
+        } catch (Exception ex) {
+            log.error("Redis error revoking device fingerprint for userId [{}]: {}", userId, ex.getMessage());
+        }
+    }
+
+    @Override
+    public boolean isDeviceFingerprintRevoked(Long userId, String device, String ipAddress, long tokenIssuedAtMs) {
+        if (userId == null) return false;
+        try {
+            String fp = buildFingerprint(device, ipAddress);
+            String key = SecurityConstants.REDIS_REVOKED_DEVICE_FP_PREFIX + userId + ":" + hashToken(fp);
+            String revokedAtStr = stringRedisTemplate.opsForValue().get(key);
+            if (revokedAtStr != null) {
+                long revokedAtMs = Long.parseLong(revokedAtStr);
+                return tokenIssuedAtMs <= revokedAtMs;
+            }
+        } catch (Exception ex) {
+            log.error("Redis error checking device fingerprint revocation: {}", ex.getMessage());
+        }
+        return false;
+    }
+
+    @Override
+    public void requireSessionIdForUser(Long userId) {
+        if (userId == null) return;
+        try {
+            String key = SecurityConstants.REDIS_USER_REQUIRE_SID_PREFIX + userId;
+            stringRedisTemplate.opsForValue().set(key, "1", Duration.ofDays(7));
+        } catch (Exception ex) {
+            log.error("Redis error setting require_sid for userId [{}]: {}", userId, ex.getMessage());
+        }
+    }
+
+    @Override
+    public boolean isSessionIdRequiredForUser(Long userId) {
+        if (userId == null) return false;
+        try {
+            String key = SecurityConstants.REDIS_USER_REQUIRE_SID_PREFIX + userId;
+            return Boolean.TRUE.equals(stringRedisTemplate.hasKey(key));
+        } catch (Exception ex) {
+            log.error("Redis error checking require_sid for userId [{}]: {}", userId, ex.getMessage());
+            return false;
+        }
+    }
+
+    private String buildFingerprint(String device, String ipAddress) {
+        String d = device != null ? device.trim().toLowerCase() : "";
+        String ip = ipAddress != null ? ipAddress.trim().toLowerCase() : "";
+        if ("::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
+            ip = "127.0.0.1";
+        }
+        return d + "::" + ip;
+    }
+
     private String hashToken(String token) {
         if (token == null) return "";
         try {

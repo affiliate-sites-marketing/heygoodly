@@ -186,13 +186,13 @@ export default function AdminMediaPage() {
       }
       toast.success(
         showDeletedTab
-          ? 'Đã upload lại ảnh thành công! Tất cả bài viết, Store & Banner gắn link ảnh này đã tự động hiện lại ảnh.'
-          : 'Đã thay thế ảnh tại đúng URL cũ! Mọi nơi đang dùng ảnh này sẽ tự động cập nhật.'
+          ? t('Re-uploaded image successfully! All articles, stores & banners using this URL have been restored.')
+          : t('Replaced image at the exact same URL! Every place using this image has been updated.')
       );
       loadTagCounts();
       refresh();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to replace image.';
+      const msg = err?.response?.data?.message || err?.message || t('Failed to replace image.');
       toast.error(msg);
     } finally {
       setReplacingId(null);
@@ -203,11 +203,19 @@ export default function AdminMediaPage() {
   const handleInspectUsage = async (item: MediaItem) => {
     const usage = await mediaService.getMediaUsage(item.id);
     await confirmModal({
-      title: `Nơi đang dùng ảnh (${usage.totalUsages})`,
+      title: `${t('Where This Image Is Used')} (${usage.totalUsages})`,
       message: usage.totalUsages > 0 ? (
         <div className="space-y-2.5 text-left">
           <p className="text-xs text-slate-600">
-            Đường dẫn <code className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded break-all">{item.url}</code> hiện đang được gắn tại <strong>{usage.totalUsages}</strong> vị trí:
+            {locale === 'vi' ? (
+              <>
+                Đường dẫn <code className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded break-all">{item.url}</code> hiện đang được gắn tại <strong>{usage.totalUsages}</strong> vị trí:
+              </>
+            ) : (
+              <>
+                URL <code className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded break-all">{item.url}</code> is currently referenced in <strong>{usage.totalUsages}</strong> place(s):
+              </>
+            )}
           </p>
           <ul className="max-h-52 overflow-y-auto space-y-1.5 rounded-lg border border-indigo-200 bg-indigo-50/60 p-2.5 text-xs text-slate-800">
             {usage.usages.map((u, idx) => (
@@ -222,15 +230,23 @@ export default function AdminMediaPage() {
             ))}
           </ul>
           <p className="text-xs text-emerald-700 font-medium">
-            Mẹo: Bấm nút <strong>{showDeletedTab ? 'Upload lại' : 'Thay'}</strong> để cập nhật ảnh mới cho toàn bộ {usage.totalUsages} vị trí này cùng lúc!
+            {locale === 'vi' ? (
+              <>
+                Mẹo: Bấm nút <strong>{showDeletedTab ? 'Upload lại' : 'Thay'}</strong> để cập nhật ảnh mới cho toàn bộ {usage.totalUsages} vị trí này cùng lúc!
+              </>
+            ) : (
+              <>
+                Tip: Click <strong>{showDeletedTab ? 'Re-upload' : 'Replace'}</strong> to update the image across all {usage.totalUsages} location(s) at once!
+              </>
+            )}
           </p>
         </div>
       ) : (
         <p className="text-xs text-slate-600">
-          Hiện không có bài viết, Store, Offer, Page hay Banner nào đang gắn link ảnh này.
+          {t('No articles, stores, offers, pages, or banners are currently referencing this image URL.')}
         </p>
       ),
-      confirmText: 'Đóng',
+      confirmText: t('Close'),
       cancelText: '',
       variant: 'info',
     });
@@ -241,12 +257,16 @@ export default function AdminMediaPage() {
     const hasUsages = usage.totalUsages > 0;
     const confirmed = await confirmModal({
       title: hasUsages
-        ? `Cảnh báo: Còn ${usage.totalUsages} nơi đang gắn link ảnh này!`
-        : 'Xóa vĩnh viễn khỏi Thùng rác?',
+        ? locale === 'vi'
+          ? `Cảnh báo: Còn ${usage.totalUsages} nơi đang gắn link ảnh này!`
+          : `Warning: Still referenced in ${usage.totalUsages} place(s)!`
+        : t('Permanently Delete from Trash?'),
       message: hasUsages ? (
         <div className="space-y-2 text-left">
           <p className="text-xs text-rose-700 font-semibold">
-            Nếu xóa vĩnh viễn, bạn sẽ mất hẳn dấu vết đường dẫn URL gốc và không thể bấm &quot;Upload lại&quot; để khôi phục đồng loạt cho {usage.totalUsages} vị trí sau:
+            {locale === 'vi'
+              ? `Nếu xóa vĩnh viễn, bạn sẽ mất hẳn dấu vết đường dẫn URL gốc và không thể bấm "Upload lại" để khôi phục đồng loạt cho ${usage.totalUsages} vị trí sau:`
+              : `If permanently deleted, you will lose the original URL record and cannot click "Re-upload" to bulk-restore these ${usage.totalUsages} place(s):`}
           </p>
           <ul className="max-h-36 overflow-y-auto space-y-1 rounded-lg border border-rose-200 bg-rose-50/80 p-2.5 text-xs text-rose-900">
             {usage.usages.slice(0, 8).map((u, idx) => (
@@ -260,25 +280,29 @@ export default function AdminMediaPage() {
               </li>
             ))}
             {usage.totalUsages > 8 && (
-              <li className="text-[11px] font-semibold text-rose-700">+ {usage.totalUsages - 8} vị trí khác...</li>
+              <li className="text-[11px] font-semibold text-rose-700">
+                {locale === 'vi'
+                  ? `+ ${usage.totalUsages - 8} vị trí khác...`
+                  : `+ ${usage.totalUsages - 8} more place(s)...`}
+              </li>
             )}
           </ul>
         </div>
       ) : (
-        'Sau khi xóa vĩnh viễn, bạn sẽ không thể upload đè lại vào đường dẫn URL cũ của ảnh này nữa.'
+        t('Once permanently deleted, you can no longer re-upload an image into this original URL.')
       ),
-      confirmText: 'Vẫn xóa vĩnh viễn',
+      confirmText: t('Delete Permanently'),
       cancelText: t('Cancel'),
       variant: 'danger',
     });
     if (!confirmed) return;
     try {
       await mediaService.purgeMedia(id);
-      toast.success('Đã xóa vĩnh viễn bản ghi ảnh.');
+      toast.success(t('Permanently deleted image record.'));
       loadTagCounts();
       refresh();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Không thể xóa vĩnh viễn ảnh.');
+      toast.error(err?.response?.data?.message || t('Failed to permanently delete image.'));
     }
   };
 
@@ -614,15 +638,24 @@ export default function AdminMediaPage() {
             }`}
           >
             <Trash2 size={13} />
-            <span>{showDeletedTab ? 'Đang xem: Ảnh đã xóa (Upload lại)' : 'Ảnh đã xóa (Upload lại)'}</span>
+            <span>{showDeletedTab ? t('Viewing: Deleted Images (Re-upload)') : t('Deleted Images (Re-upload)')}</span>
           </button>
         </div>
 
         {showDeletedTab && (
           <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3.5 py-2.5 text-xs text-amber-900 flex items-center justify-between gap-3">
             <span>
-              <strong>Chế độ khôi phục URL ảnh:</strong> File trên máy chủ đã bị xóa, nhưng đường dẫn URL gốc vẫn được giữ lại. Bấm{' '}
-              <strong>Upload lại</strong> để tải ảnh mới vào đúng URL cũ — tất cả bài viết, Store và Banner dùng ảnh này sẽ tự động hiện lại ảnh ngay!
+              {locale === 'vi' ? (
+                <>
+                  <strong>Chế độ khôi phục URL ảnh:</strong> File trên máy chủ đã bị xóa, nhưng đường dẫn URL gốc vẫn được giữ lại. Bấm{' '}
+                  <strong>Upload lại</strong> để tải ảnh mới vào đúng URL cũ — tất cả bài viết, Store và Banner dùng ảnh này sẽ tự động hiện lại ảnh ngay!
+                </>
+              ) : (
+                <>
+                  <strong>Image URL Recovery Mode:</strong> The file on disk was deleted, while its original URL record was preserved. Click{' '}
+                  <strong>Re-upload</strong> to upload a new image into the exact same URL — all articles, stores, and banners using it will automatically restore!
+                </>
+              )}
             </span>
           </div>
         )}
@@ -784,7 +817,7 @@ export default function AdminMediaPage() {
                       <div className="w-full h-full bg-zinc-100 flex flex-col items-center justify-center gap-1.5 p-3 text-center">
                         <ImageIcon size={24} className="text-zinc-400" />
                         <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
-                          File đã xóa
+                          {t('Deleted File')}
                         </span>
                       </div>
                     ) : (
@@ -882,7 +915,7 @@ export default function AdminMediaPage() {
                             handleInspectUsage(item);
                           }}
                           className="p-1 rounded-md bg-zinc-100 hover:bg-amber-50 text-zinc-500 hover:text-amber-700 transition cursor-pointer"
-                          title="Kiểm tra các nơi đang dùng ảnh này"
+                          title={t('Inspect where this image is used')}
                         >
                           <Link2 size={11} />
                         </button>
@@ -898,10 +931,10 @@ export default function AdminMediaPage() {
                               ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                               : 'bg-zinc-100 hover:bg-indigo-50 text-zinc-600 hover:text-indigo-700'
                           }`}
-                          title={showDeletedTab ? 'Upload lại ảnh vào đúng URL cũ' : 'Thay thế ảnh (giữ nguyên URL cũ)'}
+                          title={showDeletedTab ? t('Re-upload image to original URL') : t('Replace image (keep original URL)')}
                         >
                           <RefreshCw size={11} className={replacingId === item.id ? 'animate-spin' : ''} />
-                          <span>{showDeletedTab ? 'Upload lại' : 'Thay'}</span>
+                          <span>{showDeletedTab ? t('Re-upload') : t('Replace')}</span>
                         </button>
                         <button
                           type="button"
@@ -914,7 +947,7 @@ export default function AdminMediaPage() {
                             }
                           }}
                           className="text-zinc-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
-                          title={showDeletedTab ? 'Xóa vĩnh viễn' : t('Delete image')}
+                          title={showDeletedTab ? t('Delete Permanently') : t('Delete image')}
                         >
                           <Trash2 size={12} />
                         </button>
@@ -1029,7 +1062,7 @@ export default function AdminMediaPage() {
                             type="button"
                             onClick={() => handleInspectUsage(item)}
                             className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-amber-50 text-zinc-600 hover:text-amber-700 hover:border-amber-300 transition shrink-0 shadow-2xs cursor-pointer"
-                            title="Kiểm tra các nơi đang dùng ảnh này"
+                            title={t('Inspect where this image is used')}
                           >
                             <Link2 size={13} />
                           </button>
@@ -1042,10 +1075,10 @@ export default function AdminMediaPage() {
                                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
                                 : 'border-zinc-200 bg-white hover:bg-indigo-50 text-zinc-700 hover:text-indigo-700 hover:border-indigo-300'
                             }`}
-                            title={showDeletedTab ? 'Upload lại ảnh vào đúng URL cũ' : 'Thay thế ảnh (giữ nguyên URL cũ)'}
+                            title={showDeletedTab ? t('Re-upload image to original URL') : t('Replace image (keep original URL)')}
                           >
                             <RefreshCw size={12} className={replacingId === item.id ? 'animate-spin' : ''} />
-                            <span>{showDeletedTab ? 'Upload lại' : 'Thay'}</span>
+                            <span>{showDeletedTab ? t('Re-upload') : t('Replace')}</span>
                           </button>
                           <button
                             type="button"
@@ -1059,7 +1092,7 @@ export default function AdminMediaPage() {
                             type="button"
                             onClick={() => (showDeletedTab ? handlePurge(item.id) : handleDelete(item.id))}
                             className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white hover:bg-rose-50/60 text-zinc-400 hover:text-rose-600 hover:border-rose-300 transition shrink-0 shadow-2xs cursor-pointer"
-                            title={showDeletedTab ? 'Xóa vĩnh viễn' : t('Delete file')}
+                            title={showDeletedTab ? t('Delete Permanently') : t('Delete file')}
                           >
                             <Trash2 size={13} />
                           </button>

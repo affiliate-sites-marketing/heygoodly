@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -22,7 +22,9 @@ import {
   Bot,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { STORAGE_KEYS } from '@/constants/ui-constants';
+import { apiClient } from '@/lib/api/axios-client';
 import { authService, isValidJwtFormat, isTokenExpired } from '@/services/authService';
 import { useAdminCounts } from '@/lib/admin/useAdminCounts';
 import { usePermission, type RoleType } from '@/lib/admin/usePermission';
@@ -54,6 +56,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const counts = useAdminCounts();
   const { currentRole, switchRole, hasPermission, availableRoles } = usePermission();
   const { t } = useAdminI18n();
+  const lastSessionCheckRef = useRef<number>(0);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -92,8 +95,41 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         router.replace(`${ROUTES.AUTH.LOGIN}?reason=session_expired`);
         return;
       }
+
+      // Case 4: Verify server-side session validity (catches remotely revoked sessions immediately)
+      const now = Date.now();
+      if (now - lastSessionCheckRef.current > 1500) {
+        lastSessionCheckRef.current = now;
+        apiClient.get(API_ENDPOINTS.PROFILE.ROOT, { skipDedup: true } as any).catch(() => {});
+      }
     }
   }, [pathname, router]);
+
+  // Re-validate session immediately when user switches back to this browser tab/window or every 15s
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const verifyActiveSession = () => {
+      if (document.visibilityState === 'hidden') return;
+      const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+      if (!token && !refreshToken) return;
+      const now = Date.now();
+      if (now - lastSessionCheckRef.current < 2000) return;
+      lastSessionCheckRef.current = now;
+      apiClient.get(API_ENDPOINTS.PROFILE.ROOT, { skipDedup: true } as any).catch(() => {});
+    };
+
+    window.addEventListener('focus', verifyActiveSession);
+    document.addEventListener('visibilitychange', verifyActiveSession);
+    const intervalId = window.setInterval(verifyActiveSession, 15000);
+
+    return () => {
+      window.removeEventListener('focus', verifyActiveSession);
+      document.removeEventListener('visibilitychange', verifyActiveSession);
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await authService.logout();

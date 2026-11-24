@@ -117,6 +117,14 @@ export default function LoginPage() {
           ? 'Mã xác thực không hợp lệ hoặc đã bị thay đổi. Vui lòng đăng nhập lại.'
           : 'Your authentication token is invalid or tampered. Please sign in again.'
       );
+    } else if (reason === 'session_terminated') {
+      showToast(
+        'warning',
+        lang === 'vi' ? 'Phiên đăng nhập đã bị chấm dứt' : 'Session Terminated',
+        lang === 'vi'
+          ? 'Phiên thiết bị này đã được đăng xuất hoặc bị chấm dứt từ xa. Vui lòng đăng nhập lại.'
+          : 'This device session was signed out or remotely terminated. Please sign in again.'
+      );
     } else if (reason === 'missing_token') {
       showToast(
         'warning',

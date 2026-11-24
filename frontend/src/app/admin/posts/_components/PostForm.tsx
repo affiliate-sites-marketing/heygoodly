@@ -30,6 +30,9 @@ import {
   PanelRight,
   Search,
   AlertCircle,
+  Newspaper,
+  Image as ImageIcon,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { tagService, type TagItem } from '@/services/tagService';
 import ImageUpload from '@/components/admin/ImageUpload';
@@ -89,6 +92,10 @@ interface PostFormState {
   brandDescription: string;
   guaranteeTitle: string;
   guaranteeText: string;
+  showNewsBanner: boolean;
+  newsBannerImage: string;
+  newsBannerUrl: string;
+  newsBannerAlt: string;
 }
 
 const FORM_ID = 'post-form';
@@ -298,6 +305,10 @@ function PostFormContent({ id }: { id?: string }) {
         guaranteeText:
           existing.sidebarConfig?.guaranteeText ||
           'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.',
+        showNewsBanner: existing.sidebarConfig?.showNewsBanner !== false,
+        newsBannerImage: existing.sidebarConfig?.newsBannerImage || '',
+        newsBannerUrl: existing.sidebarConfig?.newsBannerUrl || '',
+        newsBannerAlt: existing.sidebarConfig?.newsBannerAlt || '',
       }
     : {
         title: '',
@@ -352,6 +363,10 @@ function PostFormContent({ id }: { id?: string }) {
         guaranteeTitle: `${SITE_NAME} Testing Guarantee`,
         guaranteeText:
           'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.',
+        showNewsBanner: true,
+        newsBannerImage: '',
+        newsBannerUrl: '',
+        newsBannerAlt: '',
       };
 
   return <PostFormInner key={id ?? 'new'} existing={existing} initial={initial} />;
@@ -421,7 +436,16 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
   const { toast } = useToast();
   const { t } = useAdminI18n();
   const [form, setForm] = useState<PostFormState>(initial);
+  const [articleMode, setArticleMode] = useState<'review' | 'news'>(
+    initial.storeSlug ? 'review' : 'news'
+  );
   const [editorHydrationKey, setEditorHydrationKey] = useState<number>(0);
+
+  useEffect(() => {
+    if (form.storeSlug && articleMode !== 'review') {
+      setArticleMode('review');
+    }
+  }, [form.storeSlug, articleMode]);
   const [slugTouched, setSlugTouched] = useState<boolean>(Boolean(existing?.slug));
   const [excerptTouched, setExcerptTouched] = useState<boolean>(Boolean(existing?.excerpt?.trim()));
 
@@ -773,18 +797,23 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       return;
     }
 
+    const isNewsMode = articleMode === 'news' || !form.storeSlug.trim();
     const sidebarConfig = {
-      storeName: form.storeName.trim(),
-      showBrandCard: form.showBrandCard,
-      showStoreCoupons: form.showStoreCoupons,
+      storeName: isNewsMode ? '' : form.storeName.trim(),
+      showBrandCard: isNewsMode ? false : form.showBrandCard,
+      showStoreCoupons: isNewsMode ? false : form.showStoreCoupons,
       showRelatedReviews: form.showRelatedReviews,
-      showGuaranteeCard: form.showGuaranteeCard,
-      ctaText: form.ctaText.trim(),
-      brandDescription: form.brandDescription.trim(),
+      showGuaranteeCard: isNewsMode ? false : form.showGuaranteeCard,
+      ctaText: isNewsMode ? '' : form.ctaText.trim(),
+      brandDescription: isNewsMode ? '' : form.brandDescription.trim(),
       guaranteeTitle: form.guaranteeTitle.trim() || `${SITE_NAME} Testing Guarantee`,
       guaranteeText:
         form.guaranteeText.trim() ||
         'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.',
+      showNewsBanner: isNewsMode ? form.showNewsBanner : false,
+      newsBannerImage: isNewsMode ? form.newsBannerImage.trim() : '',
+      newsBannerUrl: isNewsMode ? form.newsBannerUrl.trim() : '',
+      newsBannerAlt: isNewsMode ? form.newsBannerAlt.trim() : '',
     };
 
     const numericRating =
@@ -805,7 +834,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       excerpt: resolvedExcerpt,
       content: form.content,
       categoryId: finalCategoryId,
-      storeSlug: form.storeSlug.trim() || null,
+      storeSlug: isNewsMode ? null : form.storeSlug.trim() || null,
       authorName: form.authorName.trim() || null,
       authorRole: form.authorRole.trim() || null,
       image: form.imageUrl.trim(),
@@ -1316,7 +1345,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     { value: '', label: 'Select Editorial Category...' },
                     ...categories.map((cat) => ({
                       value: String(cat.id),
-                      label: cat.slug === 'other' ? `${cat.name} (Khác)` : cat.name,
+                      label: cat.name,
                     })),
                   ]}
                   onChange={(raw) => {
@@ -1541,11 +1570,11 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
             </FormSection>
           </div>
 
-          {/* RIGHT SIDEBAR & AFFILIATE STORE CONFIGURATION */}
+          {/* RIGHT SIDEBAR & ARTICLE MODE CONFIGURATION */}
           <div className="w-full">
             <FormSection
-              title="Right Sidebar & Affiliate Store Configuration"
-              description="Configure the partner store, active promo codes, related reviews, and editorial guarantee displayed in the article right sidebar"
+              title="Article Type & Right Sidebar Configuration"
+              description="Review articles link to a Partner Store with promo codes; News articles attach a custom sidebar banner with no store linked"
               headerRight={
                 <span className="text-[11px] font-bold text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-3 py-1 rounded-xl flex items-center gap-1.5">
                   <PanelRight size={13} />
@@ -1556,179 +1585,345 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Left 7 Cols: Controls */}
                 <div className="lg:col-span-7 space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className={labelClass}>Target Partner Store</label>
-                      <AdminSearchableSelect
-                        value={form.storeSlug}
-                        onOpen={loadStoresOnDemand}
-                        placeholder="📰 None — Publish as News (No Store Linked)"
-                        searchPlaceholder="Search partner store..."
-                        options={[
-                          { value: '', label: '📰 None — Publish as News (No Store Linked)' },
-                          ...stores.map((s) => ({
-                            value: s.slug,
-                            label: s.name,
-                            sublabel: `${s.maxDiscount} • ${s.activeCoupons} codes`,
-                          })),
-                        ]}
-                        onChange={(chosenSlug) => {
-                          const matched = stores.find((s) => s.slug === chosenSlug);
+                  {/* 2-Tab Mode Switcher: Review (Attach Store) vs News (Attach Banner) */}
+                  <div className="space-y-1.5">
+                    <label className={labelClass}>Article Format &amp; Sidebar Mode</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-1.5 bg-slate-100/90 border border-slate-200/80 rounded-2xl">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setArticleMode('review');
+                          loadStoresOnDemand();
+                        }}
+                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left transition cursor-pointer ${
+                          articleMode === 'review'
+                            ? 'bg-white text-slate-900 shadow-xs ring-1 ring-emerald-500/30'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                        }`}
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            articleMode === 'review'
+                              ? 'bg-emerald-500/15 text-emerald-600'
+                              : 'bg-slate-200/70 text-slate-500'
+                          }`}
+                        >
+                          <StoreIcon size={16} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-extrabold leading-tight">Review Article (Attach Store)</div>
+                          <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                            Store card, promo codes &amp; /reviews
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setArticleMode('news');
                           setForm((prev) => ({
                             ...prev,
-                            storeSlug: chosenSlug,
-                            storeName: chosenSlug ? (matched ? matched.name : prev.storeName) : '',
+                            storeSlug: '',
+                            storeName: '',
                           }));
                         }}
-                      />
-                      <p className={`text-[11px] font-medium pt-1 ${form.storeSlug ? 'text-emerald-700' : 'text-indigo-700'}`}>
-                        {form.storeSlug
-                          ? '★ Linked to Store → Auto-routed to Product Reviews (/reviews) with Store Card & Coupons.'
-                          : '📰 No Store linked → Auto-routed to News (/news) with News layout & Left/Right Side Banners.'}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className={labelClass}>Store Display Name (Optional Override)</label>
-                      <input
-                        type="text"
-                        value={form.storeName}
-                        onChange={(e) => setForm({ ...form, storeName: e.target.value })}
-                        placeholder={selectedStore?.name || 'e.g. Neo Sabers'}
-                        className={inputClass}
-                      />
+                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left transition cursor-pointer ${
+                          articleMode === 'news'
+                            ? 'bg-white text-slate-900 shadow-xs ring-1 ring-indigo-500/30'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                        }`}
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            articleMode === 'news'
+                              ? 'bg-indigo-500/15 text-indigo-600'
+                              : 'bg-slate-200/70 text-slate-500'
+                          }`}
+                        >
+                          <Newspaper size={16} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-extrabold leading-tight">News Article (Attach Banner)</div>
+                          <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                            No store linked, custom banner &amp; /news
+                          </div>
+                        </div>
+                      </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className={labelClass}>CTA Button Text</label>
-                      <input
-                        type="text"
-                        value={form.ctaText}
-                        onChange={(e) => setForm({ ...form, ctaText: e.target.value })}
-                        placeholder={`Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
-                        className={inputClass}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className={labelClass}>Short Description Under Store Name</label>
-                      <input
-                        type="text"
-                        value={form.brandDescription}
-                        onChange={(e) => setForm({ ...form, brandDescription: e.target.value })}
-                        placeholder={
-                          selectedStore?.shortDescription ||
-                          `Updated daily with hand-tested promo codes for ${previewStoreName}.`
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Widget Toggles */}
-                  <div className="space-y-2 pt-1">
-                    <label className={labelClass}>Right Sidebar Widget Visibility</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
-                        <input
-                          type="checkbox"
-                          checked={form.showBrandCard}
-                          onChange={(e) => setForm({ ...form, showBrandCard: e.target.checked })}
-                          className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                        />
+                  {articleMode === 'news' ? (
+                    /* NEWS MODE: Attach Sidebar Banner (No Store) */
+                    <div className="space-y-4">
+                      <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200/80 text-xs text-indigo-900 flex items-start gap-2.5">
+                        <Newspaper size={15} className="text-indigo-600 shrink-0 mt-0.5" />
                         <div>
-                          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <StoreIcon size={13} className="text-brand-primary" />
-                            <span>1. Brand Deals Card</span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Store logo, rating stars, summary, and promo code CTA button.
+                          <div className="font-bold">News Mode Active (No Store Linked)</div>
+                          <p className="text-[11px] text-indigo-700/90 mt-0.5">
+                            This article will automatically publish to News (/news). You can attach a custom clickable banner in the right sidebar below.
                           </p>
                         </div>
-                      </label>
-
-                      <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
-                        <input
-                          type="checkbox"
-                          checked={form.showStoreCoupons}
-                          onChange={(e) => setForm({ ...form, showStoreCoupons: e.target.checked })}
-                          className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                        />
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <Tag size={13} className="text-brand-primary" />
-                            <span>2. Active Promo Codes</span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Displays up to 3 active coupons for the selected store.
-                          </p>
-                        </div>
-                      </label>
-
-                      <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
-                        <input
-                          type="checkbox"
-                          checked={form.showRelatedReviews}
-                          onChange={(e) => setForm({ ...form, showRelatedReviews: e.target.checked })}
-                          className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                        />
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <BookOpen size={13} className="text-brand-primary" />
-                            <span>3. Related Lab Reviews</span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Recommends related reviews in the same category with thumbnails.
-                          </p>
-                        </div>
-                      </label>
-
-                      <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
-                        <input
-                          type="checkbox"
-                          checked={form.showGuaranteeCard}
-                          onChange={(e) => setForm({ ...form, showGuaranteeCard: e.target.checked })}
-                          className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                        />
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <ShieldCheck size={13} className="text-emerald-600" />
-                            <span>4. Testing Guarantee &amp; Tags</span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            Independent testing guarantee box with #tag pills.
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Guarantee Text Customization */}
-                  {form.showGuaranteeCard && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                      <div className="space-y-1">
-                        <label className={labelClass}>Guarantee Box Title</label>
-                        <input
-                          type="text"
-                          value={form.guaranteeTitle}
-                          onChange={(e) => setForm({ ...form, guaranteeTitle: e.target.value })}
-                          placeholder={`${SITE_NAME} Testing Guarantee`}
-                          className={inputClass}
-                        />
                       </div>
-                      <div className="space-y-1">
-                        <label className={labelClass}>Guarantee Description</label>
-                        <input
-                          type="text"
-                          value={form.guaranteeText}
-                          onChange={(e) => setForm({ ...form, guaranteeText: e.target.value })}
-                          placeholder="Every product reviewed is independently evaluated..."
-                          className={inputClass}
-                        />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                          <input
+                            type="checkbox"
+                            checked={form.showNewsBanner}
+                            onChange={(e) => setForm({ ...form, showNewsBanner: e.target.checked })}
+                            className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                              <ImageIcon size={13} className="text-indigo-600" />
+                              <span>1. Sidebar Banner</span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Display a custom promotional or editorial banner image in the right sidebar.
+                            </p>
+                          </div>
+                        </label>
+
+                        <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                          <input
+                            type="checkbox"
+                            checked={form.showRelatedReviews}
+                            onChange={(e) => setForm({ ...form, showRelatedReviews: e.target.checked })}
+                            className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                          />
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                              <BookOpen size={13} className="text-brand-primary" />
+                              <span>2. Related News &amp; Articles</span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              Recommends related articles in the same category with thumbnails.
+                            </p>
+                          </div>
+                        </label>
                       </div>
+
+                      {form.showNewsBanner && (
+                        <div className="space-y-4 p-4 rounded-2xl border border-slate-200 bg-slate-50/50">
+                          <ImageUpload
+                            value={form.newsBannerImage}
+                            onChange={(url) => setForm((prev) => ({ ...prev, newsBannerImage: url }))}
+                            folder="banners"
+                            label="News Sidebar Banner Image"
+                            description="Upload or pick a banner from Media Library (recommended portrait or square, e.g. 600x750 or 600x600)."
+                            aspectRatio="banner"
+                          />
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className={labelClass}>Banner Click Link URL (Optional)</label>
+                              <div className="relative">
+                                <LinkIcon
+                                  size={14}
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                                />
+                                <input
+                                  type="text"
+                                  value={form.newsBannerUrl}
+                                  onChange={(e) => setForm({ ...form, newsBannerUrl: e.target.value })}
+                                  placeholder="https://... or /stores/brand-slug"
+                                  className={`${inputClass} pl-9`}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className={labelClass}>Banner Caption / Alt Text (Optional)</label>
+                              <input
+                                type="text"
+                                value={form.newsBannerAlt}
+                                onChange={(e) => setForm({ ...form, newsBannerAlt: e.target.value })}
+                                placeholder="e.g. Limited-Time Spring Sale — Up to 40% Off"
+                                className={inputClass}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
+                  ) : (
+                    /* REVIEW MODE: Attach Partner Store (Existing Store & Coupon Widgets) */
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className={labelClass}>Target Partner Store</label>
+                          <AdminSearchableSelect
+                            value={form.storeSlug}
+                            onOpen={loadStoresOnDemand}
+                            placeholder="Select a partner store to link..."
+                            searchPlaceholder="Search partner store..."
+                            options={[
+                              ...stores.map((s) => ({
+                                value: s.slug,
+                                label: s.name,
+                                sublabel: `${s.maxDiscount} • ${s.activeCoupons} codes`,
+                              })),
+                            ]}
+                            onChange={(chosenSlug) => {
+                              const matched = stores.find((s) => s.slug === chosenSlug);
+                              setForm((prev) => ({
+                                ...prev,
+                                storeSlug: chosenSlug,
+                                storeName: chosenSlug ? (matched ? matched.name : prev.storeName) : '',
+                              }));
+                            }}
+                          />
+                          <p className={`text-[11px] font-medium pt-1 ${form.storeSlug ? 'text-emerald-700' : 'text-amber-700'}`}>
+                            {form.storeSlug
+                              ? '★ Linked to Store → Auto-routed to Product Reviews (/reviews) with Store Card & Coupons.'
+                              : '⚠ Select a Partner Store above so this article routes to Product Reviews (/reviews).'}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className={labelClass}>Store Display Name (Optional Override)</label>
+                          <input
+                            type="text"
+                            value={form.storeName}
+                            onChange={(e) => setForm({ ...form, storeName: e.target.value })}
+                            placeholder={selectedStore?.name || 'e.g. Neo Sabers'}
+                            className={inputClass}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className={labelClass}>CTA Button Text</label>
+                          <input
+                            type="text"
+                            value={form.ctaText}
+                            onChange={(e) => setForm({ ...form, ctaText: e.target.value })}
+                            placeholder={`Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
+                            className={inputClass}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className={labelClass}>Short Description Under Store Name</label>
+                          <input
+                            type="text"
+                            value={form.brandDescription}
+                            onChange={(e) => setForm({ ...form, brandDescription: e.target.value })}
+                            placeholder={
+                              selectedStore?.shortDescription ||
+                              `Updated daily with hand-tested promo codes for ${previewStoreName}.`
+                            }
+                            className={inputClass}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Widget Toggles */}
+                      <div className="space-y-2 pt-1">
+                        <label className={labelClass}>Right Sidebar Widget Visibility</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={form.showBrandCard}
+                              onChange={(e) => setForm({ ...form, showBrandCard: e.target.checked })}
+                              className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                            />
+                            <div>
+                              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <StoreIcon size={13} className="text-brand-primary" />
+                                <span>1. Brand Deals Card</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Store logo, rating stars, summary, and promo code CTA button.
+                              </p>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={form.showStoreCoupons}
+                              onChange={(e) => setForm({ ...form, showStoreCoupons: e.target.checked })}
+                              className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                            />
+                            <div>
+                              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <Tag size={13} className="text-brand-primary" />
+                                <span>2. Active Promo Codes</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Displays up to 3 active coupons for the selected store.
+                              </p>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={form.showRelatedReviews}
+                              onChange={(e) => setForm({ ...form, showRelatedReviews: e.target.checked })}
+                              className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                            />
+                            <div>
+                              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <BookOpen size={13} className="text-brand-primary" />
+                                <span>3. Related Lab Reviews</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Recommends related reviews in the same category with thumbnails.
+                              </p>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={form.showGuaranteeCard}
+                              onChange={(e) => setForm({ ...form, showGuaranteeCard: e.target.checked })}
+                              className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                            />
+                            <div>
+                              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <ShieldCheck size={13} className="text-emerald-600" />
+                                <span>4. Testing Guarantee &amp; Tags</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Independent testing guarantee box with #tag pills.
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Guarantee Text Customization */}
+                      {form.showGuaranteeCard && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                          <div className="space-y-1">
+                            <label className={labelClass}>Guarantee Box Title</label>
+                            <input
+                              type="text"
+                              value={form.guaranteeTitle}
+                              onChange={(e) => setForm({ ...form, guaranteeTitle: e.target.value })}
+                              placeholder={`${SITE_NAME} Testing Guarantee`}
+                              className={inputClass}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className={labelClass}>Guarantee Description</label>
+                            <input
+                              type="text"
+                              value={form.guaranteeText}
+                              onChange={(e) => setForm({ ...form, guaranteeText: e.target.value })}
+                              placeholder="Every product reviewed is independently evaluated..."
+                              className={inputClass}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -1741,65 +1936,117 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     </span>
                   </div>
 
-                  {form.showBrandCard && (
-                    <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-2.5 text-center">
-                      <StoreLogoFrame
-                        src={selectedStore?.logoUrl}
-                        name={previewStoreName}
-                        className="w-28 h-12 mx-auto rounded-xl"
-                        paddingClassName="p-1.5"
-                        fallbackTextClassName="text-lg"
-                      />
-                      <div className="space-y-1">
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded-full tracking-widest">
-                          <Sparkles size={10} /> Brand Deals • Up to {previewStoreDiscount}
-                        </span>
-                        <h4 className="font-black text-sm text-slate-900">{previewStoreName}</h4>
-                        <div className="flex items-center justify-center gap-1 text-[11px] text-slate-500">
-                          <Star size={11} className="fill-amber-400 text-amber-400" />
-                          <span className="font-bold text-slate-800">{previewStoreRating.toFixed(1)}</span>
+                  {articleMode === 'news' ? (
+                    <>
+                      {form.showNewsBanner ? (
+                        form.newsBannerImage ? (
+                          <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs">
+                            <img
+                              src={form.newsBannerImage}
+                              alt={form.newsBannerAlt || form.title || 'News Banner'}
+                              className="w-full h-auto max-h-72 object-cover"
+                            />
+                            {(form.newsBannerAlt || form.newsBannerUrl) && (
+                              <div className="px-3 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px]">
+                                <span className="font-semibold text-slate-700 truncate">
+                                  {form.newsBannerAlt || 'Clickable News Banner'}
+                                </span>
+                                {form.newsBannerUrl && (
+                                  <ExternalLink size={12} className="text-indigo-500 shrink-0" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="bg-white border border-dashed border-slate-300 rounded-xl p-6 text-center space-y-1.5">
+                            <ImageIcon size={24} className="mx-auto text-slate-300" />
+                            <div className="text-xs font-bold text-slate-600">No Banner Image Attached</div>
+                            <p className="text-[11px] text-slate-400">
+                              Upload or select a banner on the left to preview it here.
+                            </p>
+                          </div>
+                        )
+                      ) : (
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-4 text-center text-[11px] text-slate-400">
+                          Sidebar banner is currently hidden.
                         </div>
-                        <p className="text-[11px] text-slate-500 line-clamp-2">
-                          {form.brandDescription.trim() ||
-                            selectedStore?.shortDescription ||
-                            `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
-                        </p>
-                      </div>
-                      <div className="w-full py-2 bg-brand-primary text-white font-black text-[11px] rounded-lg">
-                        {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
-                      </div>
-                    </div>
-                  )}
+                      )}
 
-                  {form.showStoreCoupons && (
-                    <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs space-y-2">
-                      <div className="flex items-center justify-between text-xs font-black text-slate-900">
-                        <span className="flex items-center gap-1.5">
-                          <Tag size={13} className="text-brand-primary" />
-                          Active {previewStoreName} Codes
-                        </span>
-                      </div>
-                      <div className="p-2 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-[11px]">
-                        <span className="font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-1.5 py-0.5 rounded">
-                          {previewStoreDiscount}
-                        </span>
-                        <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2 py-0.5 rounded">
-                          SAVE20
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                      {form.showRelatedReviews && (
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs space-y-2">
+                          <div className="flex items-center gap-1.5 text-xs font-black text-slate-900">
+                            <BookOpen size={13} className="text-indigo-600" />
+                            <span>Related News &amp; Articles</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            Auto-populated with latest stories from the same category.
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {form.showBrandCard && (
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-2xs space-y-2.5 text-center">
+                          <StoreLogoFrame
+                            src={selectedStore?.logoUrl}
+                            name={previewStoreName}
+                            className="w-28 h-12 mx-auto rounded-xl"
+                            paddingClassName="p-1.5"
+                            fallbackTextClassName="text-lg"
+                          />
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded-full tracking-widest">
+                              <Sparkles size={10} /> Brand Deals • Up to {previewStoreDiscount}
+                            </span>
+                            <h4 className="font-black text-sm text-slate-900">{previewStoreName}</h4>
+                            <div className="flex items-center justify-center gap-1 text-[11px] text-slate-500">
+                              <Star size={11} className="fill-amber-400 text-amber-400" />
+                              <span className="font-bold text-slate-800">{previewStoreRating.toFixed(1)}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 line-clamp-2">
+                              {form.brandDescription.trim() ||
+                                selectedStore?.shortDescription ||
+                                `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
+                            </p>
+                          </div>
+                          <div className="w-full py-2 bg-brand-primary text-white font-black text-[11px] rounded-lg">
+                            {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
+                          </div>
+                        </div>
+                      )}
 
-                  {form.showGuaranteeCard && (
-                    <div className="bg-slate-900 text-white rounded-xl p-3.5 space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-bold">
-                        <ShieldCheck size={14} />
-                        <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
-                        {form.guaranteeText}
-                      </p>
-                    </div>
+                      {form.showStoreCoupons && (
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs space-y-2">
+                          <div className="flex items-center justify-between text-xs font-black text-slate-900">
+                            <span className="flex items-center gap-1.5">
+                              <Tag size={13} className="text-brand-primary" />
+                              Active {previewStoreName} Codes
+                            </span>
+                          </div>
+                          <div className="p-2 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-[11px]">
+                            <span className="font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-1.5 py-0.5 rounded">
+                              {previewStoreDiscount}
+                            </span>
+                            <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2 py-0.5 rounded">
+                              SAVE20
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {form.showGuaranteeCard && (
+                        <div className="bg-slate-900 text-white rounded-xl p-3.5 space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-bold">
+                            <ShieldCheck size={14} />
+                            <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                            {form.guaranteeText}
+                          </p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -1915,72 +2162,93 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
 
                     {/* Right Sidebar in Live Preview */}
                     <aside className={isDesktop ? 'col-span-4 space-y-5' : 'space-y-4'}>
-                      {form.showBrandCard && (
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 text-center">
-                          <StoreLogoFrame
-                            src={selectedStore?.logoUrl}
-                            name={previewStoreName}
-                            className="w-36 h-16 mx-auto rounded-2xl"
-                            paddingClassName="p-2"
-                            fallbackTextClassName="text-2xl"
-                          />
-                          <div className="space-y-1.5">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
-                              <Sparkles size={11} /> Brand Deals • Up to {previewStoreDiscount}
-                            </span>
-                            <h4 className="font-black text-lg text-slate-900">{previewStoreName}</h4>
-                            <p className="text-xs text-slate-500 leading-relaxed">
-                              {form.brandDescription.trim() ||
-                                selectedStore?.shortDescription ||
-                                `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
-                            </p>
-                          </div>
-                          <div className="w-full py-3 bg-brand-primary text-white font-black text-xs rounded-xl shadow-xs">
-                            {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
-                          </div>
-                        </div>
-                      )}
-
-                      {form.showStoreCoupons && (
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-2.5">
-                          <div className="flex items-center justify-between text-xs font-black text-slate-900">
-                            <span className="flex items-center gap-1.5">
-                              <Tag size={13} className="text-brand-primary" />
-                              Active {previewStoreName} Codes
-                            </span>
-                          </div>
-                          <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
-                            <span className="font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
-                              {previewStoreDiscount}
-                            </span>
-                            <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2.5 py-0.5 rounded">
-                              SAVE20
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {form.showGuaranteeCard && (
-                        <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
-                          <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                            <ShieldCheck size={16} />
-                            <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
-                          </div>
-                          <p className="text-xs text-slate-300 leading-relaxed">{form.guaranteeText}</p>
-                          <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
-                            {form.tags
-                              .split(',')
-                              .filter((t) => t.trim())
-                              .map((tag, idx) => (
-                                <span
-                                  key={idx}
-                                  className="text-[11px] font-medium bg-slate-800 text-slate-200 px-2.5 py-1 rounded-lg"
-                                >
-                                  #{tag.trim()}
+                      {articleMode === 'news' ? (
+                        <>
+                          {form.showNewsBanner && form.newsBannerImage && (
+                            <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs">
+                              <img
+                                src={form.newsBannerImage}
+                                alt={form.newsBannerAlt || form.title || 'News Banner'}
+                                className="w-full h-auto object-cover"
+                              />
+                              {form.newsBannerAlt && (
+                                <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-xs font-semibold text-slate-700">
+                                  {form.newsBannerAlt}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {form.showBrandCard && (
+                            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 text-center">
+                              <StoreLogoFrame
+                                src={selectedStore?.logoUrl}
+                                name={previewStoreName}
+                                className="w-36 h-16 mx-auto rounded-2xl"
+                                paddingClassName="p-2"
+                                fallbackTextClassName="text-2xl"
+                              />
+                              <div className="space-y-1.5">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
+                                  <Sparkles size={11} /> Brand Deals • Up to {previewStoreDiscount}
                                 </span>
-                              ))}
-                          </div>
-                        </div>
+                                <h4 className="font-black text-lg text-slate-900">{previewStoreName}</h4>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                  {form.brandDescription.trim() ||
+                                    selectedStore?.shortDescription ||
+                                    `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
+                                </p>
+                              </div>
+                              <div className="w-full py-3 bg-brand-primary text-white font-black text-xs rounded-xl shadow-xs">
+                                {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
+                              </div>
+                            </div>
+                          )}
+
+                          {form.showStoreCoupons && (
+                            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-2.5">
+                              <div className="flex items-center justify-between text-xs font-black text-slate-900">
+                                <span className="flex items-center gap-1.5">
+                                  <Tag size={13} className="text-brand-primary" />
+                                  Active {previewStoreName} Codes
+                                </span>
+                              </div>
+                              <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+                                <span className="font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
+                                  {previewStoreDiscount}
+                                </span>
+                                <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2.5 py-0.5 rounded">
+                                  SAVE20
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {form.showGuaranteeCard && (
+                            <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
+                              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                                <ShieldCheck size={16} />
+                                <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
+                              </div>
+                              <p className="text-xs text-slate-300 leading-relaxed">{form.guaranteeText}</p>
+                              <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
+                                {form.tags
+                                  .split(',')
+                                  .filter((t) => t.trim())
+                                  .map((tag, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="text-[11px] font-medium bg-slate-800 text-slate-200 px-2.5 py-1 rounded-lg"
+                                    >
+                                      #{tag.trim()}
+                                    </span>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </aside>
                   </div>

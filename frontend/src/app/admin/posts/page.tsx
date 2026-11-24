@@ -20,6 +20,7 @@ import {
   Award,
   Eye,
   LayoutGrid,
+  Sparkles,
 } from 'lucide-react';
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
@@ -29,6 +30,7 @@ import AdminActionButton from '@/components/admin/AdminActionButton';
 import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
 import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import PostOrderMatrixModal from './_components/PostOrderMatrixModal';
+import AiFeatureShowcaseModal, { type AiShowcaseMode } from '@/components/admin/AiFeatureShowcaseModal';
 import { adminSearchInputClass } from '@/components/admin/adminStyles';
 import { ROUTES } from '@/constants/routes';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
@@ -90,6 +92,7 @@ function AdminPostsContent() {
   const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>('ALL');
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [orderMatrixOpen, setOrderMatrixOpen] = useState(false);
+  const [aiShowcaseMode, setAiShowcaseMode] = useState<AiShowcaseMode | null>(null);
 
   // Categories list loaded on-demand per Rule 2
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -343,6 +346,22 @@ function AdminPostsContent() {
         badge={`${stats.total || totalItems} Articles Total`}
         description="Author and publish independent product tests, buying guides, and breaking editorial dispatches."
       >
+        <button
+          type="button"
+          onClick={() => setAiShowcaseMode('review_autopilot')}
+          className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
+        >
+          <Sparkles size={14} />
+          <span>AI Auto-Write Reviews</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setAiShowcaseMode('news_autopilot')}
+          className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
+        >
+          <Sparkles size={14} />
+          <span>AI Auto-Write News</span>
+        </button>
         {hasPermission('post.update') && (
           <button
             type="button"
@@ -628,6 +647,14 @@ function AdminPostsContent() {
         onClose={() => setOrderMatrixOpen(false)}
         initialCategoryId={activeNumericCategoryId}
         onSaved={refreshPosts}
+      />
+
+      {/* AI Auto-Write & Publish Reviews / News Showcase Modal */}
+      <AiFeatureShowcaseModal
+        isOpen={aiShowcaseMode !== null}
+        mode={aiShowcaseMode ?? 'review_autopilot'}
+        onClose={() => setAiShowcaseMode(null)}
+        onCompleted={refreshPosts}
       />
     </div>
   );

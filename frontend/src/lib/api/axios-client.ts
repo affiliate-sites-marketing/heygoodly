@@ -80,12 +80,11 @@ export const apiClient = axios.create({
   },
 });
 
-// Helper to decode token expiry
-function isJwtExpired(token?: string | null): boolean {
-  if (!token) return true;
+function parseJwtPayload(token?: string | null): Record<string, unknown> | null {
+  if (!token) return null;
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) return true;
+    if (parts.length !== 3) return null;
     const base64Url = parts[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const json = decodeURIComponent(
@@ -94,12 +93,22 @@ function isJwtExpired(token?: string | null): boolean {
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
-    const payload = JSON.parse(json);
-    if (!payload || typeof payload.exp !== 'number') return true;
-    return Date.now() >= payload.exp * 1000 - 15000; // 15-second buffer
+    return JSON.parse(json);
   } catch {
-    return true;
+    return null;
   }
+}
+
+// Helper to decode token expiry
+function isJwtExpired(token?: string | null): boolean {
+  const payload = parseJwtPayload(token);
+  if (!payload || typeof payload.exp !== 'number') return true;
+  return Date.now() >= payload.exp * 1000 - 15000; // 15-second buffer
+}
+
+function hasSessionIdClaim(token?: string | null): boolean {
+  const payload = parseJwtPayload(token);
+  return Boolean(payload && payload.sid !== undefined && payload.sid !== null);
 }
 
 let activeRefreshPromise: Promise<string | null> | null = null;
@@ -109,12 +118,12 @@ async function getOrRefreshAccessToken(): Promise<string | null> {
   const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 
-  // If token is still valid, return it immediately
-  if (token && !isJwtExpired(token)) {
+  // If token is still valid AND bound to a server sessionId, return it immediately
+  if (token && !isJwtExpired(token) && hasSessionIdClaim(token)) {
     return token;
   }
 
-  // If token is expired or expiring soon, but we have a refresh token:
+  // If token is expired, expiring soon, or a legacy token missing sid, refresh/upgrade via refreshToken:
   if (refreshToken) {
     if (activeRefreshPromise) {
       return activeRefreshPromise;
@@ -138,7 +147,11 @@ async function getOrRefreshAccessToken(): Promise<string | null> {
           return newAccess;
         }
         return null;
-      } catch {
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          handleAuthCleanupAndRedirect('session_terminated');
+        }
         return null;
       } finally {
         activeRefreshPromise = null;
@@ -195,7 +208,9 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-const handleAuthCleanupAndRedirect = (reason: 'session_expired' | 'invalid_token' | 'missing_token') => {
+const handleAuthCleanupAndRedirect = (
+  reason: 'session_expired' | 'session_terminated' | 'invalid_token' | 'missing_token'
+) => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
   localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
@@ -229,6 +244,12 @@ apiClient.interceptors.response.use(
 
     if (status === 401 && !isAuthEndpoint) {
       const refreshToken = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) : null;
+
+      // If session or token was explicitly terminated/revoked by administrator or remote sign-out, force immediate logout
+      if (errorCode === 'TOKEN_REVOKED') {
+        handleAuthCleanupAndRedirect('session_terminated');
+        return Promise.reject(error);
+      }
 
       // If token is invalid or tampered (not simply expired) and no refresh token, cleanup immediately
       if (errorCode === 'TOKEN_INVALID' && !refreshToken) {

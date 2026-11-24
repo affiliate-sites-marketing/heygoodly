@@ -97,12 +97,12 @@ public class AuthServiceImpl implements AuthService {
             if (!isOtpValid(user.getTwoFactorSecret(), request.getOtpCode())) {
                 throw new BadRequestException("Invalid two-factor authentication code.", ErrorCodes.INVALID_OTP_CODE);
             }
-            recordLoginSuccess(user, "2FA (TOTP)");
-            return generateLoginSuccessResponse(user);
+            Long sessionId = recordLoginSuccess(user, "2FA (TOTP)");
+            return generateLoginSuccessResponse(user, sessionId);
         }
 
-        recordLoginSuccess(user, "Password");
-        return generateLoginSuccessResponse(user);
+        Long sessionId = recordLoginSuccess(user, "Password");
+        return generateLoginSuccessResponse(user, sessionId);
     }
 
     @Override
@@ -132,11 +132,12 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Invalid authentication code or recovery code.", ErrorCodes.INVALID_OTP_CODE);
         }
 
-        recordLoginSuccess(user, "2FA (TOTP)");
-        return generateLoginSuccessResponse(user);
+        Long sessionId = recordLoginSuccess(user, "2FA (TOTP)");
+        return generateLoginSuccessResponse(user, sessionId);
     }
 
     @Override
+    @Transactional
     public LoginResponse refreshToken(RefreshTokenRequest request) {
         if (!jwtProvider.validateToken(request.getRefreshToken())) {
             throw new UnauthorizedException("Invalid or expired refresh token.");
@@ -155,6 +156,32 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Account is deactivated.");
         }
 
+        Date issuedAt = jwtProvider.getIssuedAtFromToken(request.getRefreshToken());
+        if (issuedAt != null && tokenBlacklistService.isUserTokenRevoked(user.getId(), issuedAt.getTime())) {
+            throw new UnauthorizedException("Session has been revoked.");
+        }
+
+        Long sessionId = jwtProvider.getSessionIdFromToken(request.getRefreshToken());
+        if (sessionId != null) {
+            if (tokenBlacklistService.isSessionRevoked(sessionId)
+                    || !loginRecordRepository.existsByIdAndUserId(sessionId, user.getId())) {
+                throw new UnauthorizedException("Device session has been terminated.");
+            }
+        } else {
+            if (tokenBlacklistService.isSessionIdRequiredForUser(user.getId())) {
+                throw new UnauthorizedException("Device session has been terminated.");
+            }
+            // Upgrade legacy refresh token to an explicit sessionId if not revoked
+            HttpServletRequest httpReq = resolveCurrentHttpRequest();
+            String ip = resolveNormalizedIp(httpReq);
+            String device = resolveNormalizedDevice(httpReq);
+            if (issuedAt != null && tokenBlacklistService.isDeviceFingerprintRevoked(user.getId(), device, ip, issuedAt.getTime())) {
+                throw new UnauthorizedException("Device session has been terminated.");
+            }
+            // Mint a dedicated session record for each legacy token upgrade so distinct browser windows never share a sessionId
+            sessionId = recordLoginSuccess(user, "Session Upgrade");
+        }
+
         // Refresh Token Rotation: Revoke the old refresh token upon issuing a new one
         try {
             Date oldExp = jwtProvider.getExpirationDateFromToken(request.getRefreshToken());
@@ -165,13 +192,19 @@ public class AuthServiceImpl implements AuthService {
             log.warn("Could not blacklist old refresh token: {}", ex.getMessage());
         }
 
-        return generateLoginSuccessResponse(user);
+        return generateLoginSuccessResponse(user, sessionId);
     }
 
     @Override
+    @Transactional
     public void logout(String accessToken, String refreshToken) {
+        Long sessionId = null;
+        Long userId = null;
+
         if (accessToken != null && !accessToken.isBlank()) {
             try {
+                sessionId = jwtProvider.getSessionIdFromToken(accessToken);
+                userId = jwtProvider.getUserIdFromToken(accessToken);
                 Date expiration = jwtProvider.getExpirationDateFromToken(accessToken);
                 if (expiration != null) {
                     tokenBlacklistService.blacklistToken(accessToken, expiration.getTime());
@@ -183,12 +216,26 @@ public class AuthServiceImpl implements AuthService {
 
         if (refreshToken != null && !refreshToken.isBlank()) {
             try {
+                if (sessionId == null) {
+                    sessionId = jwtProvider.getSessionIdFromToken(refreshToken);
+                }
                 Date expiration = jwtProvider.getExpirationDateFromToken(refreshToken);
                 if (expiration != null) {
                     tokenBlacklistService.blacklistRefreshToken(refreshToken, expiration.getTime());
                 }
             } catch (Exception ex) {
                 log.warn("Could not blacklist refresh token on logout: {}", ex.getMessage());
+            }
+        }
+
+        if (sessionId != null) {
+            tokenBlacklistService.revokeSession(sessionId);
+            if (userId != null) {
+                try {
+                    loginRecordRepository.deleteByUserIdAndId(userId, sessionId);
+                } catch (Exception ex) {
+                    log.warn("Could not delete login session record on logout: {}", ex.getMessage());
+                }
             }
         }
     }
@@ -307,7 +354,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
     }
 
-    private LoginResponse generateLoginSuccessResponse(UserEntity user) {
+    private LoginResponse generateLoginSuccessResponse(UserEntity user, Long sessionId) {
         List<String> permissions = new ArrayList<>();
         if (user.getRole() != null && user.getRole().getPermissions() != null) {
             permissions = user.getRole().getPermissions().stream()
@@ -319,10 +366,11 @@ public class AuthServiceImpl implements AuthService {
                 user.getId(),
                 user.getEmail(),
                 permissions,
-                Boolean.TRUE.equals(user.getIsSuperAdmin())
+                Boolean.TRUE.equals(user.getIsSuperAdmin()),
+                sessionId
         );
 
-        String refreshToken = jwtProvider.generateRefreshToken(user.getEmail());
+        String refreshToken = jwtProvider.generateRefreshToken(user.getEmail(), sessionId);
         UserSummaryResponse userSummary = mapToUserSummary(user);
 
         return LoginResponse.success(accessToken, refreshToken, userSummary);
@@ -363,73 +411,77 @@ public class AuthServiceImpl implements AuthService {
         return false;
     }
 
-    private void recordLoginSuccess(UserEntity user, String authMethod) {
+    private HttpServletRequest resolveCurrentHttpRequest() {
         try {
-            HttpServletRequest httpReq = null;
-            try {
-                RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
-                if (attributes instanceof ServletRequestAttributes servletAttributes) {
-                    httpReq = servletAttributes.getRequest();
-                }
-            } catch (Exception ignored) {}
-
-            String ip = "127.0.0.1";
-            String rawDevice = "Desktop Chrome / macOS";
-            if (httpReq != null) {
-                String clientIp = NetworkUtils.getClientIp(httpReq);
-                if (clientIp != null && !clientIp.isBlank()) {
-                    ip = clientIp;
-                }
-                String ua = httpReq.getHeader("User-Agent");
-                if (ua != null && !ua.isBlank()) {
-                    rawDevice = ua;
-                }
+            RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+            if (attributes instanceof ServletRequestAttributes servletAttributes) {
+                return servletAttributes.getRequest();
             }
-            if ("::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
-                ip = "127.0.0.1";
-            }
+        } catch (Exception ignored) {}
+        return null;
+    }
 
+    private String resolveNormalizedIp(HttpServletRequest httpReq) {
+        String ip = "127.0.0.1";
+        if (httpReq != null) {
+            String clientIp = NetworkUtils.getClientIp(httpReq);
+            if (clientIp != null && !clientIp.isBlank()) {
+                ip = clientIp;
+            }
+        }
+        if ("::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
+            ip = "127.0.0.1";
+        }
+        return ip;
+    }
+
+    private String resolveNormalizedDevice(HttpServletRequest httpReq) {
+        String rawDevice = "Desktop Chrome / macOS";
+        if (httpReq != null) {
+            String ua = httpReq.getHeader("User-Agent");
+            if (ua != null && !ua.isBlank()) {
+                rawDevice = ua;
+            }
+        }
+        return UserAgentUtils.parsePlatformOs(rawDevice);
+    }
+
+    private Long recordLoginSuccess(UserEntity user, String authMethod) {
+        Long createdSessionId = null;
+        try {
+            HttpServletRequest httpReq = resolveCurrentHttpRequest();
+            String ip = resolveNormalizedIp(httpReq);
             String location = IpLocationUtils.resolveLocation(ip);
-            String device = UserAgentUtils.parsePlatformOs(rawDevice);
+            String device = resolveNormalizedDevice(httpReq);
 
             final String finalIp = ip;
             final String finalDevice = device;
 
             List<UserLoginRecordEntity> existingList = loginRecordRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
-            List<UserLoginRecordEntity> matching = existingList.stream()
-                    .filter(r -> finalIp.equalsIgnoreCase(r.getIpAddress()) && finalDevice.equalsIgnoreCase(r.getDevice()))
-                    .toList();
-
-            if (!matching.isEmpty()) {
-                UserLoginRecordEntity primary = matching.get(0);
-                primary.setCreatedAt(Instant.now());
-                primary.setAuthMethod(authMethod);
-                primary.setDuration("Active now");
-                primary.setLocation(location);
-                loginRecordRepository.save(primary);
-
-                // Clean up any older duplicates for the exact same device and IP
-                if (matching.size() > 1) {
-                    for (int i = 1; i < matching.size(); i++) {
-                        try {
-                            loginRecordRepository.delete(matching.get(i));
-                        } catch (Exception ignored) {}
-                    }
+            // Keep at most 19 older active sessions per user so separate browsers/incognito windows each keep their own sessionId
+            if (existingList.size() >= 20) {
+                for (int i = 19; i < existingList.size(); i++) {
+                    try {
+                        UserLoginRecordEntity stale = existingList.get(i);
+                        tokenBlacklistService.revokeSession(stale.getId());
+                        loginRecordRepository.delete(stale);
+                    } catch (Exception ignored) {}
                 }
-            } else {
-                UserLoginRecordEntity record = UserLoginRecordEntity.builder()
-                        .userId(user.getId())
-                        .ipAddress(ip)
-                        .location(location)
-                        .device(device)
-                        .authMethod(authMethod)
-                        .status("Success")
-                        .duration("Active now")
-                        .createdAt(Instant.now())
-                        .build();
-
-                loginRecordRepository.save(record);
             }
+
+            UserLoginRecordEntity record = UserLoginRecordEntity.builder()
+                    .userId(user.getId())
+                    .ipAddress(ip)
+                    .location(location)
+                    .device(device)
+                    .authMethod(authMethod)
+                    .status("Success")
+                    .duration("Active now")
+                    .createdAt(Instant.now())
+                    .build();
+
+            UserLoginRecordEntity saved = loginRecordRepository.saveAndFlush(record);
+            createdSessionId = saved.getId();
 
             // Record security audit trail for sign-in
             try {
@@ -455,5 +507,6 @@ public class AuthServiceImpl implements AuthService {
         } catch (Exception ex) {
             log.warn("Could not record login trace: {}", ex.getMessage());
         }
+        return createdSessionId;
     }
 }

@@ -154,6 +154,10 @@ export default function ArticleDetailPage() {
   const showStoreCoupons = isReviewPost && sidebarConfig.showStoreCoupons !== false && Boolean(targetStoreSlug) && storeCoupons.length > 0;
   const showRelatedReviews = sidebarConfig.showRelatedReviews !== false && relatedArticles.length > 0;
   const showGuaranteeCard = isReviewPost && sidebarConfig.showGuaranteeCard !== false;
+  const newsBannerImage = sidebarConfig.newsBannerImage?.trim() || '';
+  const newsBannerUrl = sidebarConfig.newsBannerUrl?.trim() || '';
+  const newsBannerAlt = sidebarConfig.newsBannerAlt?.trim() || '';
+  const showNewsBanner = !isReviewPost && sidebarConfig.showNewsBanner !== false && Boolean(newsBannerImage);
 
   const categorySlug =
     article.categorySlug || article.category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -457,6 +461,47 @@ export default function ArticleDetailPage() {
 
             <aside className="lg:col-span-4 min-w-0 relative self-stretch">
               <div className="sticky top-24 z-20 space-y-6">
+
+                {/* 0. News Article Custom Sidebar Banner (Strictly only when post is News with no linked Store) */}
+                {showNewsBanner && (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs group">
+                    {newsBannerUrl ? (
+                      <a
+                        href={newsBannerUrl}
+                        target={newsBannerUrl.startsWith('http') ? '_blank' : undefined}
+                        rel={newsBannerUrl.startsWith('http') ? 'noopener noreferrer nofollow sponsored' : undefined}
+                        className="block"
+                      >
+                        <div className="overflow-hidden">
+                          <img
+                            src={newsBannerImage}
+                            alt={newsBannerAlt || article.title}
+                            className="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                          />
+                        </div>
+                        {newsBannerAlt && (
+                          <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between gap-2 text-xs font-semibold text-slate-700 group-hover:text-brand-primary transition">
+                            <span className="line-clamp-2">{newsBannerAlt}</span>
+                            <ExternalLink size={13} className="shrink-0 opacity-70" />
+                          </div>
+                        )}
+                      </a>
+                    ) : (
+                      <div>
+                        <img
+                          src={newsBannerImage}
+                          alt={newsBannerAlt || article.title}
+                          className="w-full h-auto object-cover"
+                        />
+                        {newsBannerAlt && (
+                          <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100 text-xs font-semibold text-slate-700">
+                            {newsBannerAlt}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* 1. Target Store Affiliate Callout Box (Strictly only when post is linked to a real Store) */}
                 {showBrandCard && (

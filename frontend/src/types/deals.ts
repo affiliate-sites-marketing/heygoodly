@@ -125,6 +125,10 @@ export interface ArticleSidebarConfig {
   brandDescription?: string;
   guaranteeTitle?: string;
   guaranteeText?: string;
+  showNewsBanner?: boolean;
+  newsBannerImage?: string;
+  newsBannerUrl?: string;
+  newsBannerAlt?: string;
 }
 
 export interface Article {

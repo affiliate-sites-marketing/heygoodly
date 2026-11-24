@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   Eye,
   LayoutGrid,
+  Sparkles,
 } from 'lucide-react';
 import Pagination from '@/components/admin/Pagination';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
@@ -35,6 +36,7 @@ import storeService from '@/services/storeService';
 import { type AdminStore } from './_lib/data';
 import StoreOffersModal from './_components/StoreOffersModal';
 import StoreOrderMatrixModal from './_components/StoreOrderMatrixModal';
+import AiFeatureShowcaseModal from '@/components/admin/AiFeatureShowcaseModal';
 import { usePermission } from '@/lib/admin/usePermission';
 import { useServerPagination } from '@/lib/admin/useServerPagination';
 import { useToast } from '@/context/ToastContext';
@@ -94,6 +96,7 @@ export default function AdminStoresPage() {
 
   const [selectedStoreForOffers, setSelectedStoreForOffers] = useState<AdminStore | null>(null);
   const [orderMatrixOpen, setOrderMatrixOpen] = useState(false);
+  const [aiBrandScanOpen, setAiBrandScanOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
@@ -285,7 +288,15 @@ export default function AdminStoresPage() {
         badge={`${totalItems} Stores Total`}
         description="Manage merchant brand profiles, logos, and verified discount coupons."
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setAiBrandScanOpen(true)}
+            className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:opacity-95 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap shrink-0"
+          >
+            <Sparkles size={14} />
+            <span>AI Auto-Scan Brand</span>
+          </button>
           {hasPermission('store.update') && (
             <button
               type="button"
@@ -508,6 +519,14 @@ export default function AdminStoresPage() {
         isOpen={orderMatrixOpen}
         onClose={() => setOrderMatrixOpen(false)}
         onSaved={refreshStores}
+      />
+
+      {/* AI Brand Auto-Scanner Modal */}
+      <AiFeatureShowcaseModal
+        isOpen={aiBrandScanOpen}
+        mode="brand_scanner"
+        onClose={() => setAiBrandScanOpen(false)}
+        onCompleted={refreshStores}
       />
     </div>
   );

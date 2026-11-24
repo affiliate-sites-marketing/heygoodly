@@ -36,10 +36,14 @@ public class JwtProvider {
     }
 
     public String generateAccessToken(Long userId, String email, List<String> authorities, boolean isSuperAdmin) {
+        return generateAccessToken(userId, email, authorities, isSuperAdmin, null);
+    }
+
+    public String generateAccessToken(Long userId, String email, List<String> authorities, boolean isSuperAdmin, Long sessionId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenExpirationMs);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(email)
                 .claim(SecurityConstants.CLAIM_USER_ID, userId)
                 .claim(SecurityConstants.CLAIM_AUTHORITIES, authorities)
@@ -47,21 +51,33 @@ public class JwtProvider {
                 .claim(SecurityConstants.CLAIM_IS_SUPER_ADMIN, isSuperAdmin)
                 .claim(SecurityConstants.CLAIM_EMAIL, email)
                 .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(secretKey)
-                .compact();
+                .expiration(expiryDate);
+
+        if (sessionId != null) {
+            builder.claim(SecurityConstants.CLAIM_SESSION_ID, sessionId);
+        }
+
+        return builder.signWith(secretKey).compact();
     }
 
     public String generateRefreshToken(String email) {
+        return generateRefreshToken(email, null);
+    }
+
+    public String generateRefreshToken(String email, Long sessionId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + refreshTokenExpirationMs);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(email)
                 .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(secretKey)
-                .compact();
+                .expiration(expiryDate);
+
+        if (sessionId != null) {
+            builder.claim(SecurityConstants.CLAIM_SESSION_ID, sessionId);
+        }
+
+        return builder.signWith(secretKey).compact();
     }
 
     public String getEmailFromToken(String token) {
@@ -74,6 +90,28 @@ public class JwtProvider {
             return num.longValue();
         }
         return null;
+    }
+
+    public Long extractSessionId(Claims claims) {
+        if (claims == null) return null;
+        Object val = claims.get(SecurityConstants.CLAIM_SESSION_ID);
+        if (val instanceof Number num) {
+            return num.longValue();
+        }
+        if (val instanceof String str && !str.isBlank()) {
+            try {
+                return Long.parseLong(str.trim());
+            } catch (NumberFormatException ignored) {}
+        }
+        return null;
+    }
+
+    public Long getSessionIdFromToken(String token) {
+        try {
+            return extractSessionId(parseClaims(token));
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     public Date getExpirationDateFromToken(String token) {
