@@ -19,6 +19,7 @@ export interface ReviewTemplateItem {
   category: ReviewTemplateCategory;
   title: string;
   reviewerName: string;
+  reviewerAvatar?: string;
   rating: number;
   reviewDateLabel: string;
   isVerified: boolean;

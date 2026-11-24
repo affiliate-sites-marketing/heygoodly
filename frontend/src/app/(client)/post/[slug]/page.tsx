@@ -307,393 +307,384 @@ export default function ArticleDetailPage() {
       />
 
       <NewsSideBannersFrame enabled={!isReviewPost}>
-      <div className="max-w-7xl mx-auto px-4 space-y-10">
+        <div className="max-w-7xl mx-auto px-4 space-y-10">
 
-        {/* Breadcrumb Navigation */}
-        <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-500">
-          <Link href={ROUTES.PUBLIC.HOME} className="hover:text-brand-primary transition">Home</Link>
-          <ChevronRight size={12} className="shrink-0" />
-          <Link
-            href={isReviewPost ? ROUTES.PUBLIC.REVIEWS : ROUTES.PUBLIC.NEWS}
-            className="hover:text-brand-primary transition"
-          >
-            {isReviewPost ? 'Product Reviews' : 'News & Insights'}
-          </Link>
-          {categorySlug && (
-            <>
-              <ChevronRight size={12} className="shrink-0" />
-              <Link href={ROUTES.PUBLIC.CATEGORY_DETAIL(categorySlug)} className="hover:text-brand-primary transition">
+          {/* Breadcrumb Navigation */}
+          <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-500">
+            <Link href={ROUTES.PUBLIC.HOME} className="hover:text-brand-primary transition">Home</Link>
+            <ChevronRight size={12} className="shrink-0" />
+            <Link
+              href={isReviewPost ? ROUTES.PUBLIC.REVIEWS : ROUTES.PUBLIC.NEWS}
+              className="hover:text-brand-primary transition"
+            >
+              {isReviewPost ? 'Product Reviews' : 'News & Insights'}
+            </Link>
+            {categorySlug && (
+              <>
+                <ChevronRight size={12} className="shrink-0" />
+                <Link href={ROUTES.PUBLIC.CATEGORY_DETAIL(categorySlug)} className="hover:text-brand-primary transition">
+                  {article.category}
+                </Link>
+              </>
+            )}
+            <ChevronRight size={12} className="shrink-0" />
+            <span className="text-slate-900 font-semibold truncate max-w-[180px] sm:max-w-sm">{article.title}</span>
+          </nav>
+
+          {/* Article Header Card */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-xs space-y-5 sm:space-y-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
+              {!isReviewPost && (
+                <span className="bg-indigo-600 text-white font-black text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm shadow-xs inline-flex items-center gap-1">
+                  <Newspaper size={12} /> News
+                </span>
+              )}
+              <span className="bg-brand-primary text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs">
                 {article.category}
-              </Link>
-            </>
-          )}
-          <ChevronRight size={12} className="shrink-0" />
-          <span className="text-slate-900 font-semibold truncate max-w-[180px] sm:max-w-sm">{article.title}</span>
-        </nav>
-
-        {/* Article Header Card */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-5 sm:p-10 shadow-xs space-y-5 sm:space-y-6">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
-            {!isReviewPost && (
-              <span className="bg-indigo-600 text-white font-black text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-sm shadow-xs inline-flex items-center gap-1">
-                <Newspaper size={12} /> News
               </span>
+              {article.readTime && (
+                <>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-500 flex items-center gap-1 font-semibold">
+                    <Clock size={13} /> {article.readTime}
+                  </span>
+                </>
+              )}
+              {article.publishedAt && (
+                <>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-500 flex items-center gap-1">
+                    <Calendar size={13} /> {article.publishedAt}
+                  </span>
+                </>
+              )}
+              {isReviewPost && article.rating && (
+                <>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-amber-600 font-bold inline-flex items-center gap-1">
+                    <Star size={13} className="fill-amber-400 text-amber-400" /> {article.rating}/5.0
+                  </span>
+                </>
+              )}
+            </div>
+
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tight leading-tight">
+              {article.title}
+            </h1>
+
+            {resolvedLeadExcerpt && (
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-3xl">
+                {resolvedLeadExcerpt}
+              </p>
             )}
-            <span className="bg-brand-primary text-white font-black text-[11px] uppercase tracking-wider px-3 py-1 rounded-sm shadow-xs">
-              {article.category}
-            </span>
-            {article.readTime && (
-              <>
-                <span className="text-slate-300">•</span>
-                <span className="text-slate-500 flex items-center gap-1 font-semibold">
-                  <Clock size={13} /> {article.readTime}
-                </span>
-              </>
-            )}
-            {article.publishedAt && (
-              <>
-                <span className="text-slate-300">•</span>
-                <span className="text-slate-500 flex items-center gap-1">
-                  <Calendar size={13} /> {article.publishedAt}
-                </span>
-              </>
-            )}
-            {isReviewPost && article.rating && (
-              <>
-                <span className="text-slate-300">•</span>
-                <span className="text-amber-600 font-bold inline-flex items-center gap-1">
-                  <Star size={13} className="fill-amber-400 text-amber-400" /> {article.rating}/5.0
-                </span>
-              </>
-            )}
+
+            {/* Author Byline */}
+            <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-full overflow-hidden relative border border-slate-200 bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                  {article.author.avatar ? (
+                    <Image
+                      src={article.author.avatar}
+                      alt={article.author.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span>{article.author.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-extrabold text-slate-900 text-sm truncate">
+                    {article.author.name}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {article.author.role} • {publisherName} {isReviewPost ? 'Test Lab' : 'Newsroom'}
+                  </div>
+                </div>
+              </div>
+
+              {isReviewPost ? (
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-lg w-fit">
+                  <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                  <span>Independently Purchased &amp; Laboratory Tested</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 rounded-lg w-fit">
+                  <Newspaper size={14} className="text-indigo-600 shrink-0" />
+                  <span>Editorial News &amp; Consumer Desk</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tight leading-tight">
-            {article.title}
-          </h1>
-
-          {resolvedLeadExcerpt && (
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-3xl">
-              {resolvedLeadExcerpt}
-            </p>
+          {/* Featured Image Banner */}
+          {article.imageUrl && (
+            <div className="relative aspect-[16/10] sm:aspect-[21/9] min-h-[200px] sm:min-h-[340px] lg:min-h-[440px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs border border-slate-200 bg-slate-900">
+              <Image
+                src={article.imageUrl}
+                alt={article.title}
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover"
+              />
+            </div>
           )}
 
-          {/* Author Byline */}
-          <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-full overflow-hidden relative border border-slate-200 bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
-                {article.author.avatar ? (
-                  <Image
-                    src={article.author.avatar}
-                    alt={article.author.name}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <span>{article.author.name.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="font-extrabold text-slate-900 text-sm truncate">
-                  {article.author.name}
-                </div>
-                <div className="text-xs text-slate-500">
-                  {article.author.role} • {publisherName} {isReviewPost ? 'Test Lab' : 'Newsroom'}
-                </div>
-              </div>
-            </div>
+          {/* Article Body: 8 Columns Dynamic Editorial Content + 4 Columns Sidebar */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-            {isReviewPost ? (
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-lg w-fit">
-                <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
-                <span>Independently Purchased &amp; Laboratory Tested</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 rounded-lg w-fit">
-                <Newspaper size={14} className="text-indigo-600 shrink-0" />
-                <span>Editorial News &amp; Consumer Desk</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Featured Image Banner */}
-        {article.imageUrl && (
-          <div className="relative aspect-[16/10] sm:aspect-[21/9] min-h-[200px] sm:min-h-[340px] lg:min-h-[440px] rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs border border-slate-200 bg-slate-900">
-            <Image
-              src={article.imageUrl}
-              alt={article.title}
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover"
-            />
-          </div>
-        )}
-
-        {/* Article Body: Review uses 8/4 Sidebar Grid; News uses Full-Width Magazine Layout */}
-        <div className={isReviewPost ? 'grid grid-cols-1 lg:grid-cols-12 gap-8' : 'space-y-6 sm:space-y-8'}>
-
-          <div
-            className={`${
-              isReviewPost
-                ? 'lg:col-span-8 text-sm sm:text-base'
-                : 'w-full text-[15px] sm:text-[17px]'
-            } min-w-0 space-y-6 sm:space-y-8 text-slate-800 leading-relaxed`}
-          >
-            {hasRichContent ? (
-              <div
-                className={`editorial-article-body bg-white border border-slate-200/80 rounded-2xl shadow-xs space-y-6 ${
-                  isReviewPost ? 'p-4 sm:p-6 md:p-8' : 'p-5 sm:p-8 md:p-11'
-                }`}
-                dangerouslySetInnerHTML={{ __html: article.content || '' }}
-              />
-            ) : (
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-8 shadow-xs space-y-4">
-                <p className="text-slate-700 leading-relaxed">
-                  {article.excerpt || 'No article body has been published for this entry yet.'}
-                </p>
-              </div>
-            )}
-
-            {/* Inline Topics Bar for Full-Width News Articles */}
-            {!isReviewPost && article.tags && article.tags.length > 0 && (
-              <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-4 shadow-xs flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 text-xs font-black text-slate-900 mr-1">
-                  <Tag size={14} className="text-indigo-600" />
-                  <span>Topics:</span>
-                </span>
-                {article.tags.map((tag) => (
-                  <Link
-                    key={tag}
-                    href={ROUTES.PUBLIC.TAG_DETAIL(tag.toLowerCase().replace(/\s+/g, '-'))}
-                    className="text-xs font-semibold bg-slate-100 hover:bg-indigo-600 text-slate-700 hover:text-white px-3 py-1 rounded-lg transition"
-                  >
-                    #{tag}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            <div className="bg-white border border-slate-200 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
-              <strong className="text-slate-700">Editorial Disclosure:</strong>{' '}
-              {settings.affiliateDisclosure ||
-                `When you purchase through links or redeem verified promotional codes on ${publisherName}, we may earn an affiliate commission at zero additional cost to you.`}
-            </div>
-          </div>
-
-          {isReviewPost && (
-          <aside className="lg:col-span-4 min-w-0 relative self-stretch">
-            <div className="sticky top-24 z-20 space-y-6">
-
-              {/* 1. Target Store Affiliate Callout Box (Strictly only when post is linked to a real Store) */}
-              {showBrandCard && (
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4 text-center">
-                  <StoreLogoFrame
-                    src={matchedStore?.logoUrl}
-                    name={targetStoreName}
-                    className="w-36 h-16 mx-auto rounded-2xl"
-                    paddingClassName="p-2"
-                    fallbackTextClassName="text-2xl"
-                  />
-
-                  <div className="space-y-1.5">
-                    {formattedMaxDiscount && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
-                        <Sparkles size={11} /> Brand Deals • {formattedMaxDiscount}
-                      </span>
-                    )}
-                    <h4 className="font-black text-lg text-slate-900">
-                      {targetStoreName}
-                    </h4>
-                    {targetStoreRating && (
-                      <div className="flex items-center justify-center gap-1 text-xs text-slate-500">
-                        <div className="flex items-center text-amber-400">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star key={s} size={13} className="fill-amber-400 text-amber-400" />
-                          ))}
-                        </div>
-                        <span className="font-bold text-slate-800 ml-1">{targetStoreRating.toFixed(1)}</span>
-                      </div>
-                    )}
-                    <p className="text-xs text-slate-500 leading-relaxed pt-1 line-clamp-3">
-                      {extractPlainTextExcerpt(sidebarConfig.brandDescription, 220) ||
-                        extractPlainTextExcerpt(matchedStore?.shortDescription, 220) ||
-                        extractPlainTextExcerpt(matchedStore?.description, 220) ||
-                        `Hand-tested promo codes and direct manufacturer offers for ${targetStoreName}.`}
-                    </p>
-                  </div>
-
-                  <Link
-                    href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?utm_source=review_article&utm_campaign=${encodeURIComponent(article.slug)}`}
-                    className="w-full py-3 bg-brand-primary hover:bg-brand-primary-hover text-white font-black text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 group cursor-pointer"
-                  >
-                    <span>
-                      {sidebarConfig.ctaText ||
-                        (storeCoupons.length > 0
-                          ? `Get Promo Code (${storeCoupons.length} Active) →`
-                          : `Visit ${targetStoreName} Store →`)}
-                    </span>
-                  </Link>
+            <div className="lg:col-span-8 min-w-0 space-y-6 sm:space-y-8 text-slate-800 leading-relaxed text-sm sm:text-base">
+              {hasRichContent ? (
+                <div
+                  className="editorial-article-body bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 md:p-8 shadow-xs space-y-6"
+                  dangerouslySetInnerHTML={{ __html: article.content || '' }}
+                />
+              ) : (
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-8 shadow-xs space-y-4">
+                  <p className="text-slate-700 leading-relaxed">
+                    {article.excerpt || 'No article body has been published for this entry yet.'}
+                  </p>
                 </div>
               )}
 
-              {/* 2. Live Active Coupons for this Linked Store */}
-              {showStoreCoupons && (
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3.5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
-                      <Tag size={15} className="text-brand-primary" />
-                      <span>Active {targetStoreName} Codes</span>
-                    </h3>
-                  </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
+                <strong className="text-slate-700">Editorial Disclosure:</strong>{' '}
+                {settings.affiliateDisclosure ||
+                  `When you purchase through links or redeem verified promotional codes on ${publisherName}, we may earn an affiliate commission at zero additional cost to you.`}
+              </div>
+            </div>
 
-                  <div className="space-y-2.5">
-                    {storeCoupons.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() =>
-                          triggerDualActionCoupon({
-                            code: c.code,
-                            storeSlug: targetStoreSlug,
-                            offerId: c.id,
-                            customUrl: c.affiliateUrl || matchedStore?.affiliateUrl,
-                            tracking: {
-                              source: 'review_article',
-                              medium: 'review_sidebar',
-                              campaign: article.slug,
-                              subid: c.code ? `${targetStoreSlug}_${c.code}` : `${targetStoreSlug}_offer_${c.id}`,
-                            },
-                            onOpenModal: () => setSelectedCoupon(c),
-                          })
-                        }
-                        className="w-full text-left block p-3 rounded-xl border border-slate-200/90 hover:border-brand-primary bg-slate-50/60 hover:bg-brand-primary-soft/40 transition group space-y-1.5 cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
-                            {c.discount}
-                          </span>
-                          {c.code ? (
-                            <span className="font-mono text-[11px] font-bold text-slate-800 bg-white border border-dashed border-slate-300 px-2 py-0.5 rounded group-hover:border-brand-primary group-hover:text-brand-primary transition">
-                              {c.code}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
-                              <CheckCircle2 size={11} /> Instant Deal
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs font-bold text-slate-800 group-hover:text-brand-primary transition line-clamp-1">
-                          {c.title}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+            <aside className="lg:col-span-4 min-w-0 relative self-stretch">
+              <div className="sticky top-24 z-20 space-y-6">
 
-                  <Link
-                    href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?utm_source=review_article&utm_campaign=${encodeURIComponent(article.slug)}`}
-                    className="w-full py-2 text-center text-xs font-bold text-slate-600 hover:text-brand-primary flex items-center justify-center gap-1 pt-1 transition"
-                  >
-                    <span>View all {targetStoreName} coupons</span>
-                    <ExternalLink size={12} />
-                  </Link>
-                </div>
-              )}
+                {/* 1. Target Store Affiliate Callout Box (Strictly only when post is linked to a real Store) */}
+                {showBrandCard && (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4 text-center">
+                    <StoreLogoFrame
+                      src={matchedStore?.logoUrl}
+                      name={targetStoreName}
+                      className="w-36 h-16 mx-auto rounded-2xl"
+                      paddingClassName="p-2"
+                      fallbackTextClassName="text-2xl"
+                    />
 
-              {/* 3. Related Editorial Reviews / News in Sidebar */}
-              {showRelatedReviews && (
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
-                      {isReviewPost ? (
-                        <BookOpen size={15} className="text-brand-primary" />
-                      ) : (
-                        <Newspaper size={15} className="text-indigo-600" />
+                    <div className="space-y-1.5">
+                      {formattedMaxDiscount && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
+                          <Sparkles size={11} /> Brand Deals • {formattedMaxDiscount}
+                        </span>
                       )}
-                      <span>{isReviewPost ? 'Related Lab Reviews' : 'Related News'}</span>
-                    </h3>
+                      <h4 className="font-black text-lg text-slate-900">
+                        {targetStoreName}
+                      </h4>
+                      {targetStoreRating && (
+                        <div className="flex items-center justify-center gap-1 text-xs text-slate-500">
+                          <div className="flex items-center text-amber-400">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star key={s} size={13} className="fill-amber-400 text-amber-400" />
+                            ))}
+                          </div>
+                          <span className="font-bold text-slate-800 ml-1">{targetStoreRating.toFixed(1)}</span>
+                        </div>
+                      )}
+                      <p className="text-xs text-slate-500 leading-relaxed pt-1 line-clamp-3">
+                        {extractPlainTextExcerpt(sidebarConfig.brandDescription, 220) ||
+                          extractPlainTextExcerpt(matchedStore?.shortDescription, 220) ||
+                          extractPlainTextExcerpt(matchedStore?.description, 220) ||
+                          `Hand-tested promo codes and direct manufacturer offers for ${targetStoreName}.`}
+                      </p>
+                    </div>
+
                     <Link
-                      href={isReviewPost ? ROUTES.PUBLIC.REVIEWS : ROUTES.PUBLIC.NEWS}
-                      className="text-[11px] font-bold text-brand-primary hover:underline"
+                      href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?utm_source=review_article&utm_campaign=${encodeURIComponent(article.slug)}`}
+                      className="w-full py-3 bg-brand-primary hover:bg-brand-primary-hover text-white font-black text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 group cursor-pointer"
                     >
-                      See all
+                      <span>
+                        {sidebarConfig.ctaText ||
+                          (storeCoupons.length > 0
+                            ? `Get Promo Code (${storeCoupons.length} Active) →`
+                            : `Visit ${targetStoreName} Store →`)}
+                      </span>
                     </Link>
                   </div>
+                )}
 
-                  <div className="space-y-3.5">
-                    {relatedArticles.map((rel) => (
+                {/* 2. Live Active Coupons for this Linked Store */}
+                {showStoreCoupons && (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3.5">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
+                        <Tag size={15} className="text-brand-primary" />
+                        <span>Active {targetStoreName} Codes</span>
+                      </h3>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {storeCoupons.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() =>
+                            triggerDualActionCoupon({
+                              code: c.code,
+                              storeSlug: targetStoreSlug,
+                              offerId: c.id,
+                              customUrl: c.affiliateUrl || matchedStore?.affiliateUrl,
+                              tracking: {
+                                source: 'review_article',
+                                medium: 'review_sidebar',
+                                campaign: article.slug,
+                                subid: c.code ? `${targetStoreSlug}_${c.code}` : `${targetStoreSlug}_offer_${c.id}`,
+                              },
+                              onOpenModal: () => setSelectedCoupon(c),
+                            })
+                          }
+                          className="w-full text-left block p-3 rounded-xl border border-slate-200/90 hover:border-brand-primary bg-slate-50/60 hover:bg-brand-primary-soft/40 transition group space-y-1.5 cursor-pointer"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
+                              {c.discount}
+                            </span>
+                            {c.code ? (
+                              <span className="font-mono text-[11px] font-bold text-slate-800 bg-white border border-dashed border-slate-300 px-2 py-0.5 rounded group-hover:border-brand-primary group-hover:text-brand-primary transition">
+                                {c.code}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                                <CheckCircle2 size={11} /> Instant Deal
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs font-bold text-slate-800 group-hover:text-brand-primary transition line-clamp-1">
+                            {c.title}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+
+                    <Link
+                      href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?utm_source=review_article&utm_campaign=${encodeURIComponent(article.slug)}`}
+                      className="w-full py-2 text-center text-xs font-bold text-slate-600 hover:text-brand-primary flex items-center justify-center gap-1 pt-1 transition"
+                    >
+                      <span>View all {targetStoreName} coupons</span>
+                      <ExternalLink size={12} />
+                    </Link>
+                  </div>
+                )}
+
+                {/* 3. Related Editorial Reviews / News in Sidebar */}
+                {showRelatedReviews && (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
+                        {isReviewPost ? (
+                          <BookOpen size={15} className="text-brand-primary" />
+                        ) : (
+                          <Newspaper size={15} className="text-indigo-600" />
+                        )}
+                        <span>{isReviewPost ? 'Related Lab Reviews' : 'Related News'}</span>
+                      </h3>
                       <Link
-                        key={rel.id}
-                        href={ROUTES.PUBLIC.POST_DETAIL(rel.slug)}
-                        className="flex items-start gap-3 group"
+                        href={isReviewPost ? ROUTES.PUBLIC.REVIEWS : ROUTES.PUBLIC.NEWS}
+                        className="text-[11px] font-bold text-brand-primary hover:underline"
                       >
-                        <div className="relative w-16 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200 flex items-center justify-center">
-                          {rel.imageUrl ? (
-                            <Image
-                              src={rel.imageUrl}
-                              alt={rel.title}
-                              fill
-                              sizes="70px"
-                              className="object-cover group-hover:scale-105 transition-transform"
-                            />
-                          ) : (
-                            <BookOpen size={16} className="text-slate-400" />
-                          )}
-                        </div>
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary block">
-                            {rel.category}
-                          </span>
-                          <h4 className="font-bold text-xs text-slate-900 group-hover:text-brand-primary transition line-clamp-2 leading-snug">
-                            {rel.title}
-                          </h4>
-                        </div>
+                        See all
                       </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
 
-              {/* 4. Article Tags & Independent Testing Guarantee */}
-              {showGuaranteeCard && (
-                <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                    <ShieldCheck size={16} />
-                    <span>{sidebarConfig.guaranteeTitle || `${publisherName} Testing Guarantee`}</span>
+                    <div className="space-y-3.5">
+                      {relatedArticles.map((rel) => (
+                        <Link
+                          key={rel.id}
+                          href={ROUTES.PUBLIC.POST_DETAIL(rel.slug)}
+                          className="flex items-start gap-3 group"
+                        >
+                          <div className="relative w-16 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200 flex items-center justify-center">
+                            {rel.imageUrl ? (
+                              <Image
+                                src={rel.imageUrl}
+                                alt={rel.title}
+                                fill
+                                sizes="70px"
+                                className="object-cover group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <BookOpen size={16} className="text-slate-400" />
+                            )}
+                          </div>
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary block">
+                              {rel.category}
+                            </span>
+                            <h4 className="font-bold text-xs text-slate-900 group-hover:text-brand-primary transition line-clamp-2 leading-snug">
+                              {rel.title}
+                            </h4>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {sidebarConfig.guaranteeText ||
-                      'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.'}
-                  </p>
-                  {article.tags && article.tags.length > 0 && (
-                    <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
+                )}
+
+                {/* 4. Article Tags & Independent Testing Guarantee */}
+                {showGuaranteeCard && (
+                  <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
+                    <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                      <ShieldCheck size={16} />
+                      <span>{sidebarConfig.guaranteeTitle || `${publisherName} Testing Guarantee`}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {sidebarConfig.guaranteeText ||
+                        'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.'}
+                    </p>
+                    {article.tags && article.tags.length > 0 && (
+                      <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
+                        {article.tags.map((tag) => (
+                          <Link
+                            key={tag}
+                            href={ROUTES.PUBLIC.TAG_DETAIL(tag.toLowerCase().replace(/\s+/g, '-'))}
+                            className="text-[11px] font-medium bg-slate-800 hover:bg-brand-primary-hover text-slate-200 hover:text-white px-2.5 py-1 rounded-lg transition"
+                          >
+                            #{tag}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 4b. News Topics Card (for News articles without Store/Testing Guarantee) */}
+                {!isReviewPost && article.tags && article.tags.length > 0 && (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3">
+                    <div className="flex items-center gap-2 text-slate-900 text-sm font-black border-b border-slate-100 pb-2.5">
+                      <Tag size={14} className="text-indigo-600" />
+                      <span>Topics in this Story</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
                       {article.tags.map((tag) => (
                         <Link
                           key={tag}
                           href={ROUTES.PUBLIC.TAG_DETAIL(tag.toLowerCase().replace(/\s+/g, '-'))}
-                          className="text-[11px] font-medium bg-slate-800 hover:bg-brand-primary-hover text-slate-200 hover:text-white px-2.5 py-1 rounded-lg transition"
+                          className="text-[11px] font-semibold bg-slate-100 hover:bg-indigo-600 text-slate-700 hover:text-white px-2.5 py-1 rounded-lg transition"
                         >
                           #{tag}
                         </Link>
                       ))}
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-            </div>
-          </aside>
-          )}
+              </div>
+            </aside>
 
-        </div>
+          </div>
 
-        {/* Related Articles - Full-Width Magazine Grid for News, Compact Strip for Reviews */}
-        {relatedArticles.length > 0 && (
-          isReviewPost ? (
+          {/* Related Articles - Below main article grid */}
+          {relatedArticles.length > 0 && (
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 max-w-full lg:max-w-4xl">
               <h3 className="font-black text-slate-900 text-sm border-b border-slate-100 pb-3">
-                Related Editorial Reviews
+                {isReviewPost ? 'Related Editorial Reviews' : 'More News & Insights'}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {relatedArticles.map((rel) => (
@@ -727,81 +718,9 @@ export default function ArticleDetailPage() {
                 ))}
               </div>
             </div>
-          ) : (
-            <section className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs space-y-5">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
-                <h3 className="font-black text-slate-950 text-base sm:text-lg flex items-center gap-2">
-                  <Newspaper size={18} className="text-indigo-600 shrink-0" />
-                  <span>Related News &amp; Insights</span>
-                </h3>
-                <Link
-                  href={ROUTES.PUBLIC.NEWS}
-                  className="text-xs font-bold text-brand-primary hover:underline shrink-0"
-                >
-                  See all news →
-                </Link>
-              </div>
+          )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {relatedArticles.slice(0, 3).map((rel) => (
-                  <Link
-                    key={rel.id}
-                    href={ROUTES.PUBLIC.POST_DETAIL(rel.slug)}
-                    className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 hover:border-brand-primary-border bg-slate-50/40 hover:bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all"
-                  >
-                    <div>
-                      <div className="relative h-44 bg-slate-100 overflow-hidden">
-                        {rel.imageUrl ? (
-                          <Image
-                            src={rel.imageUrl}
-                            alt={rel.title}
-                            fill
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center">
-                            <Newspaper size={28} className="text-white/25" />
-                          </div>
-                        )}
-                        <span className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-slate-800 text-[10px] font-bold px-2.5 py-0.5 rounded-md border border-slate-200">
-                          {rel.category}
-                        </span>
-                      </div>
-
-                      <div className="p-4 space-y-2">
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                          {rel.readTime && (
-                            <span className="inline-flex items-center gap-1">
-                              <Clock size={11} /> {rel.readTime}
-                            </span>
-                          )}
-                          {rel.readTime && rel.publishedAt && <span>•</span>}
-                          {rel.publishedAt && <span>{rel.publishedAt}</span>}
-                        </div>
-                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-brand-primary transition line-clamp-2 leading-snug">
-                          {rel.title}
-                        </h4>
-                        {rel.excerpt && (
-                          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                            {rel.excerpt}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="px-4 py-3 border-t border-slate-100 text-xs font-bold text-brand-primary group-hover:text-brand-primary-hover flex items-center justify-between">
-                      <span>Read Article</span>
-                      <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )
-        )}
-
-      </div>
+        </div>
       </NewsSideBannersFrame>
 
       {/* Coupon Reveal Modal for Sidebar Offers */}

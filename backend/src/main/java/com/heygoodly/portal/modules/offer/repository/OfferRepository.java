@@ -52,6 +52,10 @@ public interface OfferRepository extends JpaRepository<OfferEntity, Long>, JpaSp
     Page<OfferEntity> findByStoreIdAndIsDeletedFalse(Long storeId, Pageable pageable);
 
     @Modifying
+    @Query("UPDATE OfferEntity o SET o.sortOrder = o.sortOrder + 1 WHERE o.storeId = :storeId AND o.isDeleted = false AND o.sortOrder >= 1 AND o.sortOrder < 9999")
+    int shiftSortOrdersDown(@Param("storeId") Long storeId);
+
+    @Modifying
     @Query("UPDATE OfferEntity o SET o.isDeleted = true, o.isActive = false WHERE o.storeId = :storeId AND o.isDeleted = false")
     int softDeleteByStoreId(@Param("storeId") Long storeId);
 }

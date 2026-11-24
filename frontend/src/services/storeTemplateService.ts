@@ -31,6 +31,7 @@ export interface ReviewTemplatePayload {
   category?: ReviewTemplateCategory;
   title: string;
   reviewerName: string;
+  reviewerAvatar?: string;
   rating: number;
   reviewDateLabel: string;
   isVerified: boolean;
@@ -66,6 +67,7 @@ function mapReviewDto(row: any, index = 0): ReviewTemplateItem {
     category,
     title: String(row?.title || 'Customer Review'),
     reviewerName: String(row?.reviewerName || 'Verified Buyer'),
+    reviewerAvatar: row?.reviewerAvatar ? String(row.reviewerAvatar) : '',
     rating: Math.min(5, Math.max(1, Number(row?.rating) || 5)),
     reviewDateLabel: String(row?.reviewDateLabel || '3 days ago'),
     isVerified: row?.isVerified !== false,
@@ -94,6 +96,7 @@ function buildReviewRequestBody(payload: ReviewTemplatePayload, defaultSortOrder
     category: normalizeReviewCategory(payload.category || 'custom'),
     title: payload.title.trim(),
     reviewerName: payload.reviewerName.trim(),
+    reviewerAvatar: payload.reviewerAvatar?.trim() || '',
     rating: Math.min(5, Math.max(1, Number(payload.rating) || 5)),
     reviewDateLabel: payload.reviewDateLabel.trim() || 'Recently',
     isVerified: payload.isVerified !== false,
@@ -194,30 +197,25 @@ class StoreTemplateService {
 
   getStarterReviewsForBrand(
     brandName?: string,
-    templates?: ReviewTemplateItem[]
+    templates?: ReviewTemplateItem[],
+    count = 3
   ): StoreCustomerReview[] {
     if (!templates || templates.length === 0) {
       return [];
     }
 
-    const picked: ReviewTemplateItem[] = [];
-    const targetCategories: ReviewTemplateCategory[] = ['savings', 'quality', 'balanced'];
-    for (const cat of targetCategories) {
-      const match = templates.find(
-        (item) => item.category === cat && !picked.some((p) => p.id === item.id)
-      );
-      if (match) picked.push(match);
+    // Randomize templates so each store gets a fresh mix with their pre-configured avatars
+    const shuffled = [...templates];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    for (const item of templates) {
-      if (picked.length >= 3) break;
-      if (!picked.some((p) => p.id === item.id)) {
-        picked.push(item);
-      }
-    }
+
+    const picked = shuffled.slice(0, Math.min(count, shuffled.length));
 
     return picked.map((item) => ({
       reviewerName: item.reviewerName,
-      reviewerAvatar: '',
+      reviewerAvatar: item.reviewerAvatar || '',
       isVerified: item.isVerified,
       rating: item.rating,
       reviewDateLabel: item.reviewDateLabel,

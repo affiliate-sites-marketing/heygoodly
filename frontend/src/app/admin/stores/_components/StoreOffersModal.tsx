@@ -31,6 +31,11 @@ import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { apiClient } from '@/lib/api/axios-client';
 import { useToast } from '@/context/ToastContext';
+import {
+  OFFER_AUTO_SORT_OPTIONS,
+  sortOffersAuto,
+  type OfferAutoSortRule,
+} from '@/utils/offerAutoSort';
 
 interface StoreOffersModalProps {
   isOpen: boolean;
@@ -57,6 +62,7 @@ export default function StoreOffersModal({
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [autoSortTick, setAutoSortTick] = useState(0);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -137,7 +143,49 @@ export default function StoreOffersModal({
       .finally(() => {
         setLoading(false);
       });
-  }, [isOpen, store?.id, currentPage, pageSize, debouncedSearch, typeFilter]);
+  }, [isOpen, store?.id, currentPage, pageSize, debouncedSearch, typeFilter, autoSortTick]);
+
+  const handleAutoSortStoreOffers = async (rule: OfferAutoSortRule) => {
+    if (!store || reordering) return;
+    setReordering(true);
+    try {
+      const allRes = await offerService.getAdminOffers({
+        storeId: Number(store.id),
+        page: 0,
+        size: 200,
+        sortBy: 'sortOrder',
+        direction: 'asc',
+      });
+      const raw = allRes.content || [];
+      if (raw.length <= 1) {
+        toast.info('Need at least 2 offers to auto-sort.');
+        return;
+      }
+      const sorted = sortOffersAuto(
+        raw.map((o) => ({
+          id: Number(o.id),
+          discount: o.discountValue || '',
+          code: o.code || null,
+          isExclusive: Boolean(o.isExclusive),
+          isVerified: Boolean(o.isVerified),
+          isActive: o.isActive !== false,
+          usesCount: Number((o as any).usesCount ?? 0),
+          expireAt: (o as any).expireAt || null,
+        })),
+        rule
+      );
+      await apiClient.patch(API_ENDPOINTS.ADMIN.OFFERS_REORDER, {
+        orderedIds: sorted.map((item) => item.id),
+      });
+      toast.success('Auto-sorted and saved store coupon order!');
+      setCurrentPage(1);
+      setAutoSortTick((n) => n + 1);
+    } catch {
+      toast.error('Failed to auto-sort store coupons.');
+    } finally {
+      setReordering(false);
+    }
+  };
 
   if (!isOpen || !store) return null;
 
@@ -288,7 +336,24 @@ export default function StoreOffersModal({
             </div>
 
             {/* Quick Action Links */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="w-48">
+                <AdminSearchableSelect
+                  value=""
+                  searchable={false}
+                  disabled={reordering || totalElements <= 1}
+                  onChange={(val) => {
+                    if (val) handleAutoSortStoreOffers(val as OfferAutoSortRule);
+                  }}
+                  placeholder="⚡ Auto-Sort Coupons..."
+                  triggerClassName="h-9 bg-amber-50/70 border-amber-200 text-xs"
+                  options={OFFER_AUTO_SORT_OPTIONS.map((opt) => ({
+                    value: opt.value,
+                    label: opt.label,
+                  }))}
+                />
+              </div>
+
               <Link
                 href={`/admin/offers?store=${encodeURIComponent(store.name)}`}
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-brand-primary bg-slate-100 hover:bg-slate-200/80 px-3 py-2 rounded-xl transition cursor-pointer whitespace-nowrap"

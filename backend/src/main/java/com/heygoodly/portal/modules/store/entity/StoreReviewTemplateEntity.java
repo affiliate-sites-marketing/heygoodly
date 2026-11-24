@@ -38,6 +38,9 @@ public class StoreReviewTemplateEntity extends BaseEntity {
     @Column(name = "reviewer_name", nullable = false, length = 120)
     private String reviewerName;
 
+    @Column(name = "reviewer_avatar", length = 500)
+    private String reviewerAvatar;
+
     @Builder.Default
     @JdbcTypeCode(SqlTypes.SMALLINT)
     @Column(nullable = false, columnDefinition = "smallint")

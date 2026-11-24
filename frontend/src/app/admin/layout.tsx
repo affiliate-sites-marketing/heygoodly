@@ -19,6 +19,7 @@ import {
   History,
   Mail,
   Sparkles,
+  Bot,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { STORAGE_KEYS } from '@/constants/ui-constants';
@@ -104,6 +105,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       group: t('OPERATIONS'),
       items: [
         { label: t('Dashboard'), icon: LayoutDashboard, href: ROUTES.ADMIN.DASHBOARD },
+        { label: t('AI Assistant'), icon: Bot, href: ROUTES.ADMIN.AI_CHAT },
         { label: t('Stores Directory'), icon: Store, href: ROUTES.ADMIN.STORES, count: String(counts.storesCount), permission: 'store.view' },
         { label: t('Offers & Coupons'), icon: Tag, href: ROUTES.ADMIN.OFFERS, count: String(counts.offersCount), permission: 'offer.view' },
         { label: t('Articles & Reviews'), icon: FileText, href: ROUTES.ADMIN.POSTS, count: String(counts.postsCount), permission: 'post.view' },

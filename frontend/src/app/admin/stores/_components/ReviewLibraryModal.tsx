@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   BookOpen,
   X,
@@ -14,7 +14,12 @@ import {
   Pencil,
   Loader2,
   Database,
+  Shuffle,
+  UploadCloud,
+  Layers,
 } from 'lucide-react';
+import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
+import { mediaService } from '@/services/mediaService';
 import { StoreCustomerReview } from '@/types/deals';
 import {
   ReviewTemplateItem,
@@ -41,6 +46,7 @@ const DEFAULT_FORM_STATE = {
   category: 'custom' as ReviewTemplateCategory,
   title: '',
   reviewerName: '',
+  reviewerAvatar: '',
   rating: 5,
   reviewDateLabel: '',
   isVerified: true,
@@ -67,6 +73,32 @@ export default function ReviewLibraryModal({
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] = useState(DEFAULT_FORM_STATE);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(t('Image must be smaller than 10MB'));
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const uploaded = await mediaService.uploadMedia(file, 'avatars', ['avatar', 'reviewer']);
+      const url = uploaded?.url || '';
+      if (url) {
+        setFormState((prev) => ({ ...prev, reviewerAvatar: url }));
+        toast.success(t('Avatar uploaded!'));
+      }
+    } catch {
+      toast.error(t('Failed to upload avatar'));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -121,13 +153,26 @@ export default function ReviewLibraryModal({
 
   const toStoreReview = (item: ReviewTemplateItem): StoreCustomerReview => ({
     reviewerName: item.reviewerName,
-    reviewerAvatar: '',
+    reviewerAvatar: item.reviewerAvatar || '',
     isVerified: item.isVerified,
     rating: item.rating,
     reviewDateLabel: item.reviewDateLabel,
     comment: applyBrandToken(item.commentTemplate, brandName),
     isActive: true,
   });
+
+  const handleInsertRandom = (count = 3) => {
+    const pool = filteredTemplates.length > 0 ? filteredTemplates : templates;
+    if (pool.length === 0) return;
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const chosen = shuffled.slice(0, Math.min(count, shuffled.length));
+    onInsertReviews(chosen.map(toStoreReview));
+    onClose();
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) =>
@@ -163,6 +208,7 @@ export default function ReviewLibraryModal({
       category: item.category,
       title: item.title,
       reviewerName: item.reviewerName,
+      reviewerAvatar: item.reviewerAvatar || '',
       rating: item.rating,
       reviewDateLabel: item.reviewDateLabel,
       isVerified: item.isVerified,
@@ -181,6 +227,7 @@ export default function ReviewLibraryModal({
         formState.title.trim() ||
         `${formState.reviewerName.trim() || 'Shopper'} Review`,
       reviewerName: formState.reviewerName.trim() || 'Verified Buyer',
+      reviewerAvatar: formState.reviewerAvatar.trim() || '',
       rating: formState.rating,
       reviewDateLabel: formState.reviewDateLabel.trim() || 'Recently',
       isVerified: formState.isVerified,
@@ -246,6 +293,7 @@ export default function ReviewLibraryModal({
   ];
 
   return (
+    <>
     <div
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-xs animate-fadeIn"
@@ -366,18 +414,91 @@ export default function ReviewLibraryModal({
                 className={`${inputClass} text-xs`}
               />
             </div>
-            <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-end">
-              <div className="flex-1 space-y-2">
-                <textarea
-                  rows={2}
-                  required
-                  value={formState.commentTemplate}
-                  onChange={(e) =>
-                    setFormState((prev) => ({ ...prev, commentTemplate: e.target.value }))
-                  }
-                  placeholder="Write review text... Example: Used a {brand} promo code and saved 20% at checkout!"
-                  className={`${inputClass} text-xs w-full resize-y`}
+            <textarea
+              rows={2}
+              required
+              value={formState.commentTemplate}
+              onChange={(e) =>
+                setFormState((prev) => ({ ...prev, commentTemplate: e.target.value }))
+              }
+              placeholder="Write review text... Example: Used a {brand} promo code and saved 20% at checkout!"
+              className={`${inputClass} text-xs w-full resize-y`}
+            />
+
+            {/* Compact Single-Row Avatar Picker + Verified + Save Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+              <div className="flex items-center gap-2.5 flex-1 min-w-[260px]">
+                {/* 40x40 Circular Avatar Preview */}
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setAvatarPickerOpen(true)}
+                    title={t('Choose avatar from Media Library')}
+                    className="w-10 h-10 rounded-full overflow-hidden border border-slate-300 bg-white flex items-center justify-center hover:border-indigo-500 transition cursor-pointer"
+                  >
+                    {uploadingAvatar ? (
+                      <Loader2 size={14} className="animate-spin text-indigo-600" />
+                    ) : formState.reviewerAvatar ? (
+                      <img
+                        src={formState.reviewerAvatar}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 w-full h-full flex items-center justify-center">
+                        {(formState.reviewerName || 'AV').slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                  </button>
+                  {formState.reviewerAvatar && (
+                    <button
+                      type="button"
+                      onClick={() => setFormState((prev) => ({ ...prev, reviewerAvatar: '' }))}
+                      title={t('Remove avatar')}
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs hover:bg-rose-700 cursor-pointer"
+                    >
+                      <X size={10} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Inline Upload + Media Library + URL */}
+                <input
+                  ref={avatarFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUploadAvatarFile}
+                  className="hidden"
                 />
+                <button
+                  type="button"
+                  disabled={uploadingAvatar}
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  className="h-8 px-2.5 rounded-lg text-[11px] font-bold text-slate-700 bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-700 inline-flex items-center gap-1 transition cursor-pointer shrink-0 disabled:opacity-50"
+                >
+                  <UploadCloud size={12} />
+                  <span>{t('Upload')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAvatarPickerOpen(true)}
+                  className="h-8 px-2.5 rounded-lg text-[11px] font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 inline-flex items-center gap-1 transition cursor-pointer shrink-0"
+                >
+                  <Layers size={12} />
+                  <span>{t('Library')}</span>
+                </button>
+                <input
+                  type="text"
+                  value={formState.reviewerAvatar}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, reviewerAvatar: e.target.value }))
+                  }
+                  placeholder={t('Avatar URL (optional)...')}
+                  className={`${inputClass} text-[11px] h-8 flex-1 min-w-[140px]`}
+                />
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
                 <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -389,8 +510,6 @@ export default function ReviewLibraryModal({
                   />
                   <span>{t('Verified Buyer')}</span>
                 </label>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -398,14 +517,14 @@ export default function ReviewLibraryModal({
                     setEditingId(null);
                     setFormState(DEFAULT_FORM_STATE);
                   }}
-                  className="px-3 py-2 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                  className="h-8 px-3 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
                 >
                   {t('Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 flex items-center gap-1.5 cursor-pointer"
+                  className="h-8 px-4 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 flex items-center gap-1.5 cursor-pointer"
                 >
                   {saving && <Loader2 size={12} className="animate-spin" />}
                   <span>
@@ -517,7 +636,7 @@ export default function ReviewLibraryModal({
                       <div className="flex items-start gap-2.5 min-w-0">
                         {mode === 'append' && (
                           <span
-                            className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                            className={`mt-1 w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
                               isSelected
                                 ? 'bg-emerald-600 border-emerald-600 text-white'
                                 : 'border-slate-300 bg-white'
@@ -525,6 +644,17 @@ export default function ReviewLibraryModal({
                           >
                             {isSelected && <Check size={11} />}
                           </span>
+                        )}
+                        {item.reviewerAvatar ? (
+                          <img
+                            src={item.reviewerAvatar}
+                            alt={item.reviewerName}
+                            className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 font-black text-[11px] flex items-center justify-center shrink-0 border border-emerald-200">
+                            {(item.reviewerName || 'U').slice(0, 2).toUpperCase()}
+                          </div>
                         )}
                         <div className="min-w-0">
                           <p className="text-xs font-extrabold text-slate-900 truncate">
@@ -613,18 +743,40 @@ export default function ReviewLibraryModal({
               {t('Close')}
             </button>
             {mode === 'append' && (
-              <button
-                type="button"
-                disabled={selectedIds.length === 0}
-                onClick={handleInsertSelected}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer transition"
-              >
-                {t(`Add Selected Reviews (${selectedIds.length})`)}
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={templates.length === 0}
+                  onClick={() => handleInsertRandom(3)}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 disabled:opacity-45 disabled:cursor-not-allowed inline-flex items-center gap-1.5 cursor-pointer transition"
+                  title={t('Randomly pick 3 templates (with their saved avatars) and insert into this store')}
+                >
+                  <Shuffle size={12} />
+                  <span>{t('Insert Random 3')}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedIds.length === 0}
+                  onClick={handleInsertSelected}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer transition"
+                >
+                  {t(`Add Selected Reviews (${selectedIds.length})`)}
+                </button>
+              </>
             )}
           </div>
         </div>
       </div>
     </div>
+
+    <MediaLibraryModal
+      isOpen={avatarPickerOpen}
+      onClose={() => setAvatarPickerOpen(false)}
+      onSelect={(url) => {
+        setFormState((prev) => ({ ...prev, reviewerAvatar: url }));
+        setAvatarPickerOpen(false);
+      }}
+    />
+    </>
   );
 }

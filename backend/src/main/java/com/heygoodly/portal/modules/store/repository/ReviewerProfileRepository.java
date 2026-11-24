@@ -8,9 +8,18 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ReviewerProfileRepository extends JpaRepository<ReviewerProfileEntity, Long> {
+
+    Optional<ReviewerProfileEntity> findByIdAndIsDeletedFalse(Long id);
+
+    Optional<ReviewerProfileEntity> findFirstByNameIgnoreCaseAndIsDeletedFalse(String name);
+
+    List<ReviewerProfileEntity> findByIdInAndIsDeletedFalse(Collection<Long> ids);
+
+    List<ReviewerProfileEntity> findTop50ByIsDeletedFalseOrderByUpdatedAtDescIdDesc();
 
     List<ReviewerProfileEntity> findTop20ByIsDeletedFalseOrderByUpdatedAtDescIdDesc();
 

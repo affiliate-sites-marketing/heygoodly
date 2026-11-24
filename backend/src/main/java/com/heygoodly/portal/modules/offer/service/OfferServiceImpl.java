@@ -219,6 +219,16 @@ public class OfferServiceImpl implements OfferService {
             throw new IllegalArgumentException("Offer expiration date must be on or after the start date.");
         }
 
+        // Auto-place newly created offers at the top (#1) of the store unless a specific custom position was requested
+        Integer requestedOrder = request.getSortOrder();
+        int resolvedSortOrder;
+        if (requestedOrder == null || requestedOrder <= 0 || requestedOrder >= AppConstants.DEFAULT_SORT_ORDER) {
+            offerRepository.shiftSortOrdersDown(store.getId());
+            resolvedSortOrder = 1;
+        } else {
+            resolvedSortOrder = requestedOrder;
+        }
+
         OfferEntity entity = OfferEntity.builder()
                 .storeId(store.getId())
                 .name(request.getName().trim())
@@ -230,7 +240,7 @@ public class OfferServiceImpl implements OfferService {
                 .isVerified(request.getIsVerified() != null ? request.getIsVerified() : false)
                 .isExclusive(request.getIsExclusive() != null ? request.getIsExclusive() : false)
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
-                .sortOrder(request.getSortOrder() != null ? request.getSortOrder() : com.heygoodly.portal.common.constant.AppConstants.DEFAULT_SORT_ORDER)
+                .sortOrder(resolvedSortOrder)
                 .hasExpiration(hasExpiration)
                 .startAt(startAt)
                 .expireAt(expireAt)

@@ -20,6 +20,9 @@ public class StoreReviewTemplateRequest {
     @Size(max = 120)
     private String reviewerName;
 
+    @Size(max = 500)
+    private String reviewerAvatar;
+
     @Min(1)
     @Max(5)
     private Integer rating = 5;

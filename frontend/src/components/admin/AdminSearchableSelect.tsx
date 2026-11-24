@@ -20,6 +20,7 @@ interface AdminSearchableSelectProps {
   searchPlaceholder?: string;
   emptyText?: string;
   searchable?: boolean;
+  allowCustomValue?: boolean;
   onOpen?: () => void;
   disabled?: boolean;
   className?: string;
@@ -45,6 +46,7 @@ export default function AdminSearchableSelect({
   searchPlaceholder = 'Search...',
   emptyText = 'No matching options',
   searchable = true,
+  allowCustomValue = false,
   onOpen,
   disabled = false,
   className = '',
@@ -75,11 +77,17 @@ export default function AdminSearchableSelect({
     return options.filter((opt) => {
       const translatedLabel = t(opt.label);
       const haystack = normalizeSearch(
-        `${opt.label} ${translatedLabel} ${opt.sublabel || ''}`
+        `${opt.value} ${opt.label} ${translatedLabel} ${opt.sublabel || ''}`
       );
       return haystack.includes(q);
     });
   }, [options, query, t]);
+
+  const trimmedQuery = query.trim();
+  const canUseCustomQuery =
+    allowCustomValue &&
+    trimmedQuery.length > 0 &&
+    !options.some((opt) => opt.value.toLowerCase() === trimmedQuery.toLowerCase());
 
   const updateMenuPosition = useCallback(() => {
     const trigger = triggerRef.current;
@@ -207,6 +215,8 @@ export default function AdminSearchableSelect({
       const target = filteredOptions[highlightedIdx];
       if (target && !target.disabled) {
         handleSelect(target);
+      } else if (canUseCustomQuery) {
+        handleSelect({ value: trimmedQuery, label: trimmedQuery });
       }
     }
   };
@@ -254,7 +264,20 @@ export default function AdminSearchableSelect({
             )}
 
             <div className="max-h-60 overflow-y-auto p-1 space-y-0.5">
-              {filteredOptions.length === 0 ? (
+              {canUseCustomQuery && (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  onClick={() => handleSelect({ value: trimmedQuery, label: trimmedQuery })}
+                  className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-xs text-left transition cursor-pointer bg-brand-primary/5 hover:bg-brand-primary/10 text-brand-primary font-bold"
+                >
+                  <span className="truncate">
+                    + {t('Use custom')}: <code className="font-mono">{trimmedQuery}</code>
+                  </span>
+                </button>
+              )}
+              {filteredOptions.length === 0 && !canUseCustomQuery ? (
                 <div className="py-5 px-3 text-center text-xs text-slate-400">
                   {t(emptyText)}
                 </div>
@@ -316,8 +339,12 @@ export default function AdminSearchableSelect({
               : 'border-slate-200 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary'
         } ${triggerClassName}`}
       >
-        <span className={`truncate ${selectedOption ? 'text-slate-800' : 'text-slate-400'}`}>
-          {selectedOption ? t(selectedOption.label) : t(placeholder)}
+        <span className={`truncate ${selectedOption || (allowCustomValue && value) ? 'text-slate-800' : 'text-slate-400'}`}>
+          {selectedOption
+            ? t(selectedOption.label)
+            : allowCustomValue && value
+              ? value
+              : t(placeholder)}
         </span>
         <ChevronDown
           size={14}

@@ -7,6 +7,7 @@ public record StoreReviewTemplateResponse(
         String category,
         String title,
         String reviewerName,
+        String reviewerAvatar,
         Integer rating,
         String reviewDateLabel,
         Boolean isVerified,

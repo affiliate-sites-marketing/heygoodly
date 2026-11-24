@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useParams, useSearchParams } from 'next/navigation';
 import {
   Star,
@@ -20,8 +19,6 @@ import {
   HelpCircle,
   Store as StoreIcon,
   ArrowLeft,
-  ArrowRight,
-  BookOpen,
   Loader2,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
@@ -31,14 +28,13 @@ import CouponModal from '@/components/deals/CouponModal';
 import StoreCustomerReviewsSection from '@/components/store/StoreCustomerReviewsSection';
 import StoreLogoFrame from '@/components/store/StoreLogoFrame';
 import { triggerDualActionCoupon, appendAffiliateTracking } from '@/lib/deals/affiliateAction';
-import { Store, Coupon, Article } from '@/types/deals';
+import { Store, Coupon } from '@/types/deals';
 import storeService, {
   extractPlainTextExcerpt,
   buildDefaultPopularSearches,
   buildDefaultStoreFaqs,
 } from '@/services/storeService';
 import dealService from '@/services/dealService';
-import postService from '@/services/postService';
 import JsonLd from '@/components/seo/JsonLd';
 import subscriberService from '@/services/subscriberService';
 
@@ -51,7 +47,6 @@ export default function StoreAffiliatePage() {
 
   const [store, setStore] = useState<Store | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [storeReviewPosts, setStoreReviewPosts] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'codes' | 'deals'>('all');
@@ -73,10 +68,9 @@ export default function StoreAffiliatePage() {
       setIsLoading(true);
       setNotFound(false);
 
-      const [fetchedStore, fetchedCoupons, fetchedReviews] = await Promise.all([
+      const [fetchedStore, fetchedCoupons] = await Promise.all([
         storeService.getStoreBySlug(cleanSlug),
         dealService.getCouponsByStoreSlug(cleanSlug),
-        postService.getPosts({ storeSlug: cleanSlug, page: 1, size: 6, sortBy: 'newest' }),
       ]);
 
       if (!active) return;
@@ -84,7 +78,6 @@ export default function StoreAffiliatePage() {
       if (!fetchedStore) {
         setStore(null);
         setCoupons([]);
-        setStoreReviewPosts([]);
         setNotFound(true);
         setIsLoading(false);
         return;
@@ -92,7 +85,6 @@ export default function StoreAffiliatePage() {
 
       setStore(fetchedStore);
       setCoupons(fetchedCoupons);
-      setStoreReviewPosts(fetchedReviews.items || []);
       setIsLoading(false);
     }
 
@@ -426,103 +418,102 @@ export default function StoreAffiliatePage() {
                 {filteredCoupons.map((coupon, idx) => {
                   const isTopOffer = idx === 0;
                   return (
-                  <div
-                    key={coupon.id}
-                    className={`relative bg-white rounded-xl p-4 sm:p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group ${
-                      isTopOffer
+                    <div
+                      key={coupon.id}
+                      className={`relative bg-white rounded-xl p-4 sm:p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group ${isTopOffer
                         ? 'border-2 border-emerald-500/45 shadow-sm hover:border-emerald-500/70'
                         : 'border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs'
-                    }`}
-                  >
+                        }`}
+                    >
 
-                    <div className="flex items-start gap-3.5 sm:gap-4 flex-1 min-w-0">
-                      {/* Compact Store Logo Thumbnail (No large offer image) */}
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-white p-1.5 flex items-center justify-center">
-                        {(coupon.imageUrl || store.logoUrl) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={coupon.imageUrl || store.logoUrl}
-                            alt={coupon.title || storeName}
-                            className="w-full h-full object-contain"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-sm font-black text-slate-800">
-                            {storeName.substring(0, 2).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="space-y-1.5 flex-1 min-w-0">
-                        <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug line-clamp-2">
-                          {!coupon.title.toLowerCase().startsWith(coupon.discount.toLowerCase()) && (
-                            <span className="text-brand-primary mr-1.5">{coupon.discount}</span>
-                          )}
-                          <span>{coupon.title}</span>
-                        </h3>
-
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded inline-flex items-center gap-1">
-                            {coupon.isCode ? (
-                              <Tag size={10} className="text-slate-600 shrink-0" />
-                            ) : (
-                              <Sparkles size={10} className="text-emerald-600 shrink-0" />
-                            )}
-                            <span>{coupon.isCode ? 'CODE' : 'DEAL'}</span>
-                          </span>
-                          <span className="text-[11px] font-bold text-emerald-700 inline-flex items-center gap-1 px-1.5 py-0.5">
-                            <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
-                            <span>Verified</span>
-                          </span>
-                          {coupon.isExclusive && (
-                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                              <Star size={10} className="fill-amber-500 text-amber-500 shrink-0" />
-                              <span>Exclusive</span>
-                            </span>
-                          )}
-                          {coupon.discount && (
-                            <span className="text-[10px] font-semibold text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                              <BadgePercent size={11} className="text-brand-primary shrink-0" />
-                              <span>{coupon.discount}</span>
+                      <div className="flex items-start gap-3.5 sm:gap-4 flex-1 min-w-0">
+                        {/* Compact Store Logo Thumbnail (No large offer image) */}
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-white p-1.5 flex items-center justify-center">
+                          {(coupon.imageUrl || store.logoUrl) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={coupon.imageUrl || store.logoUrl}
+                              alt={coupon.title || storeName}
+                              className="w-full h-full object-contain"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-sm font-black text-slate-800">
+                              {storeName.substring(0, 2).toUpperCase()}
                             </span>
                           )}
                         </div>
 
-                        {((coupon.usesCount ?? 0) > 0 || coupon.startDate || coupon.expiryDate) && (
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400 pt-0.5">
-                            {(coupon.usesCount ?? 0) > 0 && (
-                              <span className="inline-flex items-center gap-1">
-                                <Users size={11} className="shrink-0" />
-                                <span>{(coupon.usesCount ?? 0).toLocaleString()} uses</span>
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug line-clamp-2">
+                            {!coupon.title.toLowerCase().startsWith(coupon.discount.toLowerCase()) && (
+                              <span className="text-brand-primary mr-1.5">{coupon.discount}</span>
+                            )}
+                            <span>{coupon.title}</span>
+                          </h3>
+
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] uppercase font-extrabold tracking-wider text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded inline-flex items-center gap-1">
+                              {coupon.isCode ? (
+                                <Tag size={10} className="text-slate-600 shrink-0" />
+                              ) : (
+                                <Sparkles size={10} className="text-emerald-600 shrink-0" />
+                              )}
+                              <span>{coupon.isCode ? 'CODE' : 'DEAL'}</span>
+                            </span>
+                            <span className="text-[11px] font-bold text-emerald-700 inline-flex items-center gap-1 px-1.5 py-0.5">
+                              <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
+                              <span>Verified</span>
+                            </span>
+                            {coupon.isExclusive && (
+                              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                <Star size={10} className="fill-amber-500 text-amber-500 shrink-0" />
+                                <span>Exclusive</span>
                               </span>
                             )}
-                            {(coupon.startDate || coupon.expiryDate) && (
-                              <span className="inline-flex items-center gap-1">
-                                <Clock size={11} className="shrink-0" />
-                                <span>
-                                  {coupon.startDate && coupon.expiryDate
-                                    ? `Valid ${coupon.startDate} – ${coupon.expiryDate}`
-                                    : coupon.expiryDate
-                                    ? `Expires ${coupon.expiryDate}`
-                                    : `Valid from ${coupon.startDate}`}
-                                </span>
+                            {coupon.discount && (
+                              <span className="text-[10px] font-semibold text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                <BadgePercent size={11} className="text-brand-primary shrink-0" />
+                                <span>{coupon.discount}</span>
                               </span>
                             )}
                           </div>
-                        )}
+
+                          {((coupon.usesCount ?? 0) > 0 || coupon.startDate || coupon.expiryDate) && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400 pt-0.5">
+                              {(coupon.usesCount ?? 0) > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Users size={11} className="shrink-0" />
+                                  <span>{(coupon.usesCount ?? 0).toLocaleString()} uses</span>
+                                </span>
+                              )}
+                              {(coupon.startDate || coupon.expiryDate) && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Clock size={11} className="shrink-0" />
+                                  <span>
+                                    {coupon.startDate && coupon.expiryDate
+                                      ? `Valid ${coupon.startDate} – ${coupon.expiryDate}`
+                                      : coupon.expiryDate
+                                        ? `Expires ${coupon.expiryDate}`
+                                        : `Valid from ${coupon.startDate}`}
+                                  </span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 w-full sm:w-auto flex justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                        <GetCodeButton
+                          code={coupon.code}
+                          isCode={coupon.isCode}
+                          highlight={isTopOffer}
+                          onOpenModal={() => handleOpenCouponModal(coupon)}
+                          size="md"
+                        />
                       </div>
                     </div>
-
-                    <div className="shrink-0 w-full sm:w-auto flex justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                      <GetCodeButton
-                        code={coupon.code}
-                        isCode={coupon.isCode}
-                        highlight={isTopOffer}
-                        onOpenModal={() => handleOpenCouponModal(coupon)}
-                        size="md"
-                      />
-                    </div>
-                  </div>
                   );
                 })}
               </div>
@@ -633,88 +624,6 @@ export default function StoreAffiliatePage() {
                 </div>
               )}
             </div>
-
-            {/* 2b. Linked Editorial Reviews & Guides for this Store */}
-            {storeReviewPosts.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                      <BookOpen size={18} className="text-brand-primary shrink-0" />
-                      <span>In-Depth {storeName} Reviews &amp; Guides</span>
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Hands-on editorial reviews and buying guides linked to {storeName}.
-                    </p>
-                  </div>
-                  <Link
-                    href={ROUTES.PUBLIC.REVIEWS}
-                    className="text-xs font-bold text-brand-primary hover:underline shrink-0"
-                  >
-                    All Reviews →
-                  </Link>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {storeReviewPosts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={ROUTES.PUBLIC.POST_DETAIL(post.slug)}
-                      className="group flex flex-col justify-between rounded-xl border border-slate-200/90 hover:border-brand-primary-border bg-slate-50/50 hover:bg-white overflow-hidden shadow-2xs hover:shadow-md transition-all"
-                    >
-                      <div>
-                        <div className="relative h-36 bg-slate-100 overflow-hidden">
-                          {post.imageUrl ? (
-                            <Image
-                              src={post.imageUrl}
-                              alt={post.title}
-                              fill
-                              sizes="(max-width: 640px) 100vw, 320px"
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center">
-                              <BookOpen size={28} className="text-white/25" />
-                            </div>
-                          )}
-                          <span className="absolute top-2.5 left-2.5 bg-brand-primary text-white text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-xs">
-                            Review
-                          </span>
-                          {post.rating && (
-                            <span className="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-xs text-amber-600 text-[10px] font-black px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1">
-                              <Star size={10} className="fill-amber-400 text-amber-400" /> {post.rating}/5
-                            </span>
-                          )}
-                        </div>
-                        <div className="p-3.5 space-y-1.5">
-                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                            {post.readTime && (
-                              <span className="inline-flex items-center gap-1">
-                                <Clock size={11} /> {post.readTime}
-                              </span>
-                            )}
-                            {post.readTime && post.publishedAt && <span>•</span>}
-                            {post.publishedAt && <span>{post.publishedAt}</span>}
-                          </div>
-                          <h3 className="font-bold text-sm text-slate-900 group-hover:text-brand-primary transition-colors line-clamp-2 leading-snug">
-                            {post.title}
-                          </h3>
-                          {post.excerpt && (
-                            <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                              {post.excerpt}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="px-3.5 py-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-brand-primary">
-                        <span>Read Full Review</span>
-                        <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* 3. Popular Searches (Only when present in DB) */}
             {popularSearches.length > 0 && (

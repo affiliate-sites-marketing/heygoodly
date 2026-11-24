@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Search, CheckCircle2, Loader2, UserCheck } from 'lucide-react';
+import { Search, CheckCircle2, Loader2, UserCheck, UserPlus } from 'lucide-react';
 import { ReviewerProfile } from '@/types/deals';
 import storeService from '@/services/storeService';
+import ReviewerProfilesModal from './ReviewerProfilesModal';
+import { useAdminI18n } from '@/context/AdminI18nContext';
 
 interface ReviewerPickerProps {
   selectedName?: string;
@@ -11,7 +13,9 @@ interface ReviewerPickerProps {
 }
 
 export default function ReviewerPicker({ selectedName, onSelect }: ReviewerPickerProps) {
+  const { t } = useAdminI18n();
   const [open, setOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ReviewerProfile[]>([]);
@@ -79,7 +83,32 @@ export default function ReviewerPicker({ selectedName, onSelect }: ReviewerPicke
             <Loader2 size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
           )}
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setManageOpen(true);
+          }}
+          className="h-8 px-2.5 rounded-lg text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 inline-flex items-center gap-1 transition cursor-pointer shrink-0 whitespace-nowrap"
+          title={t('Add or manage saved reviewers')}
+        >
+          <UserPlus size={12} />
+          <span>{t('Manage Reviewers')}</span>
+        </button>
       </div>
+
+      <ReviewerProfilesModal
+        isOpen={manageOpen}
+        onClose={() => setManageOpen(false)}
+        onSelect={(profile) => {
+          onSelect(profile);
+          setQuery('');
+          setOpen(false);
+        }}
+        onChanged={() => {
+          if (open) fetchReviewers(query);
+        }}
+      />
 
       {open && (
         <div className="absolute z-30 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-slate-100">

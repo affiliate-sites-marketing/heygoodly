@@ -1,6 +1,7 @@
 package com.heygoodly.portal.modules.store.service;
 
 import com.heygoodly.portal.common.dto.PageResponse;
+import com.heygoodly.portal.modules.store.dto.request.ReviewerProfileRequest;
 import com.heygoodly.portal.modules.store.dto.request.StoreRequest;
 import com.heygoodly.portal.modules.store.dto.response.ReviewerProfileDto;
 import com.heygoodly.portal.modules.store.dto.response.StoreDetailResponse;
@@ -33,4 +34,7 @@ public interface StoreService {
     void deleteByIdOrSlug(String idOrSlug);
     void reorder(List<Long> orderedIds);
     List<ReviewerProfileDto> searchReviewerProfiles(String search);
+    ReviewerProfileDto createReviewerProfile(ReviewerProfileRequest request);
+    ReviewerProfileDto updateReviewerProfile(Long id, ReviewerProfileRequest request);
+    void deleteReviewerProfile(Long id);
 }

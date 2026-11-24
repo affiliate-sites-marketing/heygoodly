@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import ImageUpload from '@/components/admin/ImageUpload';
+import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
+import { mediaService } from '@/services/mediaService';
 import TagInput from '@/components/admin/TagInput';
 import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import AdminDevicePreviewFrame from '@/components/admin/AdminDevicePreviewFrame';
@@ -60,6 +62,10 @@ import {
   BookOpen,
   RotateCcw,
   BookmarkPlus,
+  UploadCloud,
+  Layers,
+  X,
+  Loader2,
 } from 'lucide-react';
 
 interface StoreFormState {
@@ -422,13 +428,92 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
     }
   };
 
+  const [expandedFaqIndexes, setExpandedFaqIndexes] = useState<number[]>([]);
+  const [expandedReviewIndexes, setExpandedReviewIndexes] = useState<number[]>([]);
+  const [reviewAvatarModalIndex, setReviewAvatarModalIndex] = useState<number | null>(null);
+  const [uploadingReviewAvatarIdx, setUploadingReviewAvatarIdx] = useState<number | null>(null);
+  const reviewAvatarFileRef = useRef<HTMLInputElement>(null);
+  const reviewAvatarUploadTargetRef = useRef<number | null>(null);
+
+  const toggleFaqExpanded = (index: number) => {
+    setExpandedFaqIndexes((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
+
+  const toggleReviewExpanded = (index: number) => {
+    setExpandedReviewIndexes((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
+
+  // Detect item-level status ('new' | 'modified' | 'unchanged') compared to initial saved snapshot
+  const getFaqDiffStatus = (faq: { question: string; answer: string }, idx: number): 'new' | 'modified' | 'unchanged' => {
+    const orig = initial.faqs[idx];
+    if (!orig) return 'new';
+    if (
+      (faq.question || '').trim() !== (orig.question || '').trim() ||
+      (faq.answer || '').trim() !== (orig.answer || '').trim()
+    ) {
+      return 'modified';
+    }
+    return 'unchanged';
+  };
+
+  const getReviewDiffStatus = (review: StoreCustomerReview, idx: number): 'new' | 'modified' | 'unchanged' => {
+    const orig = review.id
+      ? initial.customerReviews.find((r) => r.id === review.id)
+      : initial.customerReviews[idx];
+    if (!orig) return 'new';
+    if (
+      (review.reviewerName || '').trim() !== (orig.reviewerName || '').trim() ||
+      (review.reviewerAvatar || '').trim() !== (orig.reviewerAvatar || '').trim() ||
+      Number(review.rating ?? 5) !== Number(orig.rating ?? 5) ||
+      (review.reviewDateLabel || '').trim() !== (orig.reviewDateLabel || '').trim() ||
+      Boolean(review.isVerified !== false) !== Boolean(orig.isVerified !== false) ||
+      Boolean(review.isActive !== false) !== Boolean(orig.isActive !== false) ||
+      (review.comment || '').trim() !== (orig.comment || '').trim()
+    ) {
+      return 'modified';
+    }
+    return 'unchanged';
+  };
+
+  const handleReviewAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const targetIdx = reviewAvatarUploadTargetRef.current;
+    if (!file || targetIdx === null) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(t('Image must be smaller than 10MB'));
+      return;
+    }
+    setUploadingReviewAvatarIdx(targetIdx);
+    try {
+      const uploaded = await mediaService.uploadMedia(file, 'avatars', ['avatar', 'reviewer']);
+      if (uploaded?.url) {
+        handleUpdateReview(targetIdx, 'reviewerAvatar', uploaded.url);
+        toast.success(t('Avatar uploaded!'));
+      }
+    } catch {
+      toast.error(t('Failed to upload avatar'));
+    } finally {
+      setUploadingReviewAvatarIdx(null);
+      reviewAvatarUploadTargetRef.current = null;
+    }
+  };
+
   const handleAddFaq = () => {
     setFaqsTouched(true);
     faqsTouchedRef.current = true;
-    setForm((prev) => ({
-      ...prev,
-      faqs: [...prev.faqs, { question: '', answer: '' }],
-    }));
+    setForm((prev) => {
+      const nextIdx = prev.faqs.length;
+      setExpandedFaqIndexes((exp) => (exp.includes(nextIdx) ? exp : [...exp, nextIdx]));
+      return {
+        ...prev,
+        faqs: [...prev.faqs, { question: '', answer: '' }],
+      };
+    });
   };
 
   const handleUpdateFaq = (index: number, field: 'question' | 'answer', value: string) => {
@@ -487,22 +572,26 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
   };
 
   const handleAddReview = () => {
-    setForm((prev) => ({
-      ...prev,
-      customerReviews: [
-        ...prev.customerReviews,
-        {
-          reviewerName: '',
-          reviewerAvatar: '',
-          isVerified: true,
-          rating: 5,
-          reviewDateLabel: '2 days ago',
-          comment: '',
-          sortOrder: prev.customerReviews.length,
-          isActive: true,
-        },
-      ],
-    }));
+    setForm((prev) => {
+      const nextIdx = prev.customerReviews.length;
+      setExpandedReviewIndexes((exp) => (exp.includes(nextIdx) ? exp : [...exp, nextIdx]));
+      return {
+        ...prev,
+        customerReviews: [
+          ...prev.customerReviews,
+          {
+            reviewerName: '',
+            reviewerAvatar: '',
+            isVerified: true,
+            rating: 5,
+            reviewDateLabel: '2 days ago',
+            comment: '',
+            sortOrder: prev.customerReviews.length,
+            isActive: true,
+          },
+        ],
+      };
+    });
   };
 
   const handleUpdateReview = <K extends keyof StoreCustomerReview>(
@@ -1401,6 +1490,23 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
             description="Configure frequently asked questions and answers displayed at the bottom of the store page."
             headerRight={
               <div className="flex flex-wrap items-center gap-1.5">
+                {form.faqs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedFaqIndexes(
+                        expandedFaqIndexes.length === form.faqs.length
+                          ? []
+                          : form.faqs.map((_, i) => i)
+                      )
+                    }
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 cursor-pointer transition"
+                  >
+                    {expandedFaqIndexes.length === form.faqs.length
+                      ? t('Collapse all')
+                      : t('Expand all')}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setFaqLibraryOpen(true)}
@@ -1469,78 +1575,134 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {form.faqs.map((faq, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5 relative group hover:border-slate-300 transition"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center">
-                            Q{idx + 1}
-                          </span>
-                          <span>Question #{idx + 1}</span>
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!faq.question.trim() && !faq.answer.trim()) return;
-                              try {
-                                const saved = await storeTemplateService.createFaqTemplate({
-                                  category: 'custom',
-                                  title: faq.question.trim().slice(0, 48) || `FAQ #${idx + 1}`,
-                                  questionTemplate: extractBrandToken(faq.question, form.name),
-                                  answerTemplate: extractBrandToken(faq.answer, form.name),
-                                  isDefault: false,
-                                });
-                                syncFaqTemplates([saved, ...faqTemplatesRef.current]);
-                                toast.success(t('Saved to FAQ Library!'));
-                              } catch {
-                                toast.error(t('Failed to save template'));
-                              }
-                            }}
-                            className="px-2 py-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition cursor-pointer inline-flex items-center gap-1"
-                            title={t('Save to Library')}
-                          >
-                            <BookmarkPlus size={12} />
-                            <span>{t('Save to Library')}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFaq(idx)}
-                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition cursor-pointer"
-                            title="Remove FAQ"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                <div className="space-y-2">
+                  {form.faqs.map((faq, idx) => {
+                    const isOpen = expandedFaqIndexes.includes(idx);
+                    const diffStatus = getFaqDiffStatus(faq, idx);
+                    return (
+                      <div
+                        key={idx}
+                        className={`rounded-xl border transition overflow-hidden ${
+                          isOpen
+                            ? 'border-indigo-300 bg-white shadow-xs'
+                            : diffStatus === 'modified'
+                              ? 'border-amber-300 bg-amber-50/20 hover:border-amber-400'
+                              : diffStatus === 'new'
+                                ? 'border-emerald-300 bg-emerald-50/20 hover:border-emerald-400'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        {/* Compact Accordion Header Row */}
+                        <div
+                          onClick={() => toggleFaqExpanded(idx)}
+                          className="px-3.5 py-2.5 flex items-center justify-between gap-2.5 cursor-pointer select-none"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center shrink-0">
+                              Q{idx + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-bold text-slate-900 truncate">
+                                  {faq.question.trim() || `Question #${idx + 1} (Click to edit)`}
+                                </p>
+                                {diffStatus === 'modified' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                                    {t('Modified')}
+                                  </span>
+                                )}
+                                {diffStatus === 'new' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                                    {t('New')}
+                                  </span>
+                                )}
+                              </div>
+                              {!isOpen && faq.answer.trim() && (
+                                <p className="text-[11px] text-slate-500 truncate">
+                                  {faq.answer.trim()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!faq.question.trim() && !faq.answer.trim()) return;
+                                try {
+                                  const saved = await storeTemplateService.createFaqTemplate({
+                                    category: 'custom',
+                                    title: faq.question.trim().slice(0, 48) || `FAQ #${idx + 1}`,
+                                    questionTemplate: extractBrandToken(faq.question, form.name),
+                                    answerTemplate: extractBrandToken(faq.answer, form.name),
+                                    isDefault: false,
+                                  });
+                                  syncFaqTemplates([saved, ...faqTemplatesRef.current]);
+                                  toast.success(t('Saved to FAQ Library!'));
+                                } catch {
+                                  toast.error(t('Failed to save template'));
+                                }
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                              title={t('Save to Library')}
+                            >
+                              <BookmarkPlus size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFaq(idx);
+                                setExpandedFaqIndexes((prev) =>
+                                  prev.filter((i) => i !== idx).map((i) => (i > idx ? i - 1 : i))
+                                );
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                              title="Remove FAQ"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                            <span
+                              className={`p-1 text-slate-400 transition-transform duration-150 ${
+                                isOpen ? 'rotate-180 text-indigo-600' : ''
+                              }`}
+                            >
+                              <ChevronDown size={15} />
+                            </span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Question *</label>
-                        <input
-                          type="text"
-                          value={faq.question}
-                          onChange={(e) => handleUpdateFaq(idx, 'question', e.target.value)}
-                          placeholder={`e.g. How do I apply a ${form.name || 'Store'} promo code at checkout?`}
-                          className={`${inputClass} text-xs`}
-                        />
-                      </div>
+                        {/* Expandable Edit Body */}
+                        {isOpen && (
+                          <div className="px-3.5 pb-3.5 pt-2.5 border-t border-slate-100 bg-slate-50/40 space-y-2.5">
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-slate-700">Question *</label>
+                              <input
+                                type="text"
+                                value={faq.question}
+                                onChange={(e) => handleUpdateFaq(idx, 'question', e.target.value)}
+                                placeholder={`e.g. How do I apply a ${form.name || 'Store'} promo code at checkout?`}
+                                className={`${inputClass} text-xs`}
+                              />
+                            </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Answer *</label>
-                        <textarea
-                          rows={2}
-                          value={faq.answer}
-                          onChange={(e) => handleUpdateFaq(idx, 'answer', e.target.value)}
-                          placeholder="Enter a helpful answer for shoppers..."
-                          className={`${inputClass} text-xs resize-y leading-relaxed`}
-                        />
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-slate-700">Answer *</label>
+                              <textarea
+                                rows={2}
+                                value={faq.answer}
+                                onChange={(e) => handleUpdateFaq(idx, 'answer', e.target.value)}
+                                placeholder="Enter a helpful answer for shoppers..."
+                                className={`${inputClass} text-xs resize-y leading-relaxed`}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   <button
                     type="button"
@@ -1561,6 +1723,23 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
             description="Customize shopper rating breakdown percentages and individual customer review cards displayed on the store page."
             headerRight={
               <div className="flex flex-wrap items-center gap-1.5">
+                {form.customerReviews.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedReviewIndexes(
+                        expandedReviewIndexes.length === form.customerReviews.length
+                          ? []
+                          : form.customerReviews.map((_, i) => i)
+                      )
+                    }
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 cursor-pointer transition"
+                  >
+                    {expandedReviewIndexes.length === form.customerReviews.length
+                      ? t('Collapse all')
+                      : t('Expand all')}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() =>
@@ -1590,41 +1769,78 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
               </div>
             }
           >
-            <div className="space-y-5">
-              {/* Star Breakdown Percentages (5★ to 1★) */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800">Star Rating Breakdown (%)</h4>
-                    <p className="text-[11px] text-slate-500">
-                      Leave all at 0% to auto-calculate score, review count, and % from the actual customer reviews below. Enter custom % to override using Rating Score &amp; Total Reviews Count.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {(
-                    [
-                      { key: 'fiveStar', label: '5 ★ (%)' },
-                      { key: 'fourStar', label: '4 ★ (%)' },
-                      { key: 'threeStar', label: '3 ★ (%)' },
-                      { key: 'twoStar', label: '2 ★ (%)' },
-                      { key: 'oneStar', label: '1 ★ (%)' },
-                    ] as const
-                  ).map((item) => (
-                    <div key={item.key} className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-700">{item.label}</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={form.ratingBreakdown[item.key]}
-                        onChange={(e) => handleBreakdownChange(item.key, e.target.value)}
-                        className={`${inputClass} text-xs`}
-                      />
+            <div className="space-y-4">
+              {/* Compact Single-Row Star Rating Breakdown (%) */}
+              {(() => {
+                const totalPct =
+                  Number(form.ratingBreakdown.fiveStar || 0) +
+                  Number(form.ratingBreakdown.fourStar || 0) +
+                  Number(form.ratingBreakdown.threeStar || 0) +
+                  Number(form.ratingBreakdown.twoStar || 0) +
+                  Number(form.ratingBreakdown.oneStar || 0);
+                return (
+                  <div className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-bold text-slate-800">Star Rating Breakdown (%)</h4>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            totalPct === 0
+                              ? 'bg-slate-200/80 text-slate-600'
+                              : totalPct === 100
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {totalPct === 0 ? t('Auto-calc from reviews') : `${totalPct}% / 100%`}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-400 hidden sm:inline">
+                        {t('Leave at 0% to auto-calculate from reviews below')}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {(
+                        [
+                          { key: 'fiveStar', label: '5★' },
+                          { key: 'fourStar', label: '4★' },
+                          { key: 'threeStar', label: '3★' },
+                          { key: 'twoStar', label: '2★' },
+                          { key: 'oneStar', label: '1★' },
+                        ] as const
+                      ).map((item) => {
+                        const pctVal = Number(form.ratingBreakdown[item.key] || 0);
+                        return (
+                          <div key={item.key} className="space-y-1">
+                            <div className="relative flex items-center">
+                              <span className="absolute left-2 text-[11px] font-black text-amber-500 pointer-events-none">
+                                {item.label}
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={pctVal}
+                                onChange={(e) => handleBreakdownChange(item.key, e.target.value)}
+                                className={`${inputClass} text-xs h-8 pl-8 pr-5 text-right tabular-nums`}
+                              />
+                              <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                                %
+                              </span>
+                            </div>
+                            <div className="h-1 w-full rounded-full bg-slate-200/80 overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full transition-all"
+                                style={{ width: `${Math.min(100, Math.max(0, pctVal))}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Customer Review Cards */}
               {form.customerReviews.length === 0 ? (
@@ -1668,178 +1884,324 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {form.customerReviews.map((review, idx) => (
-                    <div
-                      key={review.id ?? idx}
-                      className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 relative hover:border-slate-300 transition"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center">
-                            #{idx + 1}
-                          </span>
-                          <span>{review.reviewerName || `Customer Review #${idx + 1}`}</span>
-                        </span>
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={review.isVerified !== false}
-                              onChange={(e) => handleUpdateReview(idx, 'isVerified', e.target.checked)}
-                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
-                            />
-                            <span>Verified Buyer</span>
-                          </label>
-                          <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={review.isActive !== false}
-                              onChange={(e) => handleUpdateReview(idx, 'isActive', e.target.checked)}
-                              className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                            />
-                            <span>Active</span>
-                          </label>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!review.comment.trim()) return;
-                              try {
-                                const saved = await storeTemplateService.createReviewTemplate({
-                                  category: 'custom',
-                                  title: review.reviewerName.trim()
-                                    ? `${review.reviewerName.trim()} (${review.rating || 5}★)`
-                                    : `Review #${idx + 1}`,
-                                  reviewerName: review.reviewerName.trim() || 'Verified Buyer',
-                                  rating: Number(review.rating || 5),
-                                  reviewDateLabel: review.reviewDateLabel?.trim() || '3 days ago',
-                                  isVerified: review.isVerified !== false,
-                                  commentTemplate: extractBrandToken(review.comment, form.name),
-                                });
-                                setReviewTemplates((prev) => [saved, ...prev]);
-                                toast.success(t('Saved to Review Library!'));
-                              } catch {
-                                toast.error(t('Failed to save template'));
-                              }
-                            }}
-                            className="px-2 py-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition cursor-pointer inline-flex items-center gap-1"
-                            title={t('Save to Library')}
-                          >
-                            <BookmarkPlus size={12} />
-                            <span>{t('Save to Library')}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveReview(idx)}
-                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition cursor-pointer"
-                            title="Remove Review"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
+                <div className="space-y-2">
+                  <input
+                    ref={reviewAvatarFileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleReviewAvatarFileChange}
+                    className="hidden"
+                  />
+                  {form.customerReviews.map((review, idx) => {
+                    const isOpen = expandedReviewIndexes.includes(idx);
+                    const diffStatus = getReviewDiffStatus(review, idx);
+                    const initials = (review.reviewerName || `#${idx + 1}`).slice(0, 2).toUpperCase();
+                    return (
+                      <div
+                        key={review.id ?? idx}
+                        className={`rounded-xl border transition overflow-hidden ${
+                          isOpen
+                            ? 'border-indigo-300 bg-white shadow-xs'
+                            : diffStatus === 'modified'
+                              ? 'border-amber-300 bg-amber-50/20 hover:border-amber-400'
+                              : diffStatus === 'new'
+                                ? 'border-emerald-300 bg-emerald-50/20 hover:border-emerald-400'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        {/* Compact Accordion Review Header Row */}
+                        <div
+                          onClick={() => toggleReviewExpanded(idx)}
+                          className="px-3.5 py-2.5 flex items-center justify-between gap-2.5 cursor-pointer select-none"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            {review.reviewerAvatar ? (
+                              <img
+                                src={review.reviewerAvatar}
+                                alt={review.reviewerName || 'Reviewer'}
+                                className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                              />
+                            ) : (
+                              <span className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center shrink-0 border border-emerald-200">
+                                {initials}
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-slate-900 truncate">
+                                  {review.reviewerName || `Customer Review #${idx + 1}`}
+                                </span>
+                                {diffStatus === 'modified' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                                    {t('Modified')}
+                                  </span>
+                                )}
+                                {diffStatus === 'new' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                                    {t('New')}
+                                  </span>
+                                )}
+                                <span className="inline-flex items-center text-amber-400">
+                                  {Array.from({ length: Math.min(5, Math.max(1, Number(review.rating || 5))) }).map((_, si) => (
+                                    <Star key={si} size={10} className="fill-amber-400 text-amber-400" />
+                                  ))}
+                                </span>
+                                {review.reviewDateLabel && (
+                                  <span className="text-[10px] text-slate-400">· {review.reviewDateLabel}</span>
+                                )}
+                                {review.isVerified !== false && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">
+                                    <CheckCircle2 size={9} /> Verified
+                                  </span>
+                                )}
+                                {review.isActive === false && (
+                                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
+                                    Hidden
+                                  </span>
+                                )}
+                              </div>
+                              {!isOpen && (
+                                <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                                  {review.comment.trim() || 'Click to edit review details...'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-600">
-                          Select / Search Saved Reviewer
-                        </label>
-                        <ReviewerPicker
-                          selectedName={review.reviewerName}
-                          onSelect={(profile) => {
-                            setForm((prev) => {
-                              const updated = [...prev.customerReviews];
-                              updated[idx] = {
-                                ...updated[idx],
-                                reviewerProfileId: profile.id,
-                                reviewerName: profile.name,
-                                reviewerAvatar: profile.avatarUrl || '',
-                                isVerified: profile.isVerified,
-                              };
-                              return { ...prev, customerReviews: updated };
-                            });
-                          }}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-bold text-slate-700">Reviewer Name *</label>
-                          <input
-                            type="text"
-                            value={review.reviewerName}
-                            onChange={(e) => handleUpdateReview(idx, 'reviewerName', e.target.value)}
-                            placeholder="e.g. Jessica L."
-                            className={`${inputClass} text-xs`}
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-bold text-slate-700">Star Rating (1 - 5)</label>
-                          <AdminSearchableSelect
-                            value={String(review.rating)}
-                            searchable={false}
-                            onChange={(val) => handleUpdateReview(idx, 'rating', Number(val))}
-                            options={[
-                              { value: '5', label: '5 Stars (★★★★★)' },
-                              { value: '4', label: '4 Stars (★★★★☆)' },
-                              { value: '3', label: '3 Stars (★★★☆☆)' },
-                              { value: '2', label: '2 Stars (★★☆☆☆)' },
-                              { value: '1', label: '1 Star (★☆☆☆☆)' },
-                            ]}
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-bold text-slate-700">Date Label</label>
-                          <input
-                            type="text"
-                            value={review.reviewDateLabel || ''}
-                            onChange={(e) => handleUpdateReview(idx, 'reviewDateLabel', e.target.value)}
-                            placeholder="e.g. 2 days ago, 1 week ago"
-                            className={`${inputClass} text-xs`}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-                        <div className="space-y-1">
-                          <ImageUpload
-                            label="Reviewer Avatar"
-                            value={review.reviewerAvatar || ''}
-                            onChange={(url) => handleUpdateReview(idx, 'reviewerAvatar', url)}
-                            folder="avatars"
-                            aspectRatio="square"
-                          />
-                        </div>
-                        <div className="md:col-span-2 space-y-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <label className="text-[11px] font-bold text-slate-700">Review Comment *</label>
+                          <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
-                              onClick={() =>
-                                setReviewLibraryState({
-                                  open: true,
-                                  mode: 'replace-single',
-                                  targetIndex: idx,
-                                })
-                              }
-                              className="px-2 py-0.5 rounded-md text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 inline-flex items-center gap-1 cursor-pointer transition"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!review.comment.trim()) return;
+                                try {
+                                  const saved = await storeTemplateService.createReviewTemplate({
+                                    category: 'custom',
+                                    title: review.reviewerName.trim()
+                                      ? `${review.reviewerName.trim()} (${review.rating || 5}★)`
+                                      : `Review #${idx + 1}`,
+                                    reviewerName: review.reviewerName.trim() || 'Verified Buyer',
+                                    reviewerAvatar: review.reviewerAvatar?.trim() || '',
+                                    rating: Number(review.rating || 5),
+                                    reviewDateLabel: review.reviewDateLabel?.trim() || '3 days ago',
+                                    isVerified: review.isVerified !== false,
+                                    commentTemplate: extractBrandToken(review.comment, form.name),
+                                  });
+                                  setReviewTemplates((prev) => [saved, ...prev]);
+                                  toast.success(t('Saved to Review Library!'));
+                                } catch {
+                                  toast.error(t('Failed to save template'));
+                                }
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                              title={t('Save to Library')}
                             >
-                              <BookOpen size={11} />
-                              <span>{t('Pick from Review Library')}</span>
+                              <BookmarkPlus size={13} />
                             </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveReview(idx);
+                                setExpandedReviewIndexes((prev) =>
+                                  prev.filter((i) => i !== idx).map((i) => (i > idx ? i - 1 : i))
+                                );
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                              title="Remove Review"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                            <span
+                              className={`p-1 text-slate-400 transition-transform duration-150 ${
+                                isOpen ? 'rotate-180 text-indigo-600' : ''
+                              }`}
+                            >
+                              <ChevronDown size={15} />
+                            </span>
                           </div>
-                          <textarea
-                            rows={3}
-                            value={review.comment}
-                            onChange={(e) => handleUpdateReview(idx, 'comment', e.target.value)}
-                            placeholder="Saved big on my skincare routine with coupons. The code worked perfectly!"
-                            className={`${inputClass} text-xs resize-y leading-relaxed`}
-                          />
                         </div>
+
+                        {/* Expandable Compact Review Editor */}
+                        {isOpen && (
+                          <div className="px-3.5 pb-3.5 pt-3 border-t border-slate-100 bg-slate-50/40 space-y-3">
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-slate-600">
+                                Select / Search Saved Reviewer
+                              </label>
+                              <ReviewerPicker
+                                selectedName={review.reviewerName}
+                                onSelect={(profile) => {
+                                  setForm((prev) => {
+                                    const updated = [...prev.customerReviews];
+                                    updated[idx] = {
+                                      ...updated[idx],
+                                      reviewerProfileId: profile.id,
+                                      reviewerName: profile.name,
+                                      reviewerAvatar: profile.avatarUrl || '',
+                                      isVerified: profile.isVerified,
+                                    };
+                                    return { ...prev, customerReviews: updated };
+                                  });
+                                }}
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-bold text-slate-700">Reviewer Name *</label>
+                                <input
+                                  type="text"
+                                  value={review.reviewerName}
+                                  onChange={(e) => handleUpdateReview(idx, 'reviewerName', e.target.value)}
+                                  placeholder="e.g. Jessica L."
+                                  className={`${inputClass} text-xs h-9`}
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-bold text-slate-700">Star Rating (1 - 5)</label>
+                                <AdminSearchableSelect
+                                  value={String(review.rating)}
+                                  searchable={false}
+                                  triggerClassName="h-9 bg-white text-xs"
+                                  onChange={(val) => handleUpdateReview(idx, 'rating', Number(val))}
+                                  options={[
+                                    { value: '5', label: '5 Stars (★★★★★)' },
+                                    { value: '4', label: '4 Stars (★★★★☆)' },
+                                    { value: '3', label: '3 Stars (★★★☆☆)' },
+                                    { value: '2', label: '2 Stars (★★☆☆☆)' },
+                                    { value: '1', label: '1 Star (★☆☆☆☆)' },
+                                  ]}
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-bold text-slate-700">Date Label</label>
+                                <input
+                                  type="text"
+                                  value={review.reviewDateLabel || ''}
+                                  onChange={(e) => handleUpdateReview(idx, 'reviewDateLabel', e.target.value)}
+                                  placeholder="e.g. 2 days ago, 1 week ago"
+                                  className={`${inputClass} text-xs h-9`}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Compact Single-Row Avatar Picker + Flags */}
+                            <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-xl border border-slate-200/80 bg-white">
+                              <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+                                <div className="relative shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => setReviewAvatarModalIndex(idx)}
+                                    title={t('Choose avatar from Media Library')}
+                                    className="w-9 h-9 rounded-full overflow-hidden border border-slate-300 bg-slate-50 flex items-center justify-center hover:border-indigo-500 transition cursor-pointer"
+                                  >
+                                    {uploadingReviewAvatarIdx === idx ? (
+                                      <Loader2 size={13} className="animate-spin text-indigo-600" />
+                                    ) : review.reviewerAvatar ? (
+                                      <img
+                                        src={review.reviewerAvatar}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <span className="text-[10px] font-black text-emerald-700">{initials}</span>
+                                    )}
+                                  </button>
+                                  {review.reviewerAvatar && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateReview(idx, 'reviewerAvatar', '')}
+                                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white flex items-center justify-center hover:bg-rose-700 cursor-pointer"
+                                      title="Remove avatar"
+                                    >
+                                      <X size={9} />
+                                    </button>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled={uploadingReviewAvatarIdx === idx}
+                                  onClick={() => {
+                                    reviewAvatarUploadTargetRef.current = idx;
+                                    reviewAvatarFileRef.current?.click();
+                                  }}
+                                  className="h-8 px-2.5 rounded-lg text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-200 hover:border-indigo-400 hover:text-indigo-700 inline-flex items-center gap-1 transition cursor-pointer shrink-0"
+                                >
+                                  <UploadCloud size={12} />
+                                  <span>{t('Upload')}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setReviewAvatarModalIndex(idx)}
+                                  className="h-8 px-2.5 rounded-lg text-[11px] font-bold text-indigo-700 bg-indigo-50/70 border border-indigo-200 hover:bg-indigo-100 inline-flex items-center gap-1 transition cursor-pointer shrink-0"
+                                >
+                                  <Layers size={12} />
+                                  <span>{t('Library')}</span>
+                                </button>
+                                <input
+                                  type="text"
+                                  value={review.reviewerAvatar || ''}
+                                  onChange={(e) => handleUpdateReview(idx, 'reviewerAvatar', e.target.value)}
+                                  placeholder={t('Avatar URL (optional)...')}
+                                  className={`${inputClass} text-[11px] h-8 flex-1 min-w-[120px]`}
+                                />
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0 px-1">
+                                <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={review.isVerified !== false}
+                                    onChange={(e) => handleUpdateReview(idx, 'isVerified', e.target.checked)}
+                                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
+                                  />
+                                  <span>Verified Buyer</span>
+                                </label>
+                                <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={review.isActive !== false}
+                                    onChange={(e) => handleUpdateReview(idx, 'isActive', e.target.checked)}
+                                    className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                                  />
+                                  <span>Active</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <label className="text-[11px] font-bold text-slate-700">Review Comment *</label>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setReviewLibraryState({
+                                      open: true,
+                                      mode: 'replace-single',
+                                      targetIndex: idx,
+                                    })
+                                  }
+                                  className="px-2 py-0.5 rounded-md text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 inline-flex items-center gap-1 cursor-pointer transition"
+                                >
+                                  <BookOpen size={11} />
+                                  <span>{t('Pick from Review Library')}</span>
+                                </button>
+                              </div>
+                              <textarea
+                                rows={2}
+                                value={review.comment}
+                                onChange={(e) => handleUpdateReview(idx, 'comment', e.target.value)}
+                                placeholder="Saved big on my skincare routine with coupons. The code worked perfectly!"
+                                className={`${inputClass} text-xs resize-y leading-relaxed`}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   <button
                     type="button"
@@ -2172,6 +2534,7 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
               updated[idx] = {
                 ...existingCard,
                 reviewerName: picked.reviewerName,
+                reviewerAvatar: picked.reviewerAvatar || existingCard.reviewerAvatar || '',
                 isVerified: picked.isVerified,
                 rating: picked.rating,
                 reviewDateLabel: picked.reviewDateLabel,
@@ -2185,6 +2548,17 @@ function StoreFormInner({ id, existing, initial }: { id?: string; existing?: Adm
               customerReviews: [...prev.customerReviews, ...pickedReviews],
             }));
           }
+        }}
+      />
+
+      <MediaLibraryModal
+        isOpen={reviewAvatarModalIndex !== null}
+        onClose={() => setReviewAvatarModalIndex(null)}
+        onSelect={(url) => {
+          if (reviewAvatarModalIndex !== null) {
+            handleUpdateReview(reviewAvatarModalIndex, 'reviewerAvatar', url);
+          }
+          setReviewAvatarModalIndex(null);
         }}
       />
     </AdminFormPage>

@@ -54,6 +54,7 @@ public class StoreTemplateLibraryServiceImpl implements StoreTemplateLibraryServ
                 .category(normalizeCategory(request.getCategory(), REVIEW_CATEGORIES, "custom"))
                 .title(request.getTitle().trim())
                 .reviewerName(request.getReviewerName().trim())
+                .reviewerAvatar(StringUtils.hasText(request.getReviewerAvatar()) ? request.getReviewerAvatar().trim() : null)
                 .rating(clampRating(request.getRating()))
                 .reviewDateLabel(StringUtils.hasText(request.getReviewDateLabel())
                         ? request.getReviewDateLabel().trim()
@@ -77,6 +78,7 @@ public class StoreTemplateLibraryServiceImpl implements StoreTemplateLibraryServ
         entity.setCategory(normalizeCategory(request.getCategory(), REVIEW_CATEGORIES, entity.getCategory()));
         entity.setTitle(request.getTitle().trim());
         entity.setReviewerName(request.getReviewerName().trim());
+        entity.setReviewerAvatar(StringUtils.hasText(request.getReviewerAvatar()) ? request.getReviewerAvatar().trim() : null);
         entity.setRating(clampRating(request.getRating()));
         entity.setReviewDateLabel(StringUtils.hasText(request.getReviewDateLabel())
                 ? request.getReviewDateLabel().trim()
@@ -249,6 +251,7 @@ public class StoreTemplateLibraryServiceImpl implements StoreTemplateLibraryServ
                 e.getCategory(),
                 e.getTitle(),
                 e.getReviewerName(),
+                e.getReviewerAvatar(),
                 e.getRating(),
                 e.getReviewDateLabel(),
                 e.getIsVerified(),

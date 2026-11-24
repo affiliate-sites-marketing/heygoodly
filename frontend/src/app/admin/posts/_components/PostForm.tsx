@@ -46,9 +46,12 @@ import AdminFormPage, {
   toValidSlug,
 } from '@/components/admin/AdminFormPage';
 import CopyPublicLinkButton from '@/components/admin/CopyPublicLinkButton';
+import AiPostWriterModal from './AiPostWriterModal';
+import type { AiGeneratedPostResult } from '@/services/aiService';
 import { ROUTES } from '@/constants/routes';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
 import { STORAGE_KEYS } from '@/constants/ui-constants';
+import { AI_STORAGE_KEYS } from '@/constants/ai';
 import { apiClient } from '@/lib/api/axios-client';
 import { useToast } from '@/context/ToastContext';
 import { useAdminI18n } from '@/context/AdminI18nContext';
@@ -414,15 +417,83 @@ interface StoreOption {
 
 function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial: PostFormState }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { t } = useAdminI18n();
   const [form, setForm] = useState<PostFormState>(initial);
+  const [editorHydrationKey, setEditorHydrationKey] = useState<number>(0);
   const [slugTouched, setSlugTouched] = useState<boolean>(Boolean(existing?.slug));
   const [excerptTouched, setExcerptTouched] = useState<boolean>(Boolean(existing?.excerpt?.trim()));
+
+  // Hydrate 1-click AI Chat draft safely in useEffect (React Strict Mode + RichTextEditor safe)
+  useEffect(() => {
+    if (existing || typeof window === 'undefined') return;
+    if (searchParams.get('fromAiChat') !== '1') return;
+    try {
+      const rawDraft = window.sessionStorage.getItem(AI_STORAGE_KEYS.DRAFT_IMPORT);
+      if (!rawDraft) return;
+      const draft = JSON.parse(rawDraft) as {
+        title?: string;
+        slug?: string;
+        excerpt?: string;
+        contentHtml?: string;
+        imageUrl?: string;
+        categoryId?: number;
+        categoryName?: string;
+        rating?: string;
+        ctaText?: string;
+        brandDescription?: string;
+        storeSlug?: string;
+        storeName?: string;
+        tags?: string[] | string;
+        readTime?: string;
+      };
+      const normalizedTags = Array.isArray(draft.tags)
+        ? draft.tags.join(', ')
+        : typeof draft.tags === 'string'
+          ? draft.tags
+          : '';
+      if (draft.categoryId && draft.categoryName) {
+        setCategories((prev) =>
+          prev.some((c) => c.id === draft.categoryId)
+            ? prev
+            : [{ id: draft.categoryId!, name: draft.categoryName!, slug: '' }, ...prev]
+        );
+      }
+      setForm((prev) => ({
+        ...prev,
+        title: draft.title || prev.title,
+        slug: draft.slug || (draft.title ? generateSlug(draft.title) : prev.slug),
+        excerpt: draft.excerpt || prev.excerpt,
+        content: draft.contentHtml || prev.content,
+        imageUrl: draft.imageUrl || prev.imageUrl,
+        categoryId: draft.categoryId ?? prev.categoryId,
+        category: draft.categoryName || prev.category,
+        rating: draft.rating || prev.rating,
+        ctaText: draft.ctaText || prev.ctaText,
+        brandDescription: draft.brandDescription || prev.brandDescription,
+        storeSlug: draft.storeSlug || prev.storeSlug,
+        storeName: draft.storeName || prev.storeName,
+        tags: normalizedTags || prev.tags,
+        readTime: draft.readTime || prev.readTime,
+        status: 'DRAFT',
+      }));
+      if (draft.excerpt) setExcerptTouched(true);
+      setEditorHydrationKey((k) => k + 1);
+      // Delay removal slightly so React Strict Mode double-mount still hydrates cleanly
+      const timer = window.setTimeout(() => {
+        window.sessionStorage.removeItem(AI_STORAGE_KEYS.DRAFT_IMPORT);
+      }, 1500);
+      return () => window.clearTimeout(timer);
+    } catch {
+      // ignore malformed draft
+    }
+  }, [existing, searchParams]);
   const [autoCategoryTag, setAutoCategoryTag] = useState<string>(
     existing?.category?.trim() || (initial.categoryId ? initial.category.trim() : '')
   );
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+  const [aiModalOpen, setAiModalOpen] = useState<boolean>(false);
   const [stores, setStores] = useState<StoreOption[]>(() => {
     if (existing?.storeName) {
       return [
@@ -799,8 +870,49 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
 
   const livePostSlug = generateSlug(form.slug.trim() || form.title.trim());
 
+  const handleAiArticleGenerated = (res: AiGeneratedPostResult) => {
+    if (res.categoryId && res.categoryName) {
+      setCategories((prev) =>
+        prev.some((c) => c.id === res.categoryId)
+          ? prev
+          : [{ id: res.categoryId!, name: res.categoryName!, slug: '' }, ...prev]
+      );
+    }
+    setForm((prev) => ({
+      ...prev,
+      title: res.title || prev.title,
+      slug: res.slug || generateSlug(res.title || prev.title),
+      excerpt: res.excerpt || res.metaDescription || prev.excerpt,
+      content: res.contentHtml || prev.content,
+      imageUrl: res.imageUrl || prev.imageUrl,
+      categoryId: res.categoryId ?? prev.categoryId,
+      category: res.categoryName || prev.category,
+      rating: res.rating || prev.rating,
+      ctaText: res.ctaText || prev.ctaText,
+      brandDescription: res.brandDescription || prev.brandDescription,
+      readTime: res.readTime || prev.readTime,
+      tags: Array.isArray(res.tags) && res.tags.length > 0 ? res.tags.join(', ') : prev.tags,
+      storeSlug: res.mode === 'review' ? (res.storeSlug || prev.storeSlug) : '',
+      storeName: res.mode === 'review' ? (res.storeName || prev.storeName) : '',
+      status: 'DRAFT',
+    }));
+    setSlugTouched(true);
+    setExcerptTouched(true);
+    setEditorHydrationKey((k) => k + 1);
+    setActiveTab('edit');
+  };
+
   const headerActions = (
     <div className="flex items-center gap-2 mr-1">
+      <button
+        type="button"
+        onClick={() => setAiModalOpen(true)}
+        className="h-8 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
+        title="Generate Review or News article using AI"
+      >
+        <Sparkles size={13} />
+        <span>AI Auto-Write</span>
+      </button>
       <CopyPublicLinkButton path={livePostSlug ? `/post/${livePostSlug}` : ''} disabled={!livePostSlug} />
       <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold">
         <button
@@ -832,6 +944,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
   );
 
   return (
+    <>
     <AdminFormPage
       title={existing ? `Edit Article: ${existing.title}` : 'Write New Article & Review'}
       description="Craft in-depth product reviews, buyer guides, and industry news with live preview."
@@ -1164,6 +1277,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
               }
             >
               <RichTextEditor
+                key={`rte-${existing?.id ?? 'new'}-${editorHydrationKey}`}
                 value={form.content}
                 onChange={(html) => {
                   setForm((prev) => ({
@@ -1877,5 +1991,15 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
         </AdminDevicePreviewFrame>
       )}
     </AdminFormPage>
+
+    <AiPostWriterModal
+      isOpen={aiModalOpen}
+      onClose={() => setAiModalOpen(false)}
+      stores={stores.map((s) => ({ slug: s.slug, name: s.name }))}
+      initialStoreSlug={form.storeSlug}
+      onEnsureStoresLoaded={loadStoresOnDemand}
+      onGenerated={handleAiArticleGenerated}
+    />
+    </>
   );
 }

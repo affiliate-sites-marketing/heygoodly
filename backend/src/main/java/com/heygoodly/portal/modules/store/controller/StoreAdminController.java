@@ -8,6 +8,7 @@ import com.heygoodly.portal.common.dto.ApiResponse;
 import com.heygoodly.portal.common.dto.PageResponse;
 import com.heygoodly.portal.common.util.PaginationUtils;
 import com.heygoodly.portal.modules.role.enums.RoleCode;
+import com.heygoodly.portal.modules.store.dto.request.ReviewerProfileRequest;
 import com.heygoodly.portal.modules.store.dto.request.StoreAdminQueryCriteria;
 import com.heygoodly.portal.modules.store.dto.request.StoreRequest;
 import com.heygoodly.portal.modules.store.dto.response.ReviewerProfileDto;
@@ -61,6 +62,30 @@ public class StoreAdminController {
             @RequestParam(name = "search", required = false) String search
     ) {
         return ResponseEntity.ok(ApiResponse.ok(storeService.searchReviewerProfiles(search)));
+    }
+
+    @PostMapping("/reviewers")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.STORE_CREATE + "') or hasAuthority('" + PermissionConstants.STORE_UPDATE + "') or hasAuthority('" + RoleCode.ROLE_SUPER_ADMIN + "')")
+    public ResponseEntity<ApiResponse<ReviewerProfileDto>> createReviewer(
+            @Valid @RequestBody ReviewerProfileRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.created(MessageConstants.CREATED, storeService.createReviewerProfile(request)));
+    }
+
+    @PutMapping("/reviewers/{id}")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.STORE_UPDATE + "') or hasAuthority('" + RoleCode.ROLE_SUPER_ADMIN + "')")
+    public ResponseEntity<ApiResponse<ReviewerProfileDto>> updateReviewer(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody ReviewerProfileRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(MessageConstants.UPDATED, storeService.updateReviewerProfile(id, request)));
+    }
+
+    @DeleteMapping("/reviewers/{id}")
+    @PreAuthorize("hasAuthority('" + PermissionConstants.STORE_UPDATE + "') or hasAuthority('" + RoleCode.ROLE_SUPER_ADMIN + "')")
+    public ResponseEntity<ApiResponse<Void>> deleteReviewer(@PathVariable("id") Long id) {
+        storeService.deleteReviewerProfile(id);
+        return ResponseEntity.ok(ApiResponse.ok(MessageConstants.DELETED, null));
     }
 
     @GetMapping("/{id}")

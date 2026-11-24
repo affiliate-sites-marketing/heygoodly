@@ -60,6 +60,18 @@ spring:
       repositories:
         enabled: false
 
+  # ===========================================================================
+  # Spring AI Configuration (Server-managed default via .env, zero-config for users)
+  # ===========================================================================
+  ai:
+    openai:
+      api-key: ${SPRING_AI_OPENAI_API_KEY:not-configured}
+      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://openrouter.ai/api}
+      chat:
+        options:
+          model: ${SPRING_AI_OPENAI_MODEL:openrouter/free}
+          temperature: 0.55
+
 # ===========================================================================
 # Server Configuration
 # ===========================================================================
@@ -73,6 +85,7 @@ server:
 # Application Custom Properties (Injectable via .env)
 # ===========================================================================
 app:
+  site-url: ${APP_SITE_URL:${NEXT_PUBLIC_SITE_URL:${AFFILIATE_DEFAULT_FALLBACK_URL:http://localhost:3000}}}
   jwt:
     secret: ${JWT_SECRET:c2VjdXJlX2hleWdvb2RseV9hZmZpbGlhdGVfcG9ydGFsX2p3dF9zZWNyZXRfa2V5XzIwMjY=}
     access-token-expiration-ms: ${JWT_ACCESS_TOKEN_EXPIRATION_MS:86400000} # 24 hours

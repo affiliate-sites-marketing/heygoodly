@@ -379,6 +379,51 @@ class StoreService {
     }
     return [];
   }
+
+  async createReviewerProfile(payload: {
+    name: string;
+    avatarUrl?: string;
+    isVerified?: boolean;
+  }): Promise<ReviewerProfile> {
+    const res = await apiClient.post(API_ENDPOINTS.ADMIN.STORE_REVIEWERS, {
+      name: payload.name.trim(),
+      avatarUrl: payload.avatarUrl?.trim() || '',
+      isVerified: payload.isVerified !== false,
+    });
+    const p = res.data?.data ?? res.data;
+    return {
+      id: Number(p.id),
+      name: String(p.name || ''),
+      avatarUrl: p.avatarUrl ? String(p.avatarUrl) : undefined,
+      isVerified: p.isVerified !== false,
+    };
+  }
+
+  async updateReviewerProfile(
+    id: number,
+    payload: {
+      name: string;
+      avatarUrl?: string;
+      isVerified?: boolean;
+    }
+  ): Promise<ReviewerProfile> {
+    const res = await apiClient.put(API_ENDPOINTS.ADMIN.STORE_REVIEWER_DETAIL(id), {
+      name: payload.name.trim(),
+      avatarUrl: payload.avatarUrl?.trim() || '',
+      isVerified: payload.isVerified !== false,
+    });
+    const p = res.data?.data ?? res.data;
+    return {
+      id: Number(p.id),
+      name: String(p.name || ''),
+      avatarUrl: p.avatarUrl ? String(p.avatarUrl) : undefined,
+      isVerified: p.isVerified !== false,
+    };
+  }
+
+  async deleteReviewerProfile(id: number): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.ADMIN.STORE_REVIEWER_DETAIL(id));
+  }
 }
 
 const storeService = new StoreService();

@@ -312,9 +312,9 @@ export default function ImageUpload({
       }}
       className="space-y-2"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 shrink-0">
-          <ImageIcon size={14} className="text-brand-primary" />
+      <div className="flex flex-col items-start gap-2">
+        <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 min-h-[20px]">
+          <ImageIcon size={14} className="text-brand-primary shrink-0" />
           <span>{label}</span>
         </label>
 
@@ -457,7 +457,7 @@ export default function ImageUpload({
               onDragOver={handleDrag}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 ${
+              className={`relative border-2 border-dashed rounded-2xl p-6 min-h-[192px] text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 ${
                 dragActive
                   ? 'border-brand-primary bg-rose-50/50 scale-[0.99]'
                   : 'border-slate-200 bg-slate-50/60 hover:bg-slate-50 hover:border-slate-300'

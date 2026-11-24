@@ -50,6 +50,8 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // Allow Servlet ASYNC/ERROR dispatches (required for SSE streaming after initial JWT-authenticated REQUEST)
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC, jakarta.servlet.DispatcherType.ERROR).permitAll()
                         // Public auth endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         // Public portal endpoints

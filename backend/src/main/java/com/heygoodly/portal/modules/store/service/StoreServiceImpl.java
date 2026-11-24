@@ -7,6 +7,7 @@ import com.heygoodly.portal.common.constant.AppConstants;
 import com.heygoodly.portal.common.constant.EntityFieldConstants;
 import com.heygoodly.portal.common.dto.PageResponse;
 import com.heygoodly.portal.common.exception.DuplicateResourceException;
+import com.heygoodly.portal.common.exception.BadRequestException;
 import com.heygoodly.portal.common.exception.ResourceNotFoundException;
 import com.heygoodly.portal.common.util.NullSafeUtils;
 import com.heygoodly.portal.common.util.SecurityUtils;
@@ -15,6 +16,7 @@ import com.heygoodly.portal.modules.audit.service.AuditLogService;
 import com.heygoodly.portal.modules.category.entity.CategoryEntity;
 import com.heygoodly.portal.modules.category.repository.CategoryRepository;
 import com.heygoodly.portal.modules.offer.repository.OfferRepository;
+import com.heygoodly.portal.modules.store.dto.request.ReviewerProfileRequest;
 import com.heygoodly.portal.modules.store.dto.request.StoreRequest;
 import com.heygoodly.portal.modules.store.dto.response.ReviewerProfileDto;
 import com.heygoodly.portal.modules.store.dto.response.StoreDetailResponse;
@@ -659,7 +661,7 @@ public class StoreServiceImpl implements StoreService {
     public List<ReviewerProfileDto> searchReviewerProfiles(String search) {
         String trimmed = NullSafeUtils.safeTrim(search);
         List<ReviewerProfileEntity> profiles = trimmed.isEmpty()
-                ? reviewerProfileRepository.findTop20ByIsDeletedFalseOrderByUpdatedAtDescIdDesc()
+                ? reviewerProfileRepository.findTop50ByIsDeletedFalseOrderByUpdatedAtDescIdDesc()
                 : reviewerProfileRepository.findTop20ByIsDeletedFalseAndNameContainingIgnoreCaseOrderByNameAsc(trimmed);
         return profiles.stream()
                 .map(p -> new ReviewerProfileDto(
@@ -671,65 +673,163 @@ public class StoreServiceImpl implements StoreService {
                 .toList();
     }
 
+    @Override
+    @Transactional
+    public ReviewerProfileDto createReviewerProfile(ReviewerProfileRequest request) {
+        String actor = SecurityUtils.getCurrentUserEmail().orElse(AppConstants.SYSTEM_USER);
+        String name = NullSafeUtils.safeTrim(request.getName());
+        String avatar = NullSafeUtils.safeTrim(request.getAvatarUrl());
+        boolean verified = request.getIsVerified() == null || Boolean.TRUE.equals(request.getIsVerified());
+
+        ReviewerProfileEntity entity = reviewerProfileRepository.findFirstByNameIgnoreCaseAndIsDeletedFalse(name)
+                .map(existing -> {
+                    existing.setName(name);
+                    existing.setAvatarUrl(avatar.isEmpty() ? null : avatar);
+                    existing.setIsVerified(verified);
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    ReviewerProfileEntity created = ReviewerProfileEntity.builder()
+                            .name(name)
+                            .avatarUrl(avatar.isEmpty() ? null : avatar)
+                            .isVerified(verified)
+                            .build();
+                    created.setCreatedBy(actor);
+                    return created;
+                });
+
+        ReviewerProfileEntity saved = reviewerProfileRepository.save(entity);
+        auditLogService.recordAction("CREATE", "reviewer_profiles", String.valueOf(saved.getId()), saved.getName(), null);
+        return new ReviewerProfileDto(saved.getId(), saved.getName(), saved.getAvatarUrl(), Boolean.TRUE.equals(saved.getIsVerified()));
+    }
+
+    @Override
+    @Transactional
+    public ReviewerProfileDto updateReviewerProfile(Long id, ReviewerProfileRequest request) {
+        ReviewerProfileEntity entity = reviewerProfileRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("ReviewerProfile", "id", id));
+        String name = NullSafeUtils.safeTrim(request.getName());
+        String avatar = NullSafeUtils.safeTrim(request.getAvatarUrl());
+        boolean verified = request.getIsVerified() == null || Boolean.TRUE.equals(request.getIsVerified());
+
+        reviewerProfileRepository.findFirstByNameIgnoreCaseAndIsDeletedFalse(name)
+                .filter(other -> !other.getId().equals(id))
+                .ifPresent(other -> {
+                    throw new BadRequestException("A reviewer with this name already exists: " + name);
+                });
+
+        entity.setName(name);
+        entity.setAvatarUrl(avatar.isEmpty() ? null : avatar);
+        entity.setIsVerified(verified);
+        ReviewerProfileEntity saved = reviewerProfileRepository.save(entity);
+        auditLogService.recordAction("UPDATE", "reviewer_profiles", String.valueOf(saved.getId()), saved.getName(), null);
+        return new ReviewerProfileDto(saved.getId(), saved.getName(), saved.getAvatarUrl(), Boolean.TRUE.equals(saved.getIsVerified()));
+    }
+
+    @Override
+    @Transactional
+    public void deleteReviewerProfile(Long id) {
+        ReviewerProfileEntity entity = reviewerProfileRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("ReviewerProfile", "id", id));
+        entity.setIsDeleted(true);
+        reviewerProfileRepository.save(entity);
+        auditLogService.recordAction("DELETE", "reviewer_profiles", String.valueOf(savedIdOr(id)), entity.getName(), null);
+    }
+
+    private Long savedIdOr(Long id) {
+        return id;
+    }
+
     private void syncStoreReviews(Long storeId, List<StoreRequest.StoreReviewDto> reviewDtos, String actor) {
         storeReviewRepository.deleteByStoreId(storeId);
         if (reviewDtos == null || reviewDtos.isEmpty()) {
             return;
         }
 
-        // Batch-fetch & upsert reusable reviewer profiles (zero N+1)
+        // Batch-fetch & upsert reusable reviewer profiles by ID first, then by lowercased name (zero N+1)
+        Set<Long> profileIds = new HashSet<>();
         Set<String> lowerNames = new HashSet<>();
         for (StoreRequest.StoreReviewDto dto : reviewDtos) {
+            if (dto.getReviewerProfileId() != null) {
+                profileIds.add(dto.getReviewerProfileId());
+            }
             String trimmedName = NullSafeUtils.safeTrim(dto.getReviewerName());
             if (!trimmedName.isEmpty() && !trimmedName.equalsIgnoreCase(AppConstants.DEFAULT_REVIEWER_NAME)) {
                 lowerNames.add(trimmedName.toLowerCase());
             }
         }
 
+        Map<Long, ReviewerProfileEntity> profileById = new java.util.HashMap<>();
         Map<String, ReviewerProfileEntity> profileMap = new java.util.HashMap<>();
-        if (!lowerNames.isEmpty()) {
-            for (ReviewerProfileEntity existing : reviewerProfileRepository.findByLowerNames(lowerNames)) {
+        if (!profileIds.isEmpty()) {
+            for (ReviewerProfileEntity existing : reviewerProfileRepository.findByIdInAndIsDeletedFalse(profileIds)) {
+                profileById.put(existing.getId(), existing);
                 profileMap.put(existing.getName().toLowerCase(), existing);
             }
-            List<ReviewerProfileEntity> profilesToSave = new ArrayList<>();
-            for (StoreRequest.StoreReviewDto dto : reviewDtos) {
-                String trimmedName = NullSafeUtils.safeTrim(dto.getReviewerName());
-                if (trimmedName.isEmpty() || trimmedName.equalsIgnoreCase(AppConstants.DEFAULT_REVIEWER_NAME)) {
-                    continue;
-                }
-                String key = trimmedName.toLowerCase();
-                String avatar = NullSafeUtils.safeTrim(dto.getReviewerAvatar());
-                boolean verified = dto.getIsVerified() == null || Boolean.TRUE.equals(dto.getIsVerified());
+        }
+        if (!lowerNames.isEmpty()) {
+            for (ReviewerProfileEntity existing : reviewerProfileRepository.findByLowerNames(lowerNames)) {
+                profileById.putIfAbsent(existing.getId(), existing);
+                profileMap.putIfAbsent(existing.getName().toLowerCase(), existing);
+            }
+        }
 
-                ReviewerProfileEntity profile = profileMap.get(key);
-                if (profile == null) {
-                    profile = ReviewerProfileEntity.builder()
-                            .name(trimmedName)
-                            .avatarUrl(avatar.isEmpty() ? null : avatar)
-                            .isVerified(verified)
-                            .build();
-                    profile.setCreatedBy(actor);
-                    profileMap.put(key, profile);
+        Set<ReviewerProfileEntity> profilesToSave = new java.util.LinkedHashSet<>();
+        for (StoreRequest.StoreReviewDto dto : reviewDtos) {
+            String trimmedName = NullSafeUtils.safeTrim(dto.getReviewerName());
+            if (trimmedName.isEmpty() || trimmedName.equalsIgnoreCase(AppConstants.DEFAULT_REVIEWER_NAME)) {
+                continue;
+            }
+            String key = trimmedName.toLowerCase();
+            String avatar = NullSafeUtils.safeTrim(dto.getReviewerAvatar());
+            String normalizedAvatar = avatar.isEmpty() ? null : avatar;
+            boolean verified = dto.getIsVerified() == null || Boolean.TRUE.equals(dto.getIsVerified());
+
+            // Prefer updating the explicitly selected reviewerProfileId when provided
+            ReviewerProfileEntity profile = dto.getReviewerProfileId() != null
+                    ? profileById.get(dto.getReviewerProfileId())
+                    : null;
+            if (profile == null) {
+                profile = profileMap.get(key);
+            }
+
+            if (profile == null) {
+                profile = ReviewerProfileEntity.builder()
+                        .name(trimmedName)
+                        .avatarUrl(normalizedAvatar)
+                        .isVerified(verified)
+                        .build();
+                profile.setCreatedBy(actor);
+                profileMap.put(key, profile);
+                profilesToSave.add(profile);
+            } else {
+                boolean changed = false;
+                if (!trimmedName.equals(profile.getName())) {
+                    ReviewerProfileEntity collision = profileMap.get(key);
+                    if (collision == null || Objects.equals(collision.getId(), profile.getId())) {
+                        profileMap.remove(profile.getName().toLowerCase());
+                        profile.setName(trimmedName);
+                        profileMap.put(key, profile);
+                        changed = true;
+                    }
+                }
+                if (!Objects.equals(normalizedAvatar, profile.getAvatarUrl())) {
+                    profile.setAvatarUrl(normalizedAvatar);
+                    changed = true;
+                }
+                if (Boolean.TRUE.equals(profile.getIsVerified()) != verified) {
+                    profile.setIsVerified(verified);
+                    changed = true;
+                }
+                if (changed) {
                     profilesToSave.add(profile);
-                } else {
-                    boolean changed = false;
-                    if (!avatar.isEmpty() && !avatar.equals(profile.getAvatarUrl())) {
-                        profile.setAvatarUrl(avatar);
-                        changed = true;
-                    }
-                    if (Boolean.TRUE.equals(profile.getIsVerified()) != verified) {
-                        profile.setIsVerified(verified);
-                        changed = true;
-                    }
-                    if (changed) {
-                        profilesToSave.add(profile);
-                    }
                 }
             }
-            if (!profilesToSave.isEmpty()) {
-                for (ReviewerProfileEntity savedProfile : reviewerProfileRepository.saveAll(profilesToSave)) {
-                    profileMap.put(savedProfile.getName().toLowerCase(), savedProfile);
-                }
+        }
+        if (!profilesToSave.isEmpty()) {
+            for (ReviewerProfileEntity savedProfile : reviewerProfileRepository.saveAll(profilesToSave)) {
+                profileById.put(savedProfile.getId(), savedProfile);
+                profileMap.put(savedProfile.getName().toLowerCase(), savedProfile);
             }
         }
 

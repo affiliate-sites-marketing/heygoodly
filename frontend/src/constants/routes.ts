@@ -49,6 +49,7 @@ export const ROUTES = {
     FEEDBACK: '/admin/feedback',
     SUBSCRIBERS: '/admin/subscribers',
     MEDIA: '/admin/media',
+    AI_CHAT: '/admin/ai-chat',
     SETTINGS: '/admin/settings',
     HOLIDAYS: '/admin/holidays',
     TRACING: '/admin/tracing',

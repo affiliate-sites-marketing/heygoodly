@@ -20,6 +20,11 @@ import { offerService } from '@/services/offerService';
 import AdminSearchableSelect from '@/components/admin/AdminSearchableSelect';
 import { useToast } from '@/context/ToastContext';
 import { useAdminI18n } from '@/context/AdminI18nContext';
+import {
+  OFFER_AUTO_SORT_OPTIONS,
+  sortOffersAuto,
+  type OfferAutoSortRule,
+} from '@/utils/offerAutoSort';
 
 interface StoreOption {
   id: number;
@@ -32,7 +37,10 @@ interface MatrixOfferItem {
   discount: string;
   code: string | null;
   isExclusive: boolean;
+  isVerified?: boolean;
   isActive: boolean;
+  usesCount?: number;
+  expireAt?: string | null;
   imageUrl?: string;
 }
 
@@ -132,7 +140,10 @@ export default function OfferOrderMatrixModal({
           discount: o.discountValue || '',
           code: o.code || null,
           isExclusive: Boolean(o.isExclusive),
+          isVerified: Boolean(o.isVerified),
           isActive: o.isActive !== false,
+          usesCount: Number((o as any).usesCount ?? 0),
+          expireAt: (o as any).expireAt || null,
           imageUrl: o.image || o.imageUrl || o.storeLogo || undefined,
         }));
         setItems(mapped);
@@ -176,6 +187,14 @@ export default function OfferOrderMatrixModal({
   const handleReset = () => {
     setItems(originalItems);
     setDirty(false);
+  };
+
+  const handleAutoSort = (rule: OfferAutoSortRule) => {
+    if (items.length <= 1) return;
+    const sorted = sortOffersAuto(items, rule);
+    setItems(sorted);
+    setDirty(true);
+    toast.success(t('Auto-sorted offers! Click Save Order to apply.'));
   };
 
   const handleSave = async () => {
@@ -243,8 +262,8 @@ export default function OfferOrderMatrixModal({
           </button>
         </div>
 
-        {/* Store Selector + Highlight Search Toolbar */}
-        <div className="px-6 py-3.5 border-b border-slate-100 bg-white grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
+        {/* Store Selector + Auto-Sort + Highlight Search Toolbar */}
+        <div className="px-6 py-3.5 border-b border-slate-100 bg-white grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
           <div className="flex items-center gap-2">
             <StoreIcon size={15} className="text-brand-primary shrink-0" />
             <AdminSearchableSelect
@@ -254,6 +273,23 @@ export default function OfferOrderMatrixModal({
               placeholder={loadingStores ? 'Loading stores...' : 'Select a Merchant Store...'}
               searchPlaceholder="Search store..."
               options={stores.map((st) => ({ value: String(st.id), label: st.name }))}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Sparkles size={15} className="text-amber-500 shrink-0" />
+            <AdminSearchableSelect
+              value=""
+              searchable={false}
+              disabled={loadingOffers || items.length <= 1}
+              onChange={(val) => {
+                if (val) handleAutoSort(val as OfferAutoSortRule);
+              }}
+              placeholder={t('⚡ Auto-Sort Coupons...')}
+              options={OFFER_AUTO_SORT_OPTIONS.map((opt) => ({
+                value: opt.value,
+                label: t(opt.label),
+              }))}
             />
           </div>
 

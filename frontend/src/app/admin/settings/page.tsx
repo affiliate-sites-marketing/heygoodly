@@ -23,6 +23,18 @@ import {
   ExternalLink,
   Copy,
   FileCode2,
+  Search,
+  ChevronRight,
+  ChevronDown,
+  Bot,
+  Zap,
+  Play,
+  Eye,
+  EyeOff,
+  Plus,
+  Trash2,
+  Pencil,
+  Star,
 } from 'lucide-react';
 import {
   validateCustomHeadHtml,
@@ -33,12 +45,20 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import AdminSearchableSelect, { type SelectOption } from '@/components/admin/AdminSearchableSelect';
 import ImageUpload from '@/components/admin/ImageUpload';
 import { usePermission } from '@/lib/admin/usePermission';
 import { useToast } from '@/context/ToastContext';
 import { useAdminI18n } from '@/context/AdminI18nContext';
 import UnauthorizedAccess from '@/components/admin/UnauthorizedAccess';
 import { settingService, type SystemSettingsMap } from '@/services/settingService';
+import {
+  aiService,
+  type AiEngineStatus,
+  type AiModelOption,
+  type AiProviderConfigItem,
+  type AiTestConnectionResult,
+} from '@/services/aiService';
 import { invalidateSiteSettingsCache } from '@/lib/admin/useSiteSettings';
 import {
   BRAND_THEME_PRESETS,
@@ -52,9 +72,16 @@ import {
   resolveBrandPalette,
 } from '@/lib/brandTheme';
 import { ROUTES } from '@/constants/routes';
+import {
+  AI_AUTO_PUBLISH_MODE_OPTIONS,
+  AI_LANGUAGE_OPTIONS,
+  AI_PROVIDER_PRESETS,
+  AI_SAMPLE_RSS_FEEDS,
+  AI_TONE_OPTIONS,
+} from '@/constants/ai';
 import Link from 'next/link';
 
-type SettingsTab = 'general' | 'seo' | 'tracking' | 'ads' | 'newsletter' | 'security';
+type SettingsTab = 'general' | 'seo' | 'tracking' | 'ads' | 'newsletter' | 'ai' | 'security';
 
 function getInitialTab(): SettingsTab {
   if (typeof window !== 'undefined') {
@@ -65,6 +92,7 @@ function getInitialTab(): SettingsTab {
       paramTab === 'ads' ||
       paramTab === 'general' ||
       paramTab === 'newsletter' ||
+      paramTab === 'ai' ||
       paramTab === 'security'
     ) {
       return paramTab;
@@ -79,9 +107,34 @@ export default function AdminSettingsPage() {
   const { t } = useAdminI18n();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(getInitialTab);
+  const [navSearch, setNavSearch] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [resetting, setResetting] = useState<boolean>(false);
+  const [showPrimaryAiKey, setShowPrimaryAiKey] = useState<boolean>(false);
+  const [aiEngineStatus, setAiEngineStatus] = useState<AiEngineStatus | null>(null);
+  const [aiConfigs, setAiConfigs] = useState<AiProviderConfigItem[]>([]);
+  const [editingAiConfigId, setEditingAiConfigId] = useState<number | null>(null);
+  const [aiConfigForm, setAiConfigForm] = useState<{
+    name: string;
+    provider: string;
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+  }>({
+    name: '',
+    provider: 'openrouter',
+    apiKey: '',
+    baseUrl: '',
+    model: '',
+  });
+  const [savingAiConfig, setSavingAiConfig] = useState<boolean>(false);
+  const [testingConfigId, setTestingConfigId] = useState<number | null>(null);
+  const [liveAiModels, setLiveAiModels] = useState<AiModelOption[]>([]);
+  const [loadingAiModels, setLoadingAiModels] = useState<boolean>(false);
+  const [testingAi, setTestingAi] = useState<boolean>(false);
+  const [aiTestResult, setAiTestResult] = useState<AiTestConnectionResult | null>(null);
+  const [runningAutoPublish, setRunningAutoPublish] = useState<boolean>(false);
 
   // Database-driven state (populated strictly from GET /api/v1/admin/settings)
   const [settings, setSettings] = useState<SystemSettingsMap>({});
@@ -105,6 +158,15 @@ export default function AdminSettingsPage() {
       const resolved = data && typeof data === 'object' ? data : {};
       setSettings(resolved);
       setSavedSnapshot(resolved);
+      aiService.getStatus().then((st) => {
+        if (isMountedRef.current) setAiEngineStatus(st);
+      }).catch(() => {});
+      aiService.listConfigs().then((list) => {
+        if (isMountedRef.current) setAiConfigs(list);
+      }).catch(() => {});
+      aiService.listModels().then((models) => {
+        if (isMountedRef.current && models.length > 0) setLiveAiModels(models);
+      }).catch(() => {});
     } catch (err: any) {
       console.warn('Failed to load system settings from PostgreSQL:', err);
       toast.error(t('Failed to load settings from database.'));
@@ -240,6 +302,9 @@ export default function AdminSettingsPage() {
       if (!isMountedRef.current) return;
       setSettings(updated);
       setSavedSnapshot(updated);
+      aiService.getStatus().then((st) => {
+        if (isMountedRef.current) setAiEngineStatus(st);
+      }).catch(() => {});
       toast.success(t('System configuration updated successfully!'));
     } catch (err: any) {
       console.error('Save settings failed:', err);
@@ -301,21 +366,316 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const tabs = [
-    { id: 'general', label: 'Brand & Identity', icon: Globe },
-    { id: 'seo', label: 'SEO & Verification', icon: ShieldCheck },
-    { id: 'tracking', label: 'Telemetry & GTM', icon: BarChart3 },
-    { id: 'ads', label: 'Monetization & Ads', icon: DollarSign },
-    { id: 'newsletter', label: 'Newsletter', icon: Mail },
-    { id: 'security', label: 'Security & Policies', icon: Lock },
-  ] as const;
+  const handleSelectTab = (tabId: SettingsTab) => {
+    setActiveTab(tabId);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tabId);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  const hasTrackingConfigured = Boolean(
+    settings.gtm_id?.trim() || settings.gtag_id?.trim() || settings.facebook_pixel?.trim() || settings.cloudflare_token?.trim()
+  );
+  const hasAdsActive =
+    settings.header_ads_active === 'true' || settings.news_side_banners_active === 'true';
+  const hasNewsletterActive = settings.newsletter_enabled === 'true';
+  const hasAiActive =
+    settings.ai_enabled !== 'false' &&
+    Boolean(aiEngineStatus?.ready || settings.ai_api_key?.trim() || settings.ai_provider === 'ollama');
+
+  const refreshAiState = async () => {
+    const [st, list] = await Promise.all([aiService.getStatus(), aiService.listConfigs()]);
+    if (isMountedRef.current) {
+      setAiEngineStatus(st);
+      setAiConfigs(list);
+    }
+  };
+
+  const resetAiConfigForm = () => {
+    setEditingAiConfigId(null);
+    setAiConfigForm({ name: '', provider: 'openrouter', apiKey: '', baseUrl: '', model: '' });
+    setAiTestResult(null);
+  };
+
+  const handleSaveAiConfig = async () => {
+    const provider = aiConfigForm.provider.trim();
+    const model = aiConfigForm.model.trim();
+    const apiKey = aiConfigForm.apiKey.trim();
+    if (!provider || !model) {
+      toast.error(t('Please select a Provider and Model first.'));
+      return;
+    }
+    if (!editingAiConfigId && provider !== 'ollama' && !apiKey) {
+      toast.error(t('Please enter an API Key for this provider.'));
+      return;
+    }
+    setSavingAiConfig(true);
+    try {
+      const payload = {
+        name: aiConfigForm.name.trim() || `${provider.toUpperCase()} — ${model}`,
+        provider,
+        apiKey: apiKey || undefined,
+        baseUrl: aiConfigForm.baseUrl.trim() || undefined,
+        model,
+      };
+      if (editingAiConfigId) {
+        await aiService.updateConfig(editingAiConfigId, payload);
+        toast.success(t('AI configuration updated in database!'));
+      } else {
+        await aiService.createConfig(payload);
+        toast.success(t('AI configuration saved to database!'));
+      }
+      resetAiConfigForm();
+      await refreshAiState();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to save AI configuration.');
+    } finally {
+      setSavingAiConfig(false);
+    }
+  };
+
+  const handleEditAiConfig = (cfg: AiProviderConfigItem) => {
+    setEditingAiConfigId(cfg.id);
+    setAiConfigForm({
+      name: cfg.name,
+      provider: cfg.provider,
+      apiKey: '',
+      baseUrl: cfg.baseUrl || '',
+      model: cfg.model,
+    });
+    setAiTestResult(null);
+    handleRefreshAiModels({ provider: cfg.provider, baseUrl: cfg.baseUrl || '' });
+  };
+
+  const handleDeleteAiConfig = async (cfg: AiProviderConfigItem) => {
+    const ok = await confirm({
+      title: t('Delete AI Configuration?'),
+      message: `Delete "${cfg.name}" (${cfg.provider} / ${cfg.model}) from database?`,
+      confirmText: t('Delete'),
+      cancelText: t('Cancel'),
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await aiService.deleteConfig(cfg.id);
+      if (editingAiConfigId === cfg.id) resetAiConfigForm();
+      await refreshAiState();
+      toast.success(t('AI configuration deleted.'));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to delete configuration.');
+    }
+  };
+
+  const handleSetDefaultAiConfig = async (id: number) => {
+    try {
+      await aiService.setDefaultConfig(id);
+      await refreshAiState();
+      toast.success(t('Default AI configuration updated!'));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update default configuration.');
+    }
+  };
+
+  const handleToggleFallbackAiConfig = async (id: number) => {
+    try {
+      await aiService.toggleFallbackConfig(id);
+      await refreshAiState();
+      toast.success(t('Fallback AI configuration updated!'));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update fallback configuration.');
+    }
+  };
+
+  const handleTestSavedConfig = async (cfg: AiProviderConfigItem) => {
+    setTestingConfigId(cfg.id);
+    try {
+      const res = await aiService.testConnection({ configId: cfg.id });
+      if (res?.success) {
+        toast.success(`✓ ${cfg.name} connected (${res.model}) in ${res.latencyMs}ms!`);
+      } else {
+        toast.error(`${cfg.name}: ${res?.error || 'Connection failed'}`);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Connection test failed.');
+    } finally {
+      setTestingConfigId(null);
+    }
+  };
+
+  const handleRefreshAiModels = async (override?: { provider?: string; apiKey?: string; baseUrl?: string }) => {
+    setLoadingAiModels(true);
+    try {
+      const models = await aiService.listModels({
+        provider: override?.provider ?? aiConfigForm.provider,
+        apiKey: override?.apiKey ?? aiConfigForm.apiKey,
+        baseUrl: override?.baseUrl ?? aiConfigForm.baseUrl,
+        refresh: true,
+      });
+      if (isMountedRef.current) {
+        setLiveAiModels(models);
+        if (models.length > 0) {
+          toast.success(`Loaded ${models.length} latest models!`);
+        } else {
+          toast.info('No live model list returned (enter API key or type any model ID directly).');
+        }
+      }
+    } catch {
+      toast.error('Failed to fetch live model list.');
+    } finally {
+      if (isMountedRef.current) setLoadingAiModels(false);
+    }
+  };
+
+  const handleTestAiConnection = async () => {
+    setTestingAi(true);
+    setAiTestResult(null);
+    try {
+      const res = await aiService.testConnection({
+        configId: editingAiConfigId && !aiConfigForm.apiKey.trim() ? editingAiConfigId : undefined,
+        provider: aiConfigForm.provider,
+        apiKey: aiConfigForm.apiKey.trim() || undefined,
+        model: aiConfigForm.model.trim() || undefined,
+        baseUrl: aiConfigForm.baseUrl.trim() || undefined,
+      });
+      setAiTestResult(res);
+      if (res?.success) {
+        toast.success(`Connected (${res.model}) in ${res.latencyMs}ms!`);
+      } else {
+        toast.error(res?.error || 'AI connection test failed.');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'AI connection test failed.';
+      setAiTestResult({
+        success: false,
+        provider: aiConfigForm.provider || 'ai',
+        model: aiConfigForm.model || '',
+        latencyMs: 0,
+        error: msg,
+      });
+      toast.error(msg);
+    } finally {
+      setTestingAi(false);
+    }
+  };
+
+  const handleRunAutoPublishNow = async () => {
+    if (isDirty) {
+      toast.error('Please click "Save Changes" first before running Auto-Publisher.');
+      return;
+    }
+    setRunningAutoPublish(true);
+    try {
+      const res = await aiService.runAutoPublishNow(1);
+      if (res?.generatedCount > 0) {
+        toast.success(`Generated ${res.generatedCount} post(s): "${res.createdTitles?.[0] || ''}"`);
+      } else {
+        toast.info(res?.message || 'No new articles generated in this run.');
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Auto-Publisher failed.');
+    } finally {
+      setRunningAutoPublish(false);
+    }
+  };
+
+  const navGroups: Array<{
+    groupLabel: string;
+    items: Array<{
+      id: SettingsTab;
+      label: string;
+      subtitle: string;
+      icon: typeof Globe;
+      status?: 'active' | 'warning';
+    }>;
+  }> = [
+    {
+      groupLabel: 'General',
+      items: [
+        {
+          id: 'general',
+          label: 'Brand & Identity',
+          subtitle: 'Logo, theme palette & socials',
+          icon: Globe,
+        },
+        {
+          id: 'seo',
+          label: 'SEO & Verification',
+          subtitle: 'Meta tags, Search Console & <head>',
+          icon: ShieldCheck,
+          status: !customHeadValidation.valid ? 'warning' : undefined,
+        },
+      ],
+    },
+    {
+      groupLabel: 'Growth & Monetization',
+      items: [
+        {
+          id: 'tracking',
+          label: 'Telemetry & GTM',
+          subtitle: 'GTM, GA4, Meta Pixel & Analytics',
+          icon: BarChart3,
+          status: hasTrackingConfigured ? 'active' : undefined,
+        },
+        {
+          id: 'ads',
+          label: 'Monetization & Ads',
+          subtitle: 'Header 728x90 & News side banners',
+          icon: DollarSign,
+          status: hasAdsActive ? 'active' : undefined,
+        },
+        {
+          id: 'newsletter',
+          label: 'Newsletter',
+          subtitle: 'Homepage email dispatch block',
+          icon: Mail,
+          status: hasNewsletterActive ? 'active' : undefined,
+        },
+        {
+          id: 'ai',
+          label: 'AI Writer & Auto-Publish',
+          subtitle: 'OpenRouter, DeepSeek, Gemini & RSS cron',
+          icon: Bot,
+          status: hasAiActive ? 'active' : undefined,
+        },
+      ],
+    },
+    {
+      groupLabel: 'System & Security',
+      items: [
+        {
+          id: 'security',
+          label: 'Security & Policies',
+          subtitle: '2FA rules & affiliate disclosure',
+          icon: Lock,
+        },
+      ],
+    },
+  ];
+
+  const allTabs = navGroups.flatMap((g) => g.items);
+  const normalizedNavQuery = navSearch.trim().toLowerCase();
+  const filteredNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: normalizedNavQuery
+        ? group.items.filter(
+            (item) =>
+              item.label.toLowerCase().includes(normalizedNavQuery) ||
+              t(item.label).toLowerCase().includes(normalizedNavQuery) ||
+              item.subtitle.toLowerCase().includes(normalizedNavQuery)
+          )
+        : group.items,
+    }))
+    .filter((group) => group.items.length > 0);
 
   // GTM and GA4 format helpers
   const isGtmValid = !settings.gtm_id || /^GTM-[A-Z0-9]{4,10}$/i.test(settings.gtm_id.trim());
   const isGa4Valid = !settings.gtag_id || /^G-[A-Z0-9]{4,14}$/i.test(settings.gtag_id.trim());
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full pb-16">
+    <div className="space-y-5 max-w-[1440px] mx-auto w-full pb-16">
       {/* Page Title & Save Action */}
       <AdminPageHeader
         icon={Settings}
@@ -380,38 +740,123 @@ export default function AdminSettingsPage() {
         </div>
       )}
 
-      {/* Settings Navigation Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-3 overflow-x-auto">
-        {tabs.map((tab) => {
+      {/* Mobile / Tablet Compact Horizontal Pill Bar */}
+      <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        {allTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               type="button"
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`h-9 px-4 inline-flex items-center gap-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
+              onClick={() => handleSelectTab(tab.id)}
+              className={`h-9 px-3.5 inline-flex items-center gap-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 border ${
                 isActive
-                  ? 'bg-brand-primary text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
+                  : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
-              <Icon size={15} />
+              <Icon size={14} />
               <span>{t(tab.label)}</span>
+              {tab.status === 'active' && (
+                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white' : 'bg-emerald-500'}`} />
+              )}
+              {tab.status === 'warning' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              )}
             </button>
           );
         })}
       </div>
 
-      {loading ? (
-        <Card className="p-12 flex flex-col items-center justify-center gap-3 text-slate-500 rounded-2xl">
-          <Loader2 className="animate-spin text-brand-primary" size={28} />
-          <span className="text-xs font-semibold text-slate-500">
-            {t('Loading system configuration from PostgreSQL...')}
-          </span>
-        </Card>
-      ) : (
-        <form noValidate onSubmit={handleSave} className="space-y-6">
+      {/* Main Split Workspace: Compact Vertical Left Navigation Rail + Wide Right Settings Content */}
+      <div className="flex flex-col lg:flex-row items-start gap-5">
+        {/* Desktop Compact Vertical Navigation Sidebar */}
+        <aside className="hidden lg:block w-[224px] shrink-0 sticky top-20">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 shadow-2xs space-y-3">
+            {/* Quick Settings Filter */}
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={navSearch}
+                onChange={(e) => setNavSearch(e.target.value)}
+                placeholder={t('Filter settings...')}
+                className="w-full h-8 pl-7.5 pr-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition"
+              />
+            </div>
+
+            {/* Grouped Navigation Sections */}
+            <nav className="space-y-3">
+              {filteredNavGroups.map((group) => (
+                <div key={group.groupLabel} className="space-y-0.5">
+                  <div className="px-2.5 pb-0.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    {t(group.groupLabel)}
+                  </div>
+                  <div className="space-y-0.5">
+                    {group.items.map((tab) => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          type="button"
+                          key={tab.id}
+                          onClick={() => handleSelectTab(tab.id)}
+                          title={tab.subtitle}
+                          className={`w-full text-left px-2.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-2.5 group border ${
+                            isActive
+                              ? 'bg-brand-primary-soft border-brand-primary-border shadow-2xs'
+                              : 'border-transparent hover:bg-slate-50'
+                          }`}
+                        >
+                          <Icon
+                            size={15}
+                            className={`shrink-0 transition ${
+                              isActive
+                                ? 'text-brand-primary'
+                                : 'text-slate-400 group-hover:text-slate-700'
+                            }`}
+                          />
+                          <span
+                            className={`text-xs font-bold truncate flex-1 ${
+                              isActive ? 'text-brand-primary' : 'text-slate-700 group-hover:text-slate-950'
+                            }`}
+                          >
+                            {t(tab.label)}
+                          </span>
+                          {tab.status === 'active' && (
+                            <span
+                              title="Configured & Active"
+                              className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"
+                            />
+                          )}
+                          {tab.status === 'warning' && (
+                            <span
+                              title="Needs attention"
+                              className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse"
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </nav>
+          </div>
+        </aside>
+
+        {/* Right Content Area */}
+        <div className="flex-1 min-w-0 w-full">
+          {loading ? (
+            <Card className="p-12 flex flex-col items-center justify-center gap-3 text-slate-500 rounded-2xl">
+              <Loader2 className="animate-spin text-brand-primary" size={28} />
+              <span className="text-xs font-semibold text-slate-500">
+                {t('Loading system configuration from PostgreSQL...')}
+              </span>
+            </Card>
+          ) : (
+            <form noValidate onSubmit={handleSave} className="space-y-6">
           {/* =========================================================================
               TAB 1: BRAND & IDENTITY
              ========================================================================= */}
@@ -540,7 +985,7 @@ export default function AdminSettingsPage() {
                 </div>
 
                 {/* Logo & Favicon Upload */}
-                <div className="sm:col-span-2 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                <div className="sm:col-span-2 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                   <ImageUpload
                     label={t('Brand Logo')}
                     value={settings.site_logo ?? ''}
@@ -951,12 +1396,12 @@ export default function AdminSettingsPage() {
                 </CardDescription>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-end">
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">{t('Google Tag Manager (GTM) Container ID')}</label>
+                  <div className="flex items-center justify-between gap-2 min-h-[24px]">
+                    <label className="text-xs font-bold text-slate-700 leading-snug">{t('Google Tag Manager (GTM) Container ID')}</label>
                     {settings.gtm_id && (
-                      <Badge variant={isGtmValid ? 'success' : 'destructive'} className="text-[10px] rounded-full">
+                      <Badge variant={isGtmValid ? 'success' : 'destructive'} className="text-[10px] rounded-full shrink-0">
                         {isGtmValid ? 'Valid GTM format' : 'Format: GTM-XXXXXXX'}
                       </Badge>
                     )}
@@ -970,10 +1415,10 @@ export default function AdminSettingsPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">{t('Google Analytics 4 (GA4) Measurement ID')}</label>
+                  <div className="flex items-center justify-between gap-2 min-h-[24px]">
+                    <label className="text-xs font-bold text-slate-700 leading-snug">{t('Google Analytics 4 (GA4) Measurement ID')}</label>
                     {settings.gtag_id && (
-                      <Badge variant={isGa4Valid ? 'success' : 'destructive'} className="text-[10px] rounded-full">
+                      <Badge variant={isGa4Valid ? 'success' : 'destructive'} className="text-[10px] rounded-full shrink-0">
                         {isGa4Valid ? 'Valid GA4 format' : 'Format: G-XXXXXXXXXX'}
                       </Badge>
                     )}
@@ -1179,9 +1624,9 @@ export default function AdminSettingsPage() {
                   </label>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                   {/* Left Side Banner */}
-                  <div className="space-y-4 p-4 rounded-2xl border border-slate-200/80 bg-slate-50/40">
+                  <div className="flex flex-col justify-between space-y-4 p-4 rounded-2xl border border-slate-200/80 bg-slate-50/40">
                     <div className="text-xs font-black uppercase tracking-wider text-slate-700">
                       {t('Left Side Banner (Recommended 160×600 or 300×600 px)')}
                     </div>
@@ -1213,7 +1658,7 @@ export default function AdminSettingsPage() {
                   </div>
 
                   {/* Right Side Banner */}
-                  <div className="space-y-4 p-4 rounded-2xl border border-slate-200/80 bg-slate-50/40">
+                  <div className="flex flex-col justify-between space-y-4 p-4 rounded-2xl border border-slate-200/80 bg-slate-50/40">
                     <div className="text-xs font-black uppercase tracking-wider text-slate-700">
                       {t('Right Side Banner (Recommended 160×600 or 300×600 px)')}
                     </div>
@@ -1396,8 +1841,535 @@ export default function AdminSettingsPage() {
           )}
 
           {/* =========================================================================
-              TAB 6: SECURITY & ACCESS POLICIES
+              TAB 6: AI CONFIGURATIONS (DATABASE-STORED) & SCHEDULED AUTO-PUBLISHER
              ========================================================================= */}
+          {activeTab === 'ai' && (() => {
+            const selectedProvider = aiConfigForm.provider || 'openrouter';
+            const providerMeta = AI_PROVIDER_PRESETS[selectedProvider] || AI_PROVIDER_PRESETS.openrouter;
+            const isKeylessProvider = selectedProvider === 'ollama';
+            const canSelectModel =
+              isKeylessProvider ||
+              Boolean(aiConfigForm.apiKey.trim()) ||
+              Boolean(editingAiConfigId);
+
+            return (
+              <div className="space-y-5">
+                {/* Card 1: Saved AI Configurations (PostgreSQL ai_provider_configs) */}
+                <Card className="p-6 sm:p-7 space-y-6 rounded-2xl">
+                  <div className="border-b border-slate-100 pb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+                        <Bot className="text-brand-primary" size={20} />
+                        {t('AI Configurations (Database)')}
+                      </CardTitle>
+                      <CardDescription className="text-xs text-slate-500 mt-0.5">
+                        {t('Save multiple API Keys & Models (Ollama, OpenRouter, OpenAI, Claude, Gemini, Qwen, Kimi...) to PostgreSQL and switch anytime.')}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <Link
+                        href={ROUTES.ADMIN.AI_CHAT}
+                        className="h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 inline-flex items-center gap-1.5 transition"
+                      >
+                        <Sparkles size={13} className="text-brand-primary" />
+                        <span>{t('Open AI Chat')}</span>
+                      </Link>
+                      <label className="inline-flex items-center gap-2 cursor-pointer select-none px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition">
+                        <input
+                          type="checkbox"
+                          checked={settings.ai_enabled !== 'false'}
+                          onChange={() => toggleField('ai_enabled', settings.ai_enabled ?? 'true')}
+                          className="w-4 h-4 accent-brand-primary rounded"
+                        />
+                        <span className="text-xs font-bold text-slate-800">{t('Enable AI Writer')}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Saved Configurations Table / Cards */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
+                        {t('Saved Configurations')} ({aiConfigs.length})
+                      </h4>
+                      {editingAiConfigId && (
+                        <button
+                          type="button"
+                          onClick={resetAiConfigForm}
+                          className="text-[11px] font-bold text-brand-primary hover:underline cursor-pointer"
+                        >
+                          + {t('Create New Instead')}
+                        </button>
+                      )}
+                    </div>
+
+                    {aiConfigs.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-5 text-center space-y-1">
+                        <p className="text-xs font-bold text-slate-700">
+                          {t('No AI configurations saved in database yet.')}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          {t('Complete Step 1 & Step 2 below and click "Save Configuration" to store your API Key & Model.')}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {aiConfigs.map((cfg) => (
+                          <div
+                            key={cfg.id}
+                            className={`rounded-xl border p-3.5 flex flex-wrap items-center justify-between gap-3 transition ${
+                              cfg.isDefault
+                                ? 'bg-emerald-50/50 border-emerald-200'
+                                : editingAiConfigId === cfg.id
+                                  ? 'bg-indigo-50/50 border-indigo-300'
+                                  : 'bg-slate-50/60 border-slate-200'
+                            }`}
+                          >
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-black text-slate-900 truncate">
+                                  {cfg.name}
+                                </span>
+                                {cfg.isDefault && (
+                                  <Badge variant="success" className="text-[10px]">
+                                    ★ {t('Default')}
+                                  </Badge>
+                                )}
+                                {cfg.isFallback && (
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {t('Fallback')}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 font-mono">
+                                <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-bold">
+                                  {cfg.provider}
+                                </span>
+                                <span className="truncate max-w-[260px] text-slate-700">{cfg.model}</span>
+                                <span className="text-slate-400">•</span>
+                                <span>
+                                  {cfg.hasApiKey ? cfg.maskedApiKey : t('No key (Local)')}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleTestSavedConfig(cfg)}
+                                disabled={testingConfigId === cfg.id}
+                                className="h-8 px-2.5 text-[11px] font-bold bg-white cursor-pointer"
+                              >
+                                {testingConfigId === cfg.id ? (
+                                  <Loader2 size={12} className="animate-spin" />
+                                ) : (
+                                  <Zap size={12} className="text-amber-500" />
+                                )}
+                                <span>Test</span>
+                              </Button>
+                              {!cfg.isDefault && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSetDefaultAiConfig(cfg.id)}
+                                  className="h-8 px-2.5 text-[11px] font-bold bg-white cursor-pointer"
+                                >
+                                  <Star size={12} className="text-emerald-600" />
+                                  <span>{t('Set Default')}</span>
+                                </Button>
+                              )}
+                              {!cfg.isDefault && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleToggleFallbackAiConfig(cfg.id)}
+                                  className="h-8 px-2.5 text-[11px] font-bold bg-white cursor-pointer"
+                                >
+                                  <span>{cfg.isFallback ? t('Unset Fallback') : t('Set Fallback')}</span>
+                                </Button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleEditAiConfig(cfg)}
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 inline-flex items-center justify-center cursor-pointer"
+                                title={t('Edit')}
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAiConfig(cfg)}
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 text-slate-500 inline-flex items-center justify-center cursor-pointer"
+                                title={t('Delete')}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add / Edit Configuration Form (Step 1 -> Step 2) */}
+                  <div className="pt-5 border-t border-slate-100 space-y-5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-brand-primary text-white text-[11px] font-black inline-flex items-center justify-center">
+                          1
+                        </span>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                          {editingAiConfigId ? t('Edit Saved Configuration') : t('Add New AI Configuration')}
+                        </h4>
+                      </div>
+                      <a
+                        href={providerMeta.docsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-bold text-brand-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>{t('Get API Key')}</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">{t('Profile Name')}</label>
+                        <Input
+                          value={aiConfigForm.name}
+                          onChange={(e) => setAiConfigForm((p) => ({ ...p, name: e.target.value }))}
+                          placeholder="e.g. Ollama Local, OpenRouter Free, OpenAI Pro..."
+                          className="text-xs h-10"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">{t('AI Provider')}</label>
+                        <AdminSearchableSelect
+                          value={selectedProvider}
+                          onChange={(next) => {
+                            setAiConfigForm((p) => ({ ...p, provider: next, model: '' }));
+                            setAiTestResult(null);
+                            if (next === 'ollama' || aiConfigForm.apiKey.trim()) {
+                              handleRefreshAiModels({
+                                provider: next,
+                                apiKey: aiConfigForm.apiKey,
+                                baseUrl: aiConfigForm.baseUrl,
+                              });
+                            } else {
+                              setLiveAiModels([]);
+                            }
+                          }}
+                          searchPlaceholder="Search provider..."
+                          triggerClassName="h-10 bg-white"
+                          options={Object.entries(AI_PROVIDER_PRESETS).map(([key, meta]) => ({
+                            value: key,
+                            label: meta.label,
+                            sublabel: meta.baseUrl || 'Custom OpenAI-compatible Base URL',
+                          }))}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">
+                          {t('API Key')}
+                          {!isKeylessProvider && !editingAiConfigId && (
+                            <span className="text-rose-500 ml-1">*</span>
+                          )}
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              type={showPrimaryAiKey ? 'text' : 'password'}
+                              autoComplete="new-password"
+                              name="ai_config_api_key"
+                              value={aiConfigForm.apiKey}
+                              onChange={(e) => setAiConfigForm((p) => ({ ...p, apiKey: e.target.value }))}
+                              onBlur={() => {
+                                if (aiConfigForm.apiKey.trim()) {
+                                  handleRefreshAiModels({
+                                    provider: selectedProvider,
+                                    apiKey: aiConfigForm.apiKey.trim(),
+                                    baseUrl: aiConfigForm.baseUrl,
+                                  });
+                                }
+                              }}
+                              placeholder={
+                                editingAiConfigId
+                                  ? 'Leave blank to keep saved key...'
+                                  : providerMeta.keyPlaceholder
+                              }
+                              className="font-mono text-xs pr-9 h-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPrimaryAiKey((p) => !p)}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                            >
+                              {showPrimaryAiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleRefreshAiModels({
+                                provider: selectedProvider,
+                                apiKey: aiConfigForm.apiKey,
+                                baseUrl: aiConfigForm.baseUrl,
+                              })
+                            }
+                            disabled={loadingAiModels || !canSelectModel}
+                            className="h-10 px-2.5 font-bold shrink-0 cursor-pointer"
+                            title="Load latest models from this provider"
+                          >
+                            <RotateCcw size={13} className={loadingAiModels ? 'animate-spin' : ''} />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {(selectedProvider === 'ollama' || selectedProvider === 'custom' || Boolean(aiConfigForm.baseUrl.trim())) && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">{t('Custom Base URL')}</label>
+                        <Input
+                          value={aiConfigForm.baseUrl}
+                          onChange={(e) => setAiConfigForm((p) => ({ ...p, baseUrl: e.target.value }))}
+                          placeholder={selectedProvider === 'ollama' ? 'http://localhost:11434 (auto-detected)' : 'https://your-provider.com/v1'}
+                          className="font-mono text-xs h-10"
+                        />
+                      </div>
+                    )}
+
+                    {/* STEP 2: Pick Model & Save to DB */}
+                    <div className={`space-y-3 transition-opacity ${canSelectModel ? 'opacity-100' : 'opacity-60'}`}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`w-5 h-5 rounded-full text-[11px] font-black inline-flex items-center justify-center ${
+                            canSelectModel ? 'bg-brand-primary text-white' : 'bg-slate-200 text-slate-500'
+                          }`}
+                        >
+                          2
+                        </span>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                          {t('Select Model & Save to Database')}
+                        </h4>
+                        {canSelectModel && liveAiModels.length > 0 && (
+                          <span className="text-[11px] text-slate-500 font-semibold">
+                            ({liveAiModels.length} live)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div className="flex-1">
+                          <AdminSearchableSelect
+                            value={aiConfigForm.model}
+                            onChange={(val) => setAiConfigForm((p) => ({ ...p, model: val }))}
+                            disabled={!canSelectModel}
+                            allowCustomValue
+                            placeholder={
+                              canSelectModel
+                                ? 'Select a live model or type any custom model ID...'
+                                : 'Enter API Key in Step 1 first...'
+                            }
+                            searchPlaceholder="Search model or type custom ID..."
+                            emptyText="Click refresh icon above or type any model ID directly"
+                            triggerClassName="h-10 bg-white"
+                            options={liveAiModels.map<SelectOption>((m) => ({
+                              value: m.id,
+                              label: m.free ? `⚡ ${m.name}` : m.name,
+                              sublabel: m.free ? `${m.id} • FREE` : m.id,
+                            }))}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTestAiConnection}
+                            disabled={testingAi || !canSelectModel || !aiConfigForm.model.trim()}
+                            className="h-10 px-3.5 font-bold bg-white cursor-pointer"
+                          >
+                            {testingAi ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} className="text-amber-500" />}
+                            <span>{t('Test')}</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleSaveAiConfig}
+                            disabled={savingAiConfig || !canSelectModel || !aiConfigForm.model.trim()}
+                            className="h-10 px-4 font-bold cursor-pointer"
+                          >
+                            {savingAiConfig ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                            <span>{editingAiConfigId ? t('Update Config') : t('Save Config')}</span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {aiTestResult && (
+                        <div className="text-xs">
+                          {aiTestResult.success ? (
+                            <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                              <CheckCircle2 size={14} />
+                              <span>Connected: {aiTestResult.model} ({aiTestResult.latencyMs}ms)</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 font-bold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl">
+                              <AlertCircle size={14} />
+                              <span className="max-w-lg truncate">{aiTestResult.error}</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Editorial Style Defaults */}
+                  <div className="pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t('Default Article Language')}</label>
+                      <AdminSearchableSelect
+                        value={settings.ai_default_language || 'English'}
+                        onChange={(val) => updateField('ai_default_language', val)}
+                        searchable={false}
+                        triggerClassName="h-10 bg-white"
+                        options={[...AI_LANGUAGE_OPTIONS]}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t('Default Editorial Tone')}</label>
+                      <AdminSearchableSelect
+                        value={settings.ai_default_tone || 'Editorial & Objective'}
+                        onChange={(val) => updateField('ai_default_tone', val)}
+                        searchable={false}
+                        triggerClassName="h-10 bg-white"
+                        options={[...AI_TONE_OPTIONS]}
+                      />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Card 2: Scheduled Auto-Publisher */}
+                <Card className="p-6 sm:p-7 space-y-5 rounded-2xl">
+                  <div className="border-b border-slate-100 pb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+                        <Play className="text-emerald-600" size={18} />
+                        {t('Scheduled AI Auto-Publisher')}
+                      </CardTitle>
+                      <CardDescription className="text-xs text-slate-500 mt-0.5">
+                        {t('Automatically scans RSS feeds for News and unreviewed Stores on a schedule (every 4 hours), creating fresh SEO articles.')}
+                      </CardDescription>
+                    </div>
+                    <label className="inline-flex items-center gap-2.5 cursor-pointer select-none px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition">
+                      <input
+                        type="checkbox"
+                        checked={settings.ai_auto_enabled === 'true'}
+                        onChange={() => toggleField('ai_auto_enabled', settings.ai_auto_enabled ?? 'false')}
+                        className="w-4 h-4 accent-brand-primary rounded"
+                      />
+                      <span className="text-xs font-bold text-slate-800">{t('Enable Auto-Publisher Cron')}</span>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t('Publishing Mode')}</label>
+                      <AdminSearchableSelect
+                        value={settings.ai_auto_mode || 'draft'}
+                        onChange={(val) => updateField('ai_auto_mode', val)}
+                        searchable={false}
+                        triggerClassName="h-10 bg-white"
+                        options={[...AI_AUTO_PUBLISH_MODE_OPTIONS]}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">{t('Max Articles Per Day (SEO Safe: 2-5)')}</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={settings.ai_auto_daily_limit ?? '3'}
+                        onChange={(e) => updateField('ai_auto_daily_limit', e.target.value)}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 flex flex-col justify-end">
+                      <label className="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={settings.ai_auto_include_reviews !== 'false'}
+                          onChange={() =>
+                            updateField(
+                              'ai_auto_include_reviews',
+                              settings.ai_auto_include_reviews === 'false' ? 'true' : 'false'
+                            )
+                          }
+                          className="w-4 h-4 accent-brand-primary rounded"
+                        />
+                        <span className="text-xs font-bold text-slate-700">{t('Auto-write missing Store Reviews')}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="text-xs font-bold text-slate-700">
+                        {t('RSS News Feed URLs (One URL per line — auto-routed to /news)')}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateField(
+                            'ai_auto_rss_feeds',
+                            AI_SAMPLE_RSS_FEEDS.join('\n')
+                          )
+                        }
+                        className="text-[11px] font-bold text-brand-primary hover:underline cursor-pointer"
+                      >
+                        + Fill Sample Tech &amp; Consumer RSS Feeds
+                      </button>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={settings.ai_auto_rss_feeds ?? ''}
+                      onChange={(e) => updateField('ai_auto_rss_feeds', e.target.value)}
+                      placeholder={'https://news.google.com/rss/search?q=smart+home+tech&hl=en-US&gl=US&ceid=US:en\nhttps://techcrunch.com/feed/'}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                    />
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs text-slate-500">
+                      {t('Run 1 article immediately to verify your Auto-Publisher pipeline end-to-end.')}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleRunAutoPublishNow}
+                      disabled={runningAutoPublish || saving || (aiConfigs.length === 0 && !aiEngineStatus?.ready)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs cursor-pointer"
+                    >
+                      {runningAutoPublish ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                      <span>{runningAutoPublish ? t('Generating 1 Article...') : t('Run Auto-Publisher Now (1 Post)')}</span>
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            );
+          })()}
+
           {activeTab === 'security' && (
             <Card className="p-6 sm:p-7 space-y-6 rounded-2xl">
               <div className="border-b border-slate-100 pb-4">
@@ -1511,8 +2483,10 @@ export default function AdminSettingsPage() {
               </div>
             </Card>
           )}
-        </form>
-      )}
+            </form>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

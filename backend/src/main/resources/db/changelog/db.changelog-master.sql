@@ -1153,3 +1153,99 @@ ALTER TABLE public.stores ADD COLUMN IF NOT EXISTS display_domain VARCHAR(255);
 ALTER TABLE public.media_items ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE public.media_items ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_media_items_is_deleted ON public.media_items (is_deleted, created_at DESC);
+
+
+--changeset heygoodly:010-ai-provider-configs splitStatements:true endDelimiter:;
+CREATE TABLE IF NOT EXISTS public.ai_provider_configs (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    provider VARCHAR(60) NOT NULL,
+    api_key TEXT,
+    base_url VARCHAR(500),
+    model VARCHAR(200) NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    is_fallback BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_provider_configs_active
+    ON public.ai_provider_configs (is_deleted, is_active, is_default DESC, id ASC);
+
+
+--changeset heygoodly:011-ai-chat-history splitStatements:true endDelimiter:;
+CREATE TABLE IF NOT EXISTS public.ai_chat_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    user_email VARCHAR(150) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    config_id BIGINT,
+    model VARCHAR(200),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_chat_sessions_user
+    ON public.ai_chat_sessions (user_email, is_deleted, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.ai_chat_messages (
+    id BIGSERIAL PRIMARY KEY,
+    session_id BIGINT NOT NULL REFERENCES public.ai_chat_sessions(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    provider VARCHAR(60),
+    model VARCHAR(200),
+    latency_ms BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_session
+    ON public.ai_chat_messages (session_id, id ASC);
+
+
+--changeset heygoodly:012-seed-ai-i18n-messages splitStatements:true endDelimiter:;
+INSERT INTO public.i18n_messages (message_key, message_en, message_vi, category, created_at, updated_at)
+SELECT v.k, v.en, v.vi, v.cat, NOW(), NOW()
+FROM (VALUES
+    ('ai.config.saved', 'AI configuration saved successfully.', 'Đã lưu cấu hình AI thành công.', 'SUCCESS'),
+    ('ai.config.updated', 'AI configuration updated successfully.', 'Đã cập nhật cấu hình AI thành công.', 'SUCCESS'),
+    ('ai.config.deleted', 'AI configuration deleted.', 'Đã xóa cấu hình AI.', 'SUCCESS'),
+    ('ai.config.default_updated', 'Default AI configuration updated.', 'Đã đặt làm cấu hình AI mặc định.', 'SUCCESS'),
+    ('ai.config.fallback_updated', 'Fallback AI configuration updated.', 'Đã cập nhật cấu hình AI dự phòng.', 'SUCCESS'),
+    ('ai.config.not_found', 'AI configuration not found.', 'Không tìm thấy cấu hình AI.', 'ERROR'),
+    ('ai.config.provider_model_required', 'Provider and Model are required.', 'Vui lòng chọn Nhà cung cấp và Model.', 'ERROR'),
+    ('ai.config.api_key_required', 'API Key is required for this provider.', 'Vui lòng nhập API Key cho nhà cung cấp này.', 'ERROR'),
+    ('ai.chat.empty_request', 'Chat request cannot be empty.', 'Yêu cầu trò chuyện không được để trống.', 'ERROR'),
+    ('ai.chat.empty_message', 'Please enter a message.', 'Vui lòng nhập nội dung tin nhắn.', 'ERROR'),
+    ('ai.chat.session_not_found', 'Chat session not found.', 'Không tìm thấy phiên trò chuyện.', 'ERROR'),
+    ('ai.chat.session_deleted', 'Chat session deleted.', 'Đã xóa phiên trò chuyện.', 'SUCCESS'),
+    ('ai.chat.failed', 'AI chat request failed.', 'Gửi tin nhắn AI thất bại.', 'ERROR'),
+    ('ai.post.generated', 'AI article generated successfully.', 'Đã tạo bài viết AI thành công.', 'SUCCESS'),
+    ('ai.post.context_required', 'Please select a Store, paste a Source URL, or enter a Topic.', 'Vui lòng chọn Cửa hàng, dán URL nguồn hoặc nhập chủ đề.', 'ERROR'),
+    ('ai.post.generation_failed', 'AI article generation failed.', 'Tạo bài viết AI thất bại.', 'ERROR'),
+    ('ai.api_key.not_configured', 'AI API Key is not configured. Please add a configuration in Admin -> Settings -> AI Writer.', 'Chưa cấu hình API Key AI. Vui lòng thêm cấu hình trong Quản trị -> Cài đặt -> AI Writer.', 'ERROR')
+) AS v(k, en, vi, cat)
+WHERE NOT EXISTS (SELECT 1 FROM public.i18n_messages m WHERE m.message_key = v.k);
+
+
+--changeset heygoodly:013-ai-chat-pro-features splitStatements:true endDelimiter:;
+ALTER TABLE public.ai_chat_sessions ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.ai_chat_sessions ADD COLUMN IF NOT EXISTS persona VARCHAR(60) DEFAULT 'general';
+ALTER TABLE public.ai_chat_sessions ADD COLUMN IF NOT EXISTS system_prompt TEXT;
+ALTER TABLE public.ai_chat_messages ADD COLUMN IF NOT EXISTS prompt_tokens INTEGER;
+ALTER TABLE public.ai_chat_messages ADD COLUMN IF NOT EXISTS completion_tokens INTEGER;
+ALTER TABLE public.ai_chat_messages ADD COLUMN IF NOT EXISTS total_tokens INTEGER;
+CREATE INDEX IF NOT EXISTS idx_ai_chat_sessions_pinned
+    ON public.ai_chat_sessions (user_email, is_deleted, is_pinned DESC, updated_at DESC);
+
+INSERT INTO public.i18n_messages (message_key, message_en, message_vi, category, created_at, updated_at)
+SELECT v.k, v.en, v.vi, v.cat, NOW(), NOW()
+FROM (VALUES
+    ('ai.chat.session_updated', 'Chat session updated.', 'Đã cập nhật phiên trò chuyện.', 'SUCCESS'),
+    ('ai.chat.session_pinned', 'Chat session pin status updated.', 'Đã cập nhật trạng thái ghim phiên trò chuyện.', 'SUCCESS')
+) AS v(k, en, vi, cat)
+WHERE NOT EXISTS (SELECT 1 FROM public.i18n_messages m WHERE m.message_key = v.k);
+
+--changeset heygoodly:014-review-template-avatar splitStatements:true endDelimiter:;
+ALTER TABLE public.store_review_templates ADD COLUMN IF NOT EXISTS reviewer_avatar VARCHAR(500);
