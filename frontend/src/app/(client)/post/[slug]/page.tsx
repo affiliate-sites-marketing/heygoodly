@@ -24,12 +24,13 @@ import {
   CheckCircle2,
   ArrowLeft,
   Newspaper,
+  MessageSquare,
 } from 'lucide-react';
 import JsonLd from '@/components/seo/JsonLd';
 import CouponModal from '@/components/deals/CouponModal';
 import StoreLogoFrame from '@/components/store/StoreLogoFrame';
 import NewsSideBannersFrame from '@/components/posts/NewsSideBannersFrame';
-import { triggerDualActionCoupon } from '@/lib/deals/affiliateAction';
+import { appendAffiliateTracking, triggerDualActionCoupon } from '@/lib/deals/affiliateAction';
 
 export default function ArticleDetailPage() {
   const params = useParams();
@@ -151,13 +152,43 @@ export default function ArticleDetailPage() {
     : null;
 
   const showBrandCard = isReviewPost && sidebarConfig.showBrandCard !== false && Boolean(targetStoreSlug && targetStoreName);
-  const showStoreCoupons = isReviewPost && sidebarConfig.showStoreCoupons !== false && Boolean(targetStoreSlug) && storeCoupons.length > 0;
+  const showStoreCoupons = isReviewPost && sidebarConfig.showStoreCoupons === true && Boolean(targetStoreSlug) && storeCoupons.length > 0;
+  const showStoreReviews = isReviewPost && sidebarConfig.showStoreReviews !== false;
   const showRelatedReviews = sidebarConfig.showRelatedReviews !== false && relatedArticles.length > 0;
   const showGuaranteeCard = isReviewPost && sidebarConfig.showGuaranteeCard !== false;
-  const newsBannerImage = sidebarConfig.newsBannerImage?.trim() || '';
-  const newsBannerUrl = sidebarConfig.newsBannerUrl?.trim() || '';
-  const newsBannerAlt = sidebarConfig.newsBannerAlt?.trim() || '';
-  const showNewsBanner = !isReviewPost && sidebarConfig.showNewsBanner !== false && Boolean(newsBannerImage);
+
+  const rawDirectBrandUrl =
+    sidebarConfig.ctaUrl?.trim() ||
+    matchedStore?.affiliateUrl?.trim() ||
+    matchedStore?.websiteUrl?.trim() ||
+    (targetStoreSlug ? ROUTES.PUBLIC.GO_AFFILIATE(targetStoreSlug) : '');
+  const directBrandUrl = rawDirectBrandUrl
+    ? appendAffiliateTracking(rawDirectBrandUrl, {
+        source: 'review_article',
+        medium: 'brand_card_cta',
+        campaign: article.slug,
+        subid: `${targetStoreSlug || 'brand'}_review_cta`,
+      })
+    : '';
+  const storeCustomerReviews = (matchedStore?.customerReviews || [])
+    .filter((r) => r.isActive !== false && r.comment?.trim())
+    .slice(0, 3);
+  const brandHighlightsList = (sidebarConfig.brandHighlights || '')
+    .split(/[•\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const customNewsSideBanners = !isReviewPost
+    ? {
+        enabled: sidebarConfig.showNewsBanner !== false,
+        leftImg: sidebarConfig.leftBannerImage?.trim() || '',
+        leftUrl: sidebarConfig.leftBannerUrl?.trim() || '',
+        leftAlt: sidebarConfig.leftBannerAlt?.trim() || '',
+        rightImg: sidebarConfig.rightBannerImage?.trim() || sidebarConfig.newsBannerImage?.trim() || '',
+        rightUrl: sidebarConfig.rightBannerUrl?.trim() || sidebarConfig.newsBannerUrl?.trim() || '',
+        rightAlt: sidebarConfig.rightBannerAlt?.trim() || sidebarConfig.newsBannerAlt?.trim() || '',
+      }
+    : undefined;
 
   const categorySlug =
     article.categorySlug || article.category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -310,7 +341,7 @@ export default function ArticleDetailPage() {
         }}
       />
 
-      <NewsSideBannersFrame enabled={!isReviewPost}>
+      <NewsSideBannersFrame enabled={!isReviewPost} customBanners={customNewsSideBanners}>
         <div className="max-w-7xl mx-auto px-4 space-y-10">
 
           {/* Breadcrumb Navigation */}
@@ -435,13 +466,21 @@ export default function ArticleDetailPage() {
             </div>
           )}
 
-          {/* Article Body: 8 Columns Dynamic Editorial Content + 4 Columns Sidebar */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Article Body: Review uses 8/4 Sidebar Grid; News uses Full-Width Newspaper Layout (flanked by 2 Side Banners on Desktop & Popup on Mobile) */}
+          <div className={isReviewPost ? 'grid grid-cols-1 lg:grid-cols-12 gap-8' : 'space-y-6 sm:space-y-8'}>
 
-            <div className="lg:col-span-8 min-w-0 space-y-6 sm:space-y-8 text-slate-800 leading-relaxed text-sm sm:text-base">
+            <div
+              className={`${
+                isReviewPost
+                  ? 'lg:col-span-8 text-sm sm:text-base'
+                  : 'w-full text-[15px] sm:text-[17px]'
+              } min-w-0 space-y-6 sm:space-y-8 text-slate-800 leading-relaxed`}
+            >
               {hasRichContent ? (
                 <div
-                  className="editorial-article-body bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-6 md:p-8 shadow-xs space-y-6"
+                  className={`editorial-article-body bg-white border border-slate-200/80 rounded-2xl shadow-xs space-y-6 ${
+                    isReviewPost ? 'p-4 sm:p-6 md:p-8' : 'p-5 sm:p-8 md:p-11'
+                  }`}
                   dangerouslySetInnerHTML={{ __html: article.content || '' }}
                 />
               ) : (
@@ -452,6 +491,24 @@ export default function ArticleDetailPage() {
                 </div>
               )}
 
+              {!isReviewPost && article.tags && article.tags.length > 0 && (
+                <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-4 shadow-xs flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-black text-slate-900 mr-1">
+                    <Tag size={14} className="text-indigo-600" />
+                    <span>Topics:</span>
+                  </span>
+                  {article.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={ROUTES.PUBLIC.TAG_DETAIL(tag.toLowerCase().replace(/\s+/g, '-'))}
+                      className="text-xs font-semibold bg-slate-100 hover:bg-indigo-600 text-slate-700 hover:text-white px-3 py-1 rounded-lg transition"
+                    >
+                      #{tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
               <div className="bg-white border border-slate-200 rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
                 <strong className="text-slate-700">Editorial Disclosure:</strong>{' '}
                 {settings.affiliateDisclosure ||
@@ -459,51 +516,11 @@ export default function ArticleDetailPage() {
               </div>
             </div>
 
+            {isReviewPost && (
             <aside className="lg:col-span-4 min-w-0 relative self-stretch">
               <div className="sticky top-24 z-20 space-y-6">
 
-                {/* 0. News Article Custom Sidebar Banner (Strictly only when post is News with no linked Store) */}
-                {showNewsBanner && (
-                  <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs group">
-                    {newsBannerUrl ? (
-                      <a
-                        href={newsBannerUrl}
-                        target={newsBannerUrl.startsWith('http') ? '_blank' : undefined}
-                        rel={newsBannerUrl.startsWith('http') ? 'noopener noreferrer nofollow sponsored' : undefined}
-                        className="block"
-                      >
-                        <div className="overflow-hidden">
-                          <img
-                            src={newsBannerImage}
-                            alt={newsBannerAlt || article.title}
-                            className="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                          />
-                        </div>
-                        {newsBannerAlt && (
-                          <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100 flex items-center justify-between gap-2 text-xs font-semibold text-slate-700 group-hover:text-brand-primary transition">
-                            <span className="line-clamp-2">{newsBannerAlt}</span>
-                            <ExternalLink size={13} className="shrink-0 opacity-70" />
-                          </div>
-                        )}
-                      </a>
-                    ) : (
-                      <div>
-                        <img
-                          src={newsBannerImage}
-                          alt={newsBannerAlt || article.title}
-                          className="w-full h-auto object-cover"
-                        />
-                        {newsBannerAlt && (
-                          <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100 text-xs font-semibold text-slate-700">
-                            {newsBannerAlt}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 1. Target Store Affiliate Callout Box (Strictly only when post is linked to a real Store) */}
+                {/* 1. Target Brand Affiliate Callout Box (Direct CTA to Partner Website, skipping internal /store page) */}
                 {showBrandCard && (
                   <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-4 text-center">
                     <StoreLogoFrame
@@ -515,11 +532,12 @@ export default function ArticleDetailPage() {
                     />
 
                     <div className="space-y-1.5">
-                      {formattedMaxDiscount && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
-                          <Sparkles size={11} /> Brand Deals • {formattedMaxDiscount}
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
+                        <Sparkles size={11} />{' '}
+                        {showStoreCoupons && formattedMaxDiscount
+                          ? `Brand Deals • ${formattedMaxDiscount}`
+                          : 'Official Brand Partner'}
+                      </span>
                       <h4 className="font-black text-lg text-slate-900">
                         {targetStoreName}
                       </h4>
@@ -533,29 +551,48 @@ export default function ArticleDetailPage() {
                           <span className="font-bold text-slate-800 ml-1">{targetStoreRating.toFixed(1)}</span>
                         </div>
                       )}
-                      <p className="text-xs text-slate-500 leading-relaxed pt-1 line-clamp-3">
-                        {extractPlainTextExcerpt(sidebarConfig.brandDescription, 220) ||
-                          extractPlainTextExcerpt(matchedStore?.shortDescription, 220) ||
-                          extractPlainTextExcerpt(matchedStore?.description, 220) ||
-                          `Hand-tested promo codes and direct manufacturer offers for ${targetStoreName}.`}
+                      <p className="text-xs text-slate-500 leading-relaxed pt-1 line-clamp-4">
+                        {extractPlainTextExcerpt(sidebarConfig.brandDescription, 240) ||
+                          extractPlainTextExcerpt(matchedStore?.shortDescription, 240) ||
+                          extractPlainTextExcerpt(matchedStore?.description, 240) ||
+                          `Verified official products and direct manufacturer offers from ${targetStoreName}.`}
                       </p>
+
+                      {brandHighlightsList.length > 0 && (
+                        <div className="pt-2 flex flex-wrap items-center justify-center gap-1.5">
+                          {brandHighlightsList.map((hl, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-lg"
+                            >
+                              <CheckCircle2 size={11} className="text-emerald-600 shrink-0" />
+                              <span>{hl}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    <Link
-                      href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?utm_source=review_article&utm_campaign=${encodeURIComponent(article.slug)}`}
-                      className="w-full py-3 bg-brand-primary hover:bg-brand-primary-hover text-white font-black text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 group cursor-pointer"
-                    >
-                      <span>
-                        {sidebarConfig.ctaText ||
-                          (storeCoupons.length > 0
-                            ? `Get Promo Code (${storeCoupons.length} Active) →`
-                            : `Visit ${targetStoreName} Store →`)}
-                      </span>
-                    </Link>
+                    {directBrandUrl && (
+                      <a
+                        href={directBrandUrl}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow sponsored"
+                        className="w-full py-3 px-4 bg-brand-primary hover:bg-brand-primary-hover text-white font-black text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2 group cursor-pointer"
+                      >
+                        <span>
+                          {sidebarConfig.ctaText ||
+                            (showStoreCoupons && storeCoupons.length > 0
+                              ? `Get Promo Code (${storeCoupons.length} Active) →`
+                              : `Visit ${targetStoreName} Official Site →`)}
+                        </span>
+                        <ExternalLink size={13} className="shrink-0 opacity-90" />
+                      </a>
+                    )}
                   </div>
                 )}
 
-                {/* 2. Live Active Coupons for this Linked Store */}
+                {/* 2. Optional Active Coupons (Hidden by default unless explicitly enabled for this review) */}
                 {showStoreCoupons && (
                   <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3.5">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -608,13 +645,91 @@ export default function ArticleDetailPage() {
                       ))}
                     </div>
 
-                    <Link
-                      href={`${ROUTES.PUBLIC.STORE_DETAIL(targetStoreSlug)}?utm_source=review_article&utm_campaign=${encodeURIComponent(article.slug)}`}
-                      className="w-full py-2 text-center text-xs font-bold text-slate-600 hover:text-brand-primary flex items-center justify-center gap-1 pt-1 transition"
-                    >
-                      <span>View all {targetStoreName} coupons</span>
-                      <ExternalLink size={12} />
-                    </Link>
+                    {directBrandUrl && (
+                      <a
+                        href={directBrandUrl}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow sponsored"
+                        className="w-full py-2 text-center text-xs font-bold text-slate-600 hover:text-brand-primary flex items-center justify-center gap-1 pt-1 transition"
+                      >
+                        <span>Visit {targetStoreName} official store</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* 2b. Verified Shopper Reviews & Supplementary Brand Overview */}
+                {showStoreReviews && (storeCustomerReviews.length > 0 || matchedStore?.description) && (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3.5">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 className="font-black text-slate-900 text-sm flex items-center gap-2">
+                        <MessageSquare size={15} className="text-emerald-600" />
+                        <span>{storeCustomerReviews.length > 0 ? 'Shopper Reviews' : `About ${targetStoreName}`}</span>
+                      </h3>
+                      {targetStoreRating && (
+                        <span className="inline-flex items-center gap-1 text-xs font-extrabold text-slate-800">
+                          <Star size={12} className="fill-amber-400 text-amber-400" />
+                          {targetStoreRating.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+
+                    {storeCustomerReviews.length > 0 ? (
+                      <div className="space-y-3">
+                        {storeCustomerReviews.map((rev, idx) => (
+                          <div
+                            key={rev.id ?? idx}
+                            className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {rev.reviewerAvatar ? (
+                                  <img
+                                    src={rev.reviewerAvatar}
+                                    alt={rev.reviewerName}
+                                    className="w-6 h-6 rounded-full object-cover border border-slate-200 shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center shrink-0">
+                                    {(rev.reviewerName || 'U').charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <span className="text-xs font-bold text-slate-900 truncate">
+                                  {rev.reviewerName}
+                                </span>
+                                {rev.isVerified && (
+                                  <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                                )}
+                              </div>
+                              <div className="flex items-center text-amber-400 shrink-0">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    size={11}
+                                    className={
+                                      star <= (rev.rating || 5)
+                                        ? 'fill-amber-400 text-amber-400'
+                                        : 'text-slate-300'
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                              &ldquo;{rev.comment}&rdquo;
+                            </p>
+                            {rev.reviewDateLabel && (
+                              <span className="block text-[10px] text-slate-400">{rev.reviewDateLabel}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-5">
+                        {extractPlainTextExcerpt(matchedStore?.description, 320)}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -699,35 +814,15 @@ export default function ArticleDetailPage() {
                   </div>
                 )}
 
-                {/* 4b. News Topics Card (for News articles without Store/Testing Guarantee) */}
-                {!isReviewPost && article.tags && article.tags.length > 0 && (
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3">
-                    <div className="flex items-center gap-2 text-slate-900 text-sm font-black border-b border-slate-100 pb-2.5">
-                      <Tag size={14} className="text-indigo-600" />
-                      <span>Topics in this Story</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {article.tags.map((tag) => (
-                        <Link
-                          key={tag}
-                          href={ROUTES.PUBLIC.TAG_DETAIL(tag.toLowerCase().replace(/\s+/g, '-'))}
-                          className="text-[11px] font-semibold bg-slate-100 hover:bg-indigo-600 text-slate-700 hover:text-white px-2.5 py-1 rounded-lg transition"
-                        >
-                          #{tag}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
               </div>
             </aside>
+            )}
 
           </div>
 
           {/* Related Articles - Below main article grid */}
-          {relatedArticles.length > 0 && (
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 max-w-full lg:max-w-4xl">
+          {showRelatedReviews && (
+            <div className={`bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 max-w-full ${isReviewPost ? 'lg:max-w-4xl' : ''}`}>
               <h3 className="font-black text-slate-900 text-sm border-b border-slate-100 pb-3">
                 {isReviewPost ? 'Related Editorial Reviews' : 'More News & Insights'}
               </h3>

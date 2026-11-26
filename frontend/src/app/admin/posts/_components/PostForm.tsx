@@ -33,6 +33,8 @@ import {
   Newspaper,
   Image as ImageIcon,
   Link as LinkIcon,
+  MessageSquare,
+  Smartphone,
 } from 'lucide-react';
 import { tagService, type TagItem } from '@/services/tagService';
 import ImageUpload from '@/components/admin/ImageUpload';
@@ -86,16 +88,25 @@ interface PostFormState {
   storeName: string;
   showBrandCard: boolean;
   showStoreCoupons: boolean;
+  showStoreReviews: boolean;
   showRelatedReviews: boolean;
   showGuaranteeCard: boolean;
   ctaText: string;
+  ctaUrl: string;
   brandDescription: string;
+  brandHighlights: string;
   guaranteeTitle: string;
   guaranteeText: string;
   showNewsBanner: boolean;
   newsBannerImage: string;
   newsBannerUrl: string;
   newsBannerAlt: string;
+  leftBannerImage: string;
+  leftBannerUrl: string;
+  leftBannerAlt: string;
+  rightBannerImage: string;
+  rightBannerUrl: string;
+  rightBannerAlt: string;
 }
 
 const FORM_ID = 'post-form';
@@ -296,11 +307,14 @@ function PostFormContent({ id }: { id?: string }) {
         storeSlug: existing.storeSlug || '',
         storeName: existing.sidebarConfig?.storeName || existing.storeName || '',
         showBrandCard: existing.sidebarConfig?.showBrandCard !== false,
-        showStoreCoupons: existing.sidebarConfig?.showStoreCoupons !== false,
+        showStoreCoupons: existing.sidebarConfig?.showStoreCoupons === true,
+        showStoreReviews: existing.sidebarConfig?.showStoreReviews !== false,
         showRelatedReviews: existing.sidebarConfig?.showRelatedReviews !== false,
         showGuaranteeCard: existing.sidebarConfig?.showGuaranteeCard !== false,
         ctaText: existing.sidebarConfig?.ctaText || '',
+        ctaUrl: existing.sidebarConfig?.ctaUrl || '',
         brandDescription: existing.sidebarConfig?.brandDescription || '',
+        brandHighlights: existing.sidebarConfig?.brandHighlights || '',
         guaranteeTitle: existing.sidebarConfig?.guaranteeTitle || `${SITE_NAME} Testing Guarantee`,
         guaranteeText:
           existing.sidebarConfig?.guaranteeText ||
@@ -309,6 +323,15 @@ function PostFormContent({ id }: { id?: string }) {
         newsBannerImage: existing.sidebarConfig?.newsBannerImage || '',
         newsBannerUrl: existing.sidebarConfig?.newsBannerUrl || '',
         newsBannerAlt: existing.sidebarConfig?.newsBannerAlt || '',
+        leftBannerImage: existing.sidebarConfig?.leftBannerImage || '',
+        leftBannerUrl: existing.sidebarConfig?.leftBannerUrl || '',
+        leftBannerAlt: existing.sidebarConfig?.leftBannerAlt || '',
+        rightBannerImage:
+          existing.sidebarConfig?.rightBannerImage || existing.sidebarConfig?.newsBannerImage || '',
+        rightBannerUrl:
+          existing.sidebarConfig?.rightBannerUrl || existing.sidebarConfig?.newsBannerUrl || '',
+        rightBannerAlt:
+          existing.sidebarConfig?.rightBannerAlt || existing.sidebarConfig?.newsBannerAlt || '',
       }
     : {
         title: '',
@@ -355,11 +378,14 @@ function PostFormContent({ id }: { id?: string }) {
         storeSlug: '',
         storeName: '',
         showBrandCard: true,
-        showStoreCoupons: true,
+        showStoreCoupons: false,
+        showStoreReviews: true,
         showRelatedReviews: true,
         showGuaranteeCard: true,
         ctaText: '',
+        ctaUrl: '',
         brandDescription: '',
+        brandHighlights: '',
         guaranteeTitle: `${SITE_NAME} Testing Guarantee`,
         guaranteeText:
           'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.',
@@ -367,6 +393,12 @@ function PostFormContent({ id }: { id?: string }) {
         newsBannerImage: '',
         newsBannerUrl: '',
         newsBannerAlt: '',
+        leftBannerImage: '',
+        leftBannerUrl: '',
+        leftBannerAlt: '',
+        rightBannerImage: '',
+        rightBannerUrl: '',
+        rightBannerAlt: '',
       };
 
   return <PostFormInner key={id ?? 'new'} existing={existing} initial={initial} />;
@@ -428,6 +460,8 @@ interface StoreOption {
   activeCoupons?: number;
   shortDescription?: string;
   logoUrl?: string;
+  affiliateUrl?: string;
+  websiteUrl?: string;
 }
 
 function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial: PostFormState }) {
@@ -439,6 +473,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
   const [articleMode, setArticleMode] = useState<'review' | 'news'>(
     initial.storeSlug ? 'review' : 'news'
   );
+  const [previewMobilePopupOpen, setPreviewMobilePopupOpen] = useState<boolean>(true);
   const [editorHydrationKey, setEditorHydrationKey] = useState<number>(0);
 
   useEffect(() => {
@@ -613,8 +648,10 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
             maxDiscount: s.maxOffer ? `Up to ${s.maxOffer}% OFF` : '',
             rating: Number(s.ratingScore ?? 0),
             activeCoupons: Number(s.activeOffersCount ?? 0),
-            shortDescription: s.aboutStore || s.description || `${s.name} promo codes`,
+            shortDescription: s.aboutStore || s.description || `${s.name} official partner`,
             logoUrl: s.logo || s.logoUrl || '',
+            affiliateUrl: s.affiliateUrl || '',
+            websiteUrl: s.websiteUrl || '',
           }))
         );
       }
@@ -802,18 +839,27 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
       storeName: isNewsMode ? '' : form.storeName.trim(),
       showBrandCard: isNewsMode ? false : form.showBrandCard,
       showStoreCoupons: isNewsMode ? false : form.showStoreCoupons,
+      showStoreReviews: isNewsMode ? false : form.showStoreReviews,
       showRelatedReviews: form.showRelatedReviews,
       showGuaranteeCard: isNewsMode ? false : form.showGuaranteeCard,
       ctaText: isNewsMode ? '' : form.ctaText.trim(),
+      ctaUrl: isNewsMode ? '' : form.ctaUrl.trim(),
       brandDescription: isNewsMode ? '' : form.brandDescription.trim(),
+      brandHighlights: isNewsMode ? '' : form.brandHighlights.trim(),
       guaranteeTitle: form.guaranteeTitle.trim() || `${SITE_NAME} Testing Guarantee`,
       guaranteeText:
         form.guaranteeText.trim() ||
         'Every product reviewed is independently evaluated against real-world benchmarks. We never accept paid placements to alter lab scores.',
       showNewsBanner: isNewsMode ? form.showNewsBanner : false,
-      newsBannerImage: isNewsMode ? form.newsBannerImage.trim() : '',
-      newsBannerUrl: isNewsMode ? form.newsBannerUrl.trim() : '',
-      newsBannerAlt: isNewsMode ? form.newsBannerAlt.trim() : '',
+      newsBannerImage: isNewsMode ? (form.rightBannerImage.trim() || form.leftBannerImage.trim()) : '',
+      newsBannerUrl: isNewsMode ? (form.rightBannerUrl.trim() || form.leftBannerUrl.trim()) : '',
+      newsBannerAlt: isNewsMode ? (form.rightBannerAlt.trim() || form.leftBannerAlt.trim()) : '',
+      leftBannerImage: isNewsMode ? form.leftBannerImage.trim() : '',
+      leftBannerUrl: isNewsMode ? form.leftBannerUrl.trim() : '',
+      leftBannerAlt: isNewsMode ? form.leftBannerAlt.trim() : '',
+      rightBannerImage: isNewsMode ? form.rightBannerImage.trim() : '',
+      rightBannerUrl: isNewsMode ? form.rightBannerUrl.trim() : '',
+      rightBannerAlt: isNewsMode ? form.rightBannerAlt.trim() : '',
     };
 
     const numericRating =
@@ -1573,53 +1619,66 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
           {/* RIGHT SIDEBAR & ARTICLE MODE CONFIGURATION */}
           <div className="w-full">
             <FormSection
-              title="Article Type & Right Sidebar Configuration"
-              description="Review articles link to a Partner Store with promo codes; News articles attach a custom sidebar banner with no store linked"
+              title="Article Type, Brand Affiliate & Side Banners"
+              description="Review articles attach a Partner Brand with direct affiliate CTA, shopper reviews & optional coupons; General/News articles attach Left & Right Side Banners (auto-popup on mobile)"
               headerRight={
                 <span className="text-[11px] font-bold text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-3 py-1 rounded-xl flex items-center gap-1.5">
                   <PanelRight size={13} />
-                  <span>Right Sidebar Config</span>
+                  <span>{articleMode === 'review' ? 'Review Brand Config' : 'Side Banners & Mobile Popup'}</span>
                 </span>
               }
             >
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Left 7 Cols: Controls */}
                 <div className="lg:col-span-7 space-y-5">
-                  {/* 2-Tab Mode Switcher: Review (Attach Store) vs News (Attach Banner) */}
+                  {/* 2-Tab Mode Switcher: Review (Attach Brand) vs News/Article (2 Side Banners + Mobile Popup) */}
                   <div className="space-y-1.5">
-                    <label className={labelClass}>Article Format &amp; Sidebar Mode</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-1.5 bg-slate-100/90 border border-slate-200/80 rounded-2xl">
+                    <label className={labelClass}>Article Format &amp; Monetization Mode</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2 bg-slate-100/90 dark:bg-[#0d111a] border border-slate-200/80 dark:border-slate-800 rounded-2xl">
                       <button
                         type="button"
+                        aria-pressed={articleMode === 'review'}
                         onClick={() => {
                           setArticleMode('review');
                           loadStoresOnDemand();
                         }}
-                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left transition cursor-pointer ${
+                        className={`relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-left border-2 transition-all cursor-pointer ${
                           articleMode === 'review'
-                            ? 'bg-white text-slate-900 shadow-xs ring-1 ring-emerald-500/30'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                            ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/20 text-slate-900 dark:text-white shadow-sm ring-2 ring-emerald-500/25'
+                            : 'border-transparent bg-transparent text-slate-500 dark:text-slate-400 opacity-65 hover:opacity-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/60'
                         }`}
                       >
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                             articleMode === 'review'
-                              ? 'bg-emerald-500/15 text-emerald-600'
-                              : 'bg-slate-200/70 text-slate-500'
+                              ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+                              : 'bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                           }`}
                         >
-                          <StoreIcon size={16} />
+                          <StoreIcon size={17} />
                         </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-extrabold leading-tight">Review Article (Attach Store)</div>
-                          <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                            Store card, promo codes &amp; /reviews
+                        <div className="min-w-0 flex-1 pr-5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-extrabold leading-tight truncate">
+                              Review Article (Attach Brand)
+                            </span>
                           </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            Direct affiliate CTA, reviews &amp; optional codes
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {articleMode === 'review' ? (
+                            <CheckCircle2 size={18} className="text-emerald-500 fill-emerald-500/15" />
+                          ) : (
+                            <span className="block w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600" />
+                          )}
                         </div>
                       </button>
 
                       <button
                         type="button"
+                        aria-pressed={articleMode === 'news'}
                         onClick={() => {
                           setArticleMode('news');
                           setForm((prev) => ({
@@ -1628,40 +1687,51 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             storeName: '',
                           }));
                         }}
-                        className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left transition cursor-pointer ${
+                        className={`relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-left border-2 transition-all cursor-pointer ${
                           articleMode === 'news'
-                            ? 'bg-white text-slate-900 shadow-xs ring-1 ring-indigo-500/30'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                            ? 'border-indigo-500 bg-indigo-500/10 dark:bg-indigo-500/20 text-slate-900 dark:text-white shadow-sm ring-2 ring-indigo-500/25'
+                            : 'border-transparent bg-transparent text-slate-500 dark:text-slate-400 opacity-65 hover:opacity-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/60'
                         }`}
                       >
                         <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                             articleMode === 'news'
-                              ? 'bg-indigo-500/15 text-indigo-600'
-                              : 'bg-slate-200/70 text-slate-500'
+                              ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/30'
+                              : 'bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                           }`}
                         >
-                          <Newspaper size={16} />
+                          <Newspaper size={17} />
                         </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-extrabold leading-tight">News Article (Attach Banner)</div>
-                          <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                            No store linked, custom banner &amp; /news
+                        <div className="min-w-0 flex-1 pr-5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-extrabold leading-tight truncate">
+                              News / Article (2 Side Banners)
+                            </span>
                           </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            Desktop left/right rails → Mobile popup
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {articleMode === 'news' ? (
+                            <CheckCircle2 size={18} className="text-indigo-500 fill-indigo-500/15" />
+                          ) : (
+                            <span className="block w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600" />
+                          )}
                         </div>
                       </button>
                     </div>
                   </div>
 
                   {articleMode === 'news' ? (
-                    /* NEWS MODE: Attach Sidebar Banner (No Store) */
+                    /* NEWS / EDITORIAL ARTICLE MODE: Left & Right Newspaper Side Banners + Auto Mobile Popup */
                     <div className="space-y-4">
                       <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-200/80 text-xs text-indigo-900 flex items-start gap-2.5">
-                        <Newspaper size={15} className="text-indigo-600 shrink-0 mt-0.5" />
+                        <Smartphone size={16} className="text-indigo-600 shrink-0 mt-0.5" />
                         <div>
-                          <div className="font-bold">News Mode Active (No Store Linked)</div>
+                          <div className="font-bold">Newspaper 2-Side Banners (Desktop) → Automatic Popup (Mobile)</div>
                           <p className="text-[11px] text-indigo-700/90 mt-0.5">
-                            This article will automatically publish to News (/news). You can attach a custom clickable banner in the right sidebar below.
+                            No store or coupon section is shown. Attached banners appear as sticky Left &amp; Right side rails on Desktop and automatically convert into a dismissible Popup on Mobile phones.
                           </p>
                         </div>
                       </div>
@@ -1677,10 +1747,10 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           <div>
                             <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                               <ImageIcon size={13} className="text-indigo-600" />
-                              <span>1. Sidebar Banner</span>
+                              <span>1. Side Banners &amp; Mobile Popup</span>
                             </div>
                             <p className="text-[11px] text-slate-500 mt-0.5">
-                              Display a custom promotional or editorial banner image in the right sidebar.
+                              Flanking left/right banners on Desktop; popup modal on Mobile.
                             </p>
                           </div>
                         </label>
@@ -1698,48 +1768,97 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                               <span>2. Related News &amp; Articles</span>
                             </div>
                             <p className="text-[11px] text-slate-500 mt-0.5">
-                              Recommends related articles in the same category with thumbnails.
+                              Recommends related articles below the story with thumbnails.
                             </p>
                           </div>
                         </label>
                       </div>
 
                       {form.showNewsBanner && (
-                        <div className="space-y-4 p-4 rounded-2xl border border-slate-200 bg-slate-50/50">
-                          <ImageUpload
-                            value={form.newsBannerImage}
-                            onChange={(url) => setForm((prev) => ({ ...prev, newsBannerImage: url }))}
-                            folder="banners"
-                            label="News Sidebar Banner Image"
-                            description="Upload or pick a banner from Media Library (recommended portrait or square, e.g. 600x750 or 600x600)."
-                            aspectRatio="banner"
-                          />
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* LEFT SIDE BANNER */}
+                          <div className="space-y-3 p-4 rounded-2xl border border-slate-200 bg-slate-50/60">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-slate-900">Left Side Banner</span>
+                              <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                                Desktop Left + Popup
+                              </span>
+                            </div>
+                            <ImageUpload
+                              value={form.leftBannerImage}
+                              onChange={(url) => setForm((prev) => ({ ...prev, leftBannerImage: url }))}
+                              folder="banners"
+                              label="Left Banner Image"
+                              description="Recommended vertical 160×600, 300×600 or 600×800 px."
+                              aspectRatio="banner"
+                            />
                             <div className="space-y-1">
-                              <label className={labelClass}>Banner Click Link URL (Optional)</label>
+                              <label className={labelClass}>Left Banner Link URL</label>
                               <div className="relative">
                                 <LinkIcon
-                                  size={14}
+                                  size={13}
                                   className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                                 />
                                 <input
                                   type="text"
-                                  value={form.newsBannerUrl}
-                                  onChange={(e) => setForm({ ...form, newsBannerUrl: e.target.value })}
-                                  placeholder="https://... or /stores/brand-slug"
-                                  className={`${inputClass} pl-9`}
+                                  value={form.leftBannerUrl}
+                                  onChange={(e) => setForm({ ...form, leftBannerUrl: e.target.value })}
+                                  placeholder="https://partner-site.com/..."
+                                  className={`${inputClass} pl-8`}
                                 />
                               </div>
                             </div>
-
                             <div className="space-y-1">
-                              <label className={labelClass}>Banner Caption / Alt Text (Optional)</label>
+                              <label className={labelClass}>Left Banner Caption / Alt</label>
                               <input
                                 type="text"
-                                value={form.newsBannerAlt}
-                                onChange={(e) => setForm({ ...form, newsBannerAlt: e.target.value })}
-                                placeholder="e.g. Limited-Time Spring Sale — Up to 40% Off"
+                                value={form.leftBannerAlt}
+                                onChange={(e) => setForm({ ...form, leftBannerAlt: e.target.value })}
+                                placeholder="e.g. Spring Tech Event — Up to 40% Off"
+                                className={inputClass}
+                              />
+                            </div>
+                          </div>
+
+                          {/* RIGHT SIDE BANNER */}
+                          <div className="space-y-3 p-4 rounded-2xl border border-slate-200 bg-slate-50/60">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-slate-900">Right Side Banner</span>
+                              <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                                Desktop Right + Popup
+                              </span>
+                            </div>
+                            <ImageUpload
+                              value={form.rightBannerImage}
+                              onChange={(url) => setForm((prev) => ({ ...prev, rightBannerImage: url }))}
+                              folder="banners"
+                              label="Right Banner Image"
+                              description="Recommended vertical 160×600, 300×600 or 600×800 px."
+                              aspectRatio="banner"
+                            />
+                            <div className="space-y-1">
+                              <label className={labelClass}>Right Banner Link URL</label>
+                              <div className="relative">
+                                <LinkIcon
+                                  size={13}
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                                />
+                                <input
+                                  type="text"
+                                  value={form.rightBannerUrl}
+                                  onChange={(e) => setForm({ ...form, rightBannerUrl: e.target.value })}
+                                  placeholder="https://partner-site.com/..."
+                                  className={`${inputClass} pl-8`}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <label className={labelClass}>Right Banner Caption / Alt</label>
+                              <input
+                                type="text"
+                                value={form.rightBannerAlt}
+                                onChange={(e) => setForm({ ...form, rightBannerAlt: e.target.value })}
+                                placeholder="e.g. Exclusive Flash Sale"
                                 className={inputClass}
                               />
                             </div>
@@ -1748,21 +1867,21 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                       )}
                     </div>
                   ) : (
-                    /* REVIEW MODE: Attach Partner Store (Existing Store & Coupon Widgets) */
+                    /* REVIEW MODE: Attach Partner Brand + Direct Affiliate CTA + Reviews + Optional Coupons */
                     <>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className={labelClass}>Target Partner Store</label>
+                          <label className={labelClass}>Target Partner Brand / Store</label>
                           <AdminSearchableSelect
                             value={form.storeSlug}
                             onOpen={loadStoresOnDemand}
-                            placeholder="Select a partner store to link..."
+                            placeholder="Select a partner brand to link..."
                             searchPlaceholder="Search partner store..."
                             options={[
                               ...stores.map((s) => ({
                                 value: s.slug,
                                 label: s.name,
-                                sublabel: `${s.maxDiscount} • ${s.activeCoupons} codes`,
+                                sublabel: s.websiteUrl || `${s.maxDiscount} • ${s.activeCoupons} codes`,
                               })),
                             ]}
                             onChange={(chosenSlug) => {
@@ -1776,18 +1895,18 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           />
                           <p className={`text-[11px] font-medium pt-1 ${form.storeSlug ? 'text-emerald-700' : 'text-amber-700'}`}>
                             {form.storeSlug
-                              ? '★ Linked to Store → Auto-routed to Product Reviews (/reviews) with Store Card & Coupons.'
-                              : '⚠ Select a Partner Store above so this article routes to Product Reviews (/reviews).'}
+                              ? '★ Linked to Brand → CTA button opens Partner Brand Website directly (skips internal /store page).'
+                              : '⚠ Select a Partner Brand above so this article routes to Product Reviews (/reviews).'}
                           </p>
                         </div>
 
                         <div className="space-y-1">
-                          <label className={labelClass}>Store Display Name (Optional Override)</label>
+                          <label className={labelClass}>Brand Display Name (Optional Override)</label>
                           <input
                             type="text"
                             value={form.storeName}
                             onChange={(e) => setForm({ ...form, storeName: e.target.value })}
-                            placeholder={selectedStore?.name || 'e.g. Neo Sabers'}
+                            placeholder={selectedStore?.name || 'e.g. NuPhy Studio'}
                             className={inputClass}
                           />
                         </div>
@@ -1795,26 +1914,67 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
+                          <label className={labelClass}>Direct Affiliate / Partner CTA Link</label>
+                          <div className="relative">
+                            <ExternalLink
+                              size={14}
+                              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                            />
+                            <input
+                              type="text"
+                              value={form.ctaUrl}
+                              onChange={(e) => setForm({ ...form, ctaUrl: e.target.value })}
+                              placeholder={
+                                selectedStore?.affiliateUrl ||
+                                selectedStore?.websiteUrl ||
+                                'https://brand-partner.com/?ref=...'
+                              }
+                              className={`${inputClass} pl-9`}
+                            />
+                          </div>
+                          <p className="text-[10px] text-slate-500">
+                            Leave blank to auto-use the Brand&apos;s Affiliate / Website URL directly.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
                           <label className={labelClass}>CTA Button Text</label>
                           <input
                             type="text"
                             value={form.ctaText}
                             onChange={(e) => setForm({ ...form, ctaText: e.target.value })}
-                            placeholder={`Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
+                            placeholder={
+                              form.showStoreCoupons
+                                ? `Get Promo Code (${selectedStore?.activeCoupons || 3} Active) →`
+                                : `Visit ${previewStoreName} Official Site →`
+                            }
                             className={inputClass}
                           />
                         </div>
+                      </div>
 
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className={labelClass}>Short Description Under Store Name</label>
+                          <label className={labelClass}>Short Brand Description</label>
                           <input
                             type="text"
                             value={form.brandDescription}
                             onChange={(e) => setForm({ ...form, brandDescription: e.target.value })}
                             placeholder={
                               selectedStore?.shortDescription ||
-                              `Updated daily with hand-tested promo codes for ${previewStoreName}.`
+                              `Official products, specifications, and verified offers from ${previewStoreName}.`
                             }
+                            className={inputClass}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className={labelClass}>Supplementary Brand Highlights (Optional)</label>
+                          <input
+                            type="text"
+                            value={form.brandHighlights}
+                            onChange={(e) => setForm({ ...form, brandHighlights: e.target.value })}
+                            placeholder="e.g. Official Warranty • Free Shipping • 30-Day Returns"
                             className={inputClass}
                           />
                         </div>
@@ -1822,7 +1982,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
 
                       {/* Widget Toggles */}
                       <div className="space-y-2 pt-1">
-                        <label className={labelClass}>Right Sidebar Widget Visibility</label>
+                        <label className={labelClass}>Right Sidebar Sections (Show / Hide)</label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
                             <input
@@ -1834,15 +1994,15 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             <div>
                               <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                                 <StoreIcon size={13} className="text-brand-primary" />
-                                <span>1. Brand Deals Card</span>
+                                <span>1. Brand Card &amp; Direct Affiliate CTA</span>
                               </div>
                               <p className="text-[11px] text-slate-500 mt-0.5">
-                                Store logo, rating stars, summary, and promo code CTA button.
+                                Brand logo, rating, description, highlights &amp; direct partner CTA button.
                               </p>
                             </div>
                           </label>
 
-                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-amber-200/80 bg-amber-50/40 hover:bg-amber-50/70 cursor-pointer transition">
                             <input
                               type="checkbox"
                               checked={form.showStoreCoupons}
@@ -1851,11 +2011,29 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             />
                             <div>
                               <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                                <Tag size={13} className="text-brand-primary" />
-                                <span>2. Active Promo Codes</span>
+                                <Tag size={13} className="text-amber-600" />
+                                <span>2. Promo Codes Box (Optional)</span>
                               </div>
                               <p className="text-[11px] text-slate-500 mt-0.5">
-                                Displays up to 3 active coupons for the selected store.
+                                Hidden by default for brands that prefer direct affiliate links without coupon codes.
+                              </p>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={form.showStoreReviews}
+                              onChange={(e) => setForm({ ...form, showStoreReviews: e.target.checked })}
+                              className="mt-0.5 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
+                            />
+                            <div>
+                              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <MessageSquare size={13} className="text-emerald-600" />
+                                <span>3. Shopper Reviews &amp; Brand Notes</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Displays verified buyer reviews and supplementary brand details.
                               </p>
                             </div>
                           </label>
@@ -1870,7 +2048,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             <div>
                               <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                                 <BookOpen size={13} className="text-brand-primary" />
-                                <span>3. Related Lab Reviews</span>
+                                <span>4. Related Lab Reviews</span>
                               </div>
                               <p className="text-[11px] text-slate-500 mt-0.5">
                                 Recommends related reviews in the same category with thumbnails.
@@ -1878,7 +2056,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             </div>
                           </label>
 
-                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition">
+                          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 cursor-pointer transition sm:col-span-2">
                             <input
                               type="checkbox"
                               checked={form.showGuaranteeCard}
@@ -1888,7 +2066,7 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             <div>
                               <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                                 <ShieldCheck size={13} className="text-emerald-600" />
-                                <span>4. Testing Guarantee &amp; Tags</span>
+                                <span>5. Testing Guarantee &amp; Tags</span>
                               </div>
                               <p className="text-[11px] text-slate-500 mt-0.5">
                                 Independent testing guarantee box with #tag pills.
@@ -1927,10 +2105,10 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   )}
                 </div>
 
-                {/* Right 5 Cols: Mini Live Preview of the Right Sidebar */}
+                {/* Right 5 Cols: Mini Live Preview */}
                 <div className="lg:col-span-5 bg-slate-50 border border-slate-200/90 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider pb-1 border-b border-slate-200">
-                    <span>Right Sidebar Preview</span>
+                    <span>{articleMode === 'news' ? 'Side Banners & Popup Preview' : 'Right Sidebar Preview'}</span>
                     <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px]">
                       Live Sync
                     </span>
@@ -1939,48 +2117,81 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                   {articleMode === 'news' ? (
                     <>
                       {form.showNewsBanner ? (
-                        form.newsBannerImage ? (
-                          <div className="bg-white border border-slate-200/80 rounded-xl overflow-hidden shadow-2xs">
-                            <img
-                              src={form.newsBannerImage}
-                              alt={form.newsBannerAlt || form.title || 'News Banner'}
-                              className="w-full h-auto max-h-72 object-cover"
-                            />
-                            {(form.newsBannerAlt || form.newsBannerUrl) && (
-                              <div className="px-3 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px]">
-                                <span className="font-semibold text-slate-700 truncate">
-                                  {form.newsBannerAlt || 'Clickable News Banner'}
-                                </span>
-                                {form.newsBannerUrl && (
-                                  <ExternalLink size={12} className="text-indigo-500 shrink-0" />
-                                )}
+                        form.leftBannerImage || form.rightBannerImage ? (
+                          <div className="space-y-3">
+                            {/* Desktop 2-Side Rails Mini Diagram */}
+                            <div className="bg-white border border-slate-200/80 rounded-xl p-3 space-y-2">
+                              <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                                <span>Desktop View (2 Side Rails)</span>
+                                <span className="text-indigo-600">≥ 1280px</span>
                               </div>
-                            )}
+                              <div className="grid grid-cols-12 gap-2 items-start">
+                                <div className="col-span-3">
+                                  {form.leftBannerImage ? (
+                                    <img
+                                      src={form.leftBannerImage}
+                                      alt={form.leftBannerAlt || 'Left Banner'}
+                                      className="w-full h-28 object-cover rounded-lg border border-slate-200"
+                                    />
+                                  ) : (
+                                    <div className="h-28 rounded-lg border border-dashed border-slate-200 flex items-center justify-center text-[9px] text-slate-400 text-center p-1">
+                                      Empty Left
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="col-span-6 h-28 rounded-lg bg-slate-100 border border-slate-200 p-2 flex flex-col justify-center gap-1.5">
+                                  <div className="h-2 w-3/4 bg-slate-300 rounded" />
+                                  <div className="h-1.5 w-full bg-slate-200 rounded" />
+                                  <div className="h-1.5 w-5/6 bg-slate-200 rounded" />
+                                  <div className="text-[9px] font-bold text-slate-500 text-center pt-1">
+                                    Article Body
+                                  </div>
+                                </div>
+                                <div className="col-span-3">
+                                  {form.rightBannerImage ? (
+                                    <img
+                                      src={form.rightBannerImage}
+                                      alt={form.rightBannerAlt || 'Right Banner'}
+                                      className="w-full h-28 object-cover rounded-lg border border-slate-200"
+                                    />
+                                  ) : (
+                                    <div className="h-28 rounded-lg border border-dashed border-slate-200 flex items-center justify-center text-[9px] text-slate-400 text-center p-1">
+                                      Empty Right
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Mobile Auto-Popup Mini Diagram */}
+                            <div className="bg-slate-900 text-white rounded-xl p-3 space-y-2">
+                              <div className="flex items-center justify-between text-[10px] font-bold text-indigo-300">
+                                <span className="inline-flex items-center gap-1">
+                                  <Smartphone size={12} /> Mobile View → Auto Popup
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-white/15 text-white text-[9px]">✕ Dismissible</span>
+                              </div>
+                              <div className="bg-white rounded-lg overflow-hidden max-w-[160px] mx-auto border border-slate-700">
+                                <img
+                                  src={form.leftBannerImage || form.rightBannerImage}
+                                  alt="Mobile Popup Preview"
+                                  className="w-full h-28 object-cover"
+                                />
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <div className="bg-white border border-dashed border-slate-300 rounded-xl p-6 text-center space-y-1.5">
                             <ImageIcon size={24} className="mx-auto text-slate-300" />
-                            <div className="text-xs font-bold text-slate-600">No Banner Image Attached</div>
+                            <div className="text-xs font-bold text-slate-600">No Side Banners Attached</div>
                             <p className="text-[11px] text-slate-400">
-                              Upload or select a banner on the left to preview it here.
+                              Upload Left and/or Right banners on the left. On Mobile they automatically appear as a Popup!
                             </p>
                           </div>
                         )
                       ) : (
                         <div className="bg-white border border-slate-200/80 rounded-xl p-4 text-center text-[11px] text-slate-400">
-                          Sidebar banner is currently hidden.
-                        </div>
-                      )}
-
-                      {form.showRelatedReviews && (
-                        <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs space-y-2">
-                          <div className="flex items-center gap-1.5 text-xs font-black text-slate-900">
-                            <BookOpen size={13} className="text-indigo-600" />
-                            <span>Related News &amp; Articles</span>
-                          </div>
-                          <div className="text-[11px] text-slate-400">
-                            Auto-populated with latest stories from the same category.
-                          </div>
+                          Side banners &amp; mobile popup are currently disabled for this article.
                         </div>
                       )}
                     </>
@@ -1997,7 +2208,10 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                           />
                           <div className="space-y-1">
                             <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded-full tracking-widest">
-                              <Sparkles size={10} /> Brand Deals • Up to {previewStoreDiscount}
+                              <Sparkles size={10} />{' '}
+                              {form.showStoreCoupons
+                                ? `Brand Deals • Up to ${previewStoreDiscount}`
+                                : 'Official Brand Partner'}
                             </span>
                             <h4 className="font-black text-sm text-slate-900">{previewStoreName}</h4>
                             <div className="flex items-center justify-center gap-1 text-[11px] text-slate-500">
@@ -2007,11 +2221,22 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             <p className="text-[11px] text-slate-500 line-clamp-2">
                               {form.brandDescription.trim() ||
                                 selectedStore?.shortDescription ||
-                                `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
+                                `Verified products and direct official storefront for ${previewStoreName}.`}
                             </p>
+                            {form.brandHighlights.trim() && (
+                              <p className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-lg px-2 py-1">
+                                {form.brandHighlights.trim()}
+                              </p>
+                            )}
                           </div>
-                          <div className="w-full py-2 bg-brand-primary text-white font-black text-[11px] rounded-lg">
-                            {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
+                          <div className="w-full py-2 bg-brand-primary text-white font-black text-[11px] rounded-lg flex items-center justify-center gap-1">
+                            <span>
+                              {form.ctaText.trim() ||
+                                (form.showStoreCoupons
+                                  ? `Get Promo Code (${selectedStore?.activeCoupons || 3} Active) →`
+                                  : `Visit ${previewStoreName} Official Site →`)}
+                            </span>
+                            <ExternalLink size={11} />
                           </div>
                         </div>
                       )}
@@ -2031,6 +2256,27 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                             <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2 py-0.5 rounded">
                               SAVE20
                             </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {form.showStoreReviews && (
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs space-y-2">
+                          <div className="flex items-center justify-between text-xs font-black text-slate-900">
+                            <span className="flex items-center gap-1.5">
+                              <MessageSquare size={13} className="text-emerald-600" />
+                              Verified Shopper Reviews
+                            </span>
+                            <span className="text-[10px] font-bold text-amber-500">★ {previewStoreRating.toFixed(1)}</span>
+                          </div>
+                          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 space-y-1 text-[11px]">
+                            <div className="flex items-center justify-between font-bold text-slate-800">
+                              <span>Alex M. • ✓ Verified</span>
+                              <span className="text-amber-400">★★★★★</span>
+                            </div>
+                            <p className="text-slate-600 line-clamp-2">
+                              Pulled automatically from {previewStoreName}&apos;s verified customer reviews.
+                            </p>
                           </div>
                         </div>
                       )}
@@ -2064,9 +2310,38 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
             const isTablet = device === 'tablet';
             const isDesktop = device === 'desktop';
 
+            const hasPreviewNewsBanners =
+              articleMode === 'news' &&
+              form.showNewsBanner &&
+              Boolean(form.leftBannerImage || form.rightBannerImage);
+
             return (
-              <div className={`bg-[#F8F8F6] ${isMobile ? 'p-3.5 space-y-4' : isTablet ? 'p-5 space-y-5' : 'p-8 space-y-6'}`}>
-                <div className="max-w-6xl mx-auto space-y-5">
+              <div className={`relative bg-[#F8F8F6] ${isMobile ? 'p-3.5 space-y-4' : isTablet ? 'p-5 space-y-5' : 'p-8 space-y-6'}`}>
+                {hasPreviewNewsBanners && !isDesktop && !previewMobilePopupOpen && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMobilePopupOpen(true)}
+                      className="px-3 py-1.5 rounded-full bg-indigo-600 text-white text-[11px] font-bold inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <Smartphone size={12} />
+                      <span>Preview Mobile Banner Popup</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-start justify-center gap-4 max-w-[1400px] mx-auto">
+                  {hasPreviewNewsBanners && isDesktop && form.leftBannerImage && (
+                    <aside className="w-[140px] shrink-0 sticky top-6">
+                      <img
+                        src={form.leftBannerImage}
+                        alt={form.leftBannerAlt || 'Left Banner'}
+                        className="w-full h-auto rounded-xl border border-slate-200 shadow-xs object-cover"
+                      />
+                    </aside>
+                  )}
+
+                <div className="flex-1 min-w-0 max-w-6xl mx-auto space-y-5">
                   <nav className="flex items-center gap-1.5 text-xs text-slate-500 min-w-0">
                     <span className="shrink-0">Home</span>
                     <ChevronRight size={12} className="shrink-0" />
@@ -2130,25 +2405,27 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                     </div>
                   )}
 
-                  <div className={isDesktop ? 'grid grid-cols-12 gap-8 items-start' : 'grid grid-cols-1 gap-5 items-start'}>
-                    <div className={isDesktop ? 'col-span-8 space-y-6' : 'space-y-4'}>
-                      <div className={`bg-slate-900 text-white rounded-2xl ${isMobile ? 'p-4 flex-col text-center' : 'p-6 flex-row text-left'} flex items-center justify-between gap-4`}>
-                        <div className="space-y-1">
-                          <span className="text-[10px] uppercase font-bold tracking-widest text-[#EAB308]">
-                            Independent Evaluation
-                          </span>
-                          <h4 className="text-base font-bold text-white">{SITE_NAME} Lab Score &amp; Verdict</h4>
-                          <p className="text-xs text-slate-400">
-                            Based on durability benchmarks, pricing accuracy, and hands-on testing.
-                          </p>
-                        </div>
+                  <div className={isDesktop && articleMode === 'review' ? 'grid grid-cols-12 gap-8 items-start' : 'grid grid-cols-1 gap-5 items-start'}>
+                    <div className={isDesktop && articleMode === 'review' ? 'col-span-8 space-y-6' : 'space-y-4'}>
+                      {articleMode === 'review' && form.rating && (
+                        <div className={`bg-slate-900 text-white rounded-2xl ${isMobile ? 'p-4 flex-col text-center' : 'p-6 flex-row text-left'} flex items-center justify-between gap-4`}>
+                          <div className="space-y-1">
+                            <span className="text-[10px] uppercase font-bold tracking-widest text-[#EAB308]">
+                              Independent Evaluation
+                            </span>
+                            <h4 className="text-base font-bold text-white">{SITE_NAME} Lab Score &amp; Verdict</h4>
+                            <p className="text-xs text-slate-400">
+                              Based on durability benchmarks, pricing accuracy, and hands-on testing.
+                            </p>
+                          </div>
 
-                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl shrink-0">
-                          <Star size={20} className="fill-amber-400 text-amber-400" />
-                          <span className="text-2xl font-black text-white">{form.rating}</span>
-                          <span className="text-xs text-slate-400">/ 5.0</span>
+                          <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl shrink-0">
+                            <Star size={20} className="fill-amber-400 text-amber-400" />
+                            <span className="text-2xl font-black text-white">{form.rating}</span>
+                            <span className="text-xs text-slate-400">/ 5.0</span>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className={`bg-white border border-[#E7E7E5] rounded-2xl ${isMobile ? 'p-4' : isTablet ? 'p-6' : 'p-10'} shadow-2xs space-y-6`}>
                         <div className="w-full">
@@ -2160,99 +2437,154 @@ function PostFormInner({ existing, initial }: { existing?: AdminArticle; initial
                       </div>
                     </div>
 
-                    {/* Right Sidebar in Live Preview */}
-                    <aside className={isDesktop ? 'col-span-4 space-y-5' : 'space-y-4'}>
-                      {articleMode === 'news' ? (
-                        <>
-                          {form.showNewsBanner && form.newsBannerImage && (
-                            <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs">
-                              <img
-                                src={form.newsBannerImage}
-                                alt={form.newsBannerAlt || form.title || 'News Banner'}
-                                className="w-full h-auto object-cover"
-                              />
-                              {form.newsBannerAlt && (
-                                <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-xs font-semibold text-slate-700">
-                                  {form.newsBannerAlt}
+                    {/* Right Sidebar in Live Preview (Review Mode Only) */}
+                    {articleMode === 'review' && (
+                      <aside className={isDesktop ? 'col-span-4 space-y-5' : 'space-y-4'}>
+                        {form.showBrandCard && (
+                          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 text-center">
+                            <StoreLogoFrame
+                              src={selectedStore?.logoUrl}
+                              name={previewStoreName}
+                              className="w-36 h-16 mx-auto rounded-2xl"
+                              paddingClassName="p-2"
+                              fallbackTextClassName="text-2xl"
+                            />
+                            <div className="space-y-1.5">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
+                                <Sparkles size={11} />{' '}
+                                {form.showStoreCoupons
+                                  ? `Brand Deals • Up to ${previewStoreDiscount}`
+                                  : 'Official Brand Partner'}
+                              </span>
+                              <h4 className="font-black text-lg text-slate-900">{previewStoreName}</h4>
+                              <p className="text-xs text-slate-500 leading-relaxed">
+                                {form.brandDescription.trim() ||
+                                  selectedStore?.shortDescription ||
+                                  `Official products, specifications, and verified offers from ${previewStoreName}.`}
+                              </p>
+                              {form.brandHighlights.trim() && (
+                                <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-xl px-3 py-1.5">
+                                  {form.brandHighlights.trim()}
                                 </div>
                               )}
                             </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {form.showBrandCard && (
-                            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 text-center">
-                              <StoreLogoFrame
-                                src={selectedStore?.logoUrl}
-                                name={previewStoreName}
-                                className="w-36 h-16 mx-auto rounded-2xl"
-                                paddingClassName="p-2"
-                                fallbackTextClassName="text-2xl"
-                              />
-                              <div className="space-y-1.5">
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2.5 py-0.5 rounded-full tracking-widest">
-                                  <Sparkles size={11} /> Brand Deals • Up to {previewStoreDiscount}
-                                </span>
-                                <h4 className="font-black text-lg text-slate-900">{previewStoreName}</h4>
-                                <p className="text-xs text-slate-500 leading-relaxed">
-                                  {form.brandDescription.trim() ||
-                                    selectedStore?.shortDescription ||
-                                    `Updated daily with hand-tested promo codes and direct manufacturer discounts for ${previewStoreName}.`}
-                                </p>
-                              </div>
-                              <div className="w-full py-3 bg-brand-primary text-white font-black text-xs rounded-xl shadow-xs">
-                                {form.ctaText.trim() || `Get Promo Code (${selectedStore?.activeCoupons || 6} Active) →`}
-                              </div>
+                            <div className="w-full py-3 bg-brand-primary text-white font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5">
+                              <span>
+                                {form.ctaText.trim() ||
+                                  (form.showStoreCoupons
+                                    ? `Get Promo Code (${selectedStore?.activeCoupons || 3} Active) →`
+                                    : `Visit ${previewStoreName} Official Site →`)}
+                              </span>
+                              <ExternalLink size={13} />
                             </div>
-                          )}
+                          </div>
+                        )}
 
-                          {form.showStoreCoupons && (
-                            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-2.5">
-                              <div className="flex items-center justify-between text-xs font-black text-slate-900">
-                                <span className="flex items-center gap-1.5">
-                                  <Tag size={13} className="text-brand-primary" />
-                                  Active {previewStoreName} Codes
-                                </span>
-                              </div>
-                              <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
-                                <span className="font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
-                                  {previewStoreDiscount}
-                                </span>
-                                <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2.5 py-0.5 rounded">
-                                  SAVE20
-                                </span>
-                              </div>
+                        {form.showStoreCoupons && (
+                          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-2.5">
+                            <div className="flex items-center justify-between text-xs font-black text-slate-900">
+                              <span className="flex items-center gap-1.5">
+                                <Tag size={13} className="text-brand-primary" />
+                                Active {previewStoreName} Codes
+                              </span>
                             </div>
-                          )}
+                            <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+                              <span className="font-black text-brand-primary bg-brand-primary-soft border border-brand-primary-border px-2 py-0.5 rounded">
+                                {previewStoreDiscount}
+                              </span>
+                              <span className="font-mono font-bold text-slate-700 bg-white border border-dashed border-slate-300 px-2.5 py-0.5 rounded">
+                                SAVE20
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
-                          {form.showGuaranteeCard && (
-                            <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
-                              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                                <ShieldCheck size={16} />
-                                <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
-                              </div>
-                              <p className="text-xs text-slate-300 leading-relaxed">{form.guaranteeText}</p>
-                              <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
-                                {form.tags
-                                  .split(',')
-                                  .filter((t) => t.trim())
-                                  .map((tag, idx) => (
-                                    <span
-                                      key={idx}
-                                      className="text-[11px] font-medium bg-slate-800 text-slate-200 px-2.5 py-1 rounded-lg"
-                                    >
-                                      #{tag.trim()}
-                                    </span>
-                                  ))}
-                              </div>
+                        {form.showStoreReviews && (
+                          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                              <span className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                                <MessageSquare size={14} className="text-emerald-600" />
+                                Shopper Reviews
+                              </span>
+                              <span className="text-xs font-bold text-amber-500">★ {previewStoreRating.toFixed(1)}</span>
                             </div>
-                          )}
-                        </>
-                      )}
-                    </aside>
+                            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1 text-xs">
+                              <div className="flex items-center justify-between font-bold text-slate-800">
+                                <span>Verified Buyer</span>
+                                <span className="text-amber-400">★★★★★</span>
+                              </div>
+                              <p className="text-slate-600">
+                                Authentic buyer feedback synced from {previewStoreName}.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {form.showGuaranteeCard && (
+                          <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
+                            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                              <ShieldCheck size={16} />
+                              <span>{form.guaranteeTitle || `${SITE_NAME} Testing Guarantee`}</span>
+                            </div>
+                            <p className="text-xs text-slate-300 leading-relaxed">{form.guaranteeText}</p>
+                            <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
+                              {form.tags
+                                .split(',')
+                                .filter((t) => t.trim())
+                                .map((tag, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="text-[11px] font-medium bg-slate-800 text-slate-200 px-2.5 py-1 rounded-lg"
+                                  >
+                                    #{tag.trim()}
+                                  </span>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </aside>
+                    )}
                   </div>
                 </div>
+
+                  {hasPreviewNewsBanners && isDesktop && form.rightBannerImage && (
+                    <aside className="w-[140px] shrink-0 sticky top-6">
+                      <img
+                        src={form.rightBannerImage}
+                        alt={form.rightBannerAlt || 'Right Banner'}
+                        className="w-full h-auto rounded-xl border border-slate-200 shadow-xs object-cover"
+                      />
+                    </aside>
+                  )}
+                </div>
+
+                {/* Mobile / Tablet Live Preview Automatic Banner Popup */}
+                {hasPreviewNewsBanners && !isDesktop && previewMobilePopupOpen && (
+                  <div className="absolute inset-0 z-30 bg-slate-950/65 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div className="w-full max-w-[300px] bg-white rounded-2xl overflow-hidden shadow-2xl border border-slate-200">
+                      <div className="px-3 py-2 bg-slate-900 text-white flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                        <span>Sponsored Popup</span>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewMobilePopupOpen(false)}
+                          className="w-6 h-6 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center cursor-pointer"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                      <img
+                        src={form.leftBannerImage || form.rightBannerImage}
+                        alt="Mobile Banner Popup"
+                        className="w-full max-h-72 object-contain bg-slate-100"
+                      />
+                      {(form.leftBannerAlt || form.rightBannerAlt) && (
+                        <div className="p-2.5 text-center text-xs font-bold text-slate-800 border-t border-slate-100">
+                          {form.leftBannerAlt || form.rightBannerAlt}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           }}

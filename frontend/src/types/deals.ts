@@ -119,16 +119,25 @@ export interface ArticleSidebarConfig {
   storeName?: string;
   showBrandCard?: boolean;
   showStoreCoupons?: boolean;
+  showStoreReviews?: boolean;
   showRelatedReviews?: boolean;
   showGuaranteeCard?: boolean;
   ctaText?: string;
+  ctaUrl?: string;
   brandDescription?: string;
+  brandHighlights?: string;
   guaranteeTitle?: string;
   guaranteeText?: string;
   showNewsBanner?: boolean;
   newsBannerImage?: string;
   newsBannerUrl?: string;
   newsBannerAlt?: string;
+  leftBannerImage?: string;
+  leftBannerUrl?: string;
+  leftBannerAlt?: string;
+  rightBannerImage?: string;
+  rightBannerUrl?: string;
+  rightBannerAlt?: string;
 }
 
 export interface Article {
